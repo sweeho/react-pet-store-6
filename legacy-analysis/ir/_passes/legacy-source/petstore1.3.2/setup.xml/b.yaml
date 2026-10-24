@@ -1,0 +1,313 @@
+records:
+  - record_key: SIGN-REQ-0001
+    kind: requirement
+    capability_key: sign-on
+    requirement: >
+      The system SHALL provide a pre-provisioned administrator account, identified as
+      "jps_admin", that holds the administrator role for the order administration
+      application.
+    plain_text: >
+      An administrator account exists from installation onwards and is the account that
+      may use the order administration area.
+    technical_note: >
+      setup.xml target create_users runs RealmTool "-add jps_admin admin default"
+      (user jps_admin, password admin, group default). The admin application's
+      sun-j2ee-ri.xml maps the "administrator" role to principal jps_admin (and group
+      administrator_group). The admin EAR deploys under context root "admin".
+    confidence: high
+    confidence_basis: >
+      Stated in two independent places: the realm provisioning in setup.xml and the role
+      mapping in the admin application's runtime descriptor. What the role then protects
+      (which URLs/methods) is not visible in this shard.
+    risk_class: regulated
+    basis: >
+      The install script creates the user; the admin application binds the
+      administrator role to exactly that principal.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 190
+        line_end: 196
+        excerpt: |
+          <java classname="com.sun.enterprise.tools.admin.RealmTool" fork="yes">
+            <classpath path="${j2ee.classpath}"/>
+            ...
+            <arg line="-add jps_admin admin default"/>
+          </java>
+      - path: legacy-source/petstore1.3.2/src/apps/admin/src/sun-j2ee-ri.xml
+        line_start: 45
+        line_end: 56
+        excerpt: |
+          <rolemapping>
+            <role name="administrator">
+              <principals>
+                <principal>
+                  <name>jps_admin</name>
+                </principal>
+              </principals>
+              <groups>
+                <group name="administrator_group" />
+              </groups>
+            </role>
+          </rolemapping>
+    stack_metadata:
+      framework: J2EE 1.3 RI
+      realm.tool: RealmTool -add
+      realm.group: default
+      role_mapping: administrator -> jps_admin
+
+  - record_key: SIGN-REQ-0002
+    kind: requirement
+    capability_key: sign-on
+    requirement: >
+      The system SHALL provide a pre-provisioned supplier account, identified as
+      "supplier", that holds the protected role of the supplier application.
+    plain_text: >
+      A supplier account exists from installation onwards and is the account that may
+      use the supplier's area (for example the inventory screen).
+    technical_note: >
+      setup.xml create_users runs RealmTool "-add supplier supplier default" (user
+      supplier, password supplier, group default). The supplier application's
+      sun-j2ee-ri.xml maps its role named "administrator" to principal "supplier" and
+      group administrator_group.
+    confidence: high
+    confidence_basis: >
+      Provisioning in setup.xml and the role mapping in the supplier runtime descriptor
+      agree. The pages the role protects are outside this shard.
+    risk_class: regulated
+    basis: >
+      The install script creates the user; the supplier application binds its protected
+      role to that principal.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 183
+        line_end: 196
+        excerpt: |
+          <java classname="com.sun.enterprise.tools.admin.RealmTool" fork="yes">
+            ...
+            <arg line="-add jps_admin admin default"/>
+          </java>
+          <java classname="com.sun.enterprise.tools.admin.RealmTool" fork="yes">
+            ...
+            <arg line="-add supplier supplier default"/>
+          </java>
+      - path: legacy-source/petstore1.3.2/src/apps/supplier/src/sun-j2ee-ri.xml
+        line_start: 45
+        line_end: 53
+        excerpt: |
+          <rolemapping>
+          <role name="administrator">
+            <principals>
+              <principal>
+                <name>supplier</name>
+              </principal>
+            </principals>
+            <groups>
+              <group name="administrator_group" />
+    stack_metadata:
+      framework: J2EE 1.3 RI
+      realm.tool: RealmTool -add
+      role_mapping: administrator -> supplier
+
+  - record_key: NOTIF-INT-0001
+    kind: integration
+    capability_key: customer-notifications
+    requirement: >
+      The system SHALL deliver customer e-mail asynchronously through dedicated message
+      channels: one for order-approval mail, one for completed-order mail, and one
+      general mail channel that performs the sending.
+    plain_text: >
+      Customer e-mails (about order approval and about completed orders) are queued and
+      sent in the background rather than while the customer waits.
+    technical_note: >
+      setup.xml create_jms_queues registers three point-to-point JMS queues in the order
+      processing centre namespace: jms/opc/MailOrderApprovalQueue,
+      jms/opc/MailCompletedOrderQueue and jms/opc/MailQueue, using
+      jms/opc/QueueConnectionFactory. The consumers (mailers) are not in this shard.
+    confidence: medium
+    confidence_basis: >
+      The channels are declared in one place. Their role (which messages each carries,
+      that MailQueue is the sender) is inferred from the destination names, not read from
+      a consumer in this shard.
+    risk_class: operational
+    basis: >
+      Queue names declared at installation describe the mail flows the application
+      expects to exist.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 79
+        line_end: 93
+        excerpt: |
+          <arg line="-addJmsDestination jms/opc/MailOrderApprovalQueue queue"/>
+          ...
+          <arg line="-addJmsDestination jms/opc/MailCompletedOrderQueue queue"/>
+          ...
+          <arg line="-addJmsDestination jms/opc/MailQueue queue"/>
+    stack_metadata:
+      jms.queue: [jms/opc/MailOrderApprovalQueue, jms/opc/MailCompletedOrderQueue, jms/opc/MailQueue]
+      jms.factory: jms/opc/QueueConnectionFactory
+
+  - record_key: APPR-INT-0001
+    kind: integration
+    capability_key: order-approval
+    requirement: >
+      The system SHALL hand orders to the approval step asynchronously through a
+      dedicated order-approval message channel.
+    plain_text: >
+      Orders waiting for approval are passed along in the background, so an approval
+      decision does not have to happen while the customer is placing the order.
+    technical_note: >
+      setup.xml registers point-to-point queue jms/opc/OrderApprovalQueue (opc =
+      order processing centre). Producer and consumer are outside this shard.
+    confidence: medium
+    confidence_basis: >
+      One clear declaration; the flow carried by the queue is inferred from its name.
+    risk_class: operational
+    basis: >
+      Installation declares an order-approval queue in the order processing namespace.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 95
+        line_end: 101
+        excerpt: |
+          <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+            ...
+            <arg line="-addJmsDestination jms/opc/OrderApprovalQueue queue"/>
+          </java>
+    stack_metadata:
+      jms.queue: jms/opc/OrderApprovalQueue
+
+  - record_key: FUL-INT-0001
+    kind: integration
+    capability_key: order-fulfillment
+    requirement: >
+      The system SHALL pass orders from the storefront to order processing, purchase
+      orders from order processing to the supplier, and invoices from the supplier back,
+      each through asynchronous messaging; invoices SHALL be published so that more than
+      one interested party can receive each one.
+    plain_text: >
+      The shop, order processing and the supplier talk to each other in the background:
+      orders go to processing, purchase orders go to the supplier, and invoices come back
+      as announcements that several parts of the system can pick up.
+    technical_note: >
+      setup.xml registers queue jms/opc/OrderQueue, queue jms/supplier/PurchaseOrderQueue
+      and topic jms/opc/InvoiceTopic (publish/subscribe), plus queue and topic connection
+      factories for petstore, opc, supplier and admin (jms/petstore/QueueConnectionFactory,
+      jms/opc/QueueConnectionFactory, jms/opc/TopicConnectionFactory,
+      jms/supplier/QueueConnectionFactory, jms/supplier/TopicConnectionFactory,
+      jms/admin/QueueConnectionFactory).
+    confidence: medium
+    confidence_basis: >
+      Destinations and their queue/topic types are declared in one place. The direction
+      of each flow (who produces, who consumes) is inferred from names and namespaces,
+      not read from code in this shard.
+    risk_class: operational
+    basis: >
+      The installation creates the messaging destinations that connect the storefront,
+      order processing centre and supplier; the invoice destination is a topic, not a
+      queue.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 102
+        line_end: 163
+        excerpt: |
+          <arg line="-addJmsDestination jms/opc/OrderQueue queue"/>
+          ...
+          <arg line="-addJmsDestination jms/opc/InvoiceTopic topic"/>
+          ...
+          <arg line="-addJmsDestination jms/supplier/PurchaseOrderQueue queue"/>
+          ...
+          <arg line="-addJmsFactory jms/opc/QueueConnectionFactory queue"/>
+          ...
+          <arg line="-addJmsFactory jms/supplier/QueueConnectionFactory queue"/>
+          ...
+          <arg line="-addJmsFactory jms/opc/TopicConnectionFactory topic"/>
+          ...
+          <arg line="-addJmsFactory jms/supplier/TopicConnectionFactory topic"/>
+          ...
+          <arg line="-addJmsFactory jms/petstore/QueueConnectionFactory queue"/>
+          ...
+          <arg line="-addJmsFactory jms/admin/QueueConnectionFactory queue"/>
+    stack_metadata:
+      jms.queue: [jms/opc/OrderQueue, jms/supplier/PurchaseOrderQueue]
+      jms.topic: jms/opc/InvoiceTopic
+
+  - record_key: DATA-REQ-0001
+    kind: requirement
+    capability_key: data-population
+    requirement: >
+      The system SHALL keep storefront data, supplier data and order-processing data in
+      three separate datastores, each created automatically on first connection if it
+      does not yet exist.
+    plain_text: >
+      The shop, the supplier and order processing each keep their own separate data, and
+      each store is created automatically the first time it is used.
+    technical_note: >
+      setup.xml targets create_petstore_db, create_supplier_db and create_opc_db register
+      XA datasources jdbc/petstore/PetStoreDB, jdbc/supplier/SupplierDB and jdbc/opc/OPCDB
+      (Cloudscape RemoteXaDataSource, createDatabase=create). The deploy target runs
+      deploytool -generateSQL before -deploy for each EAR, i.e. tables are generated from
+      the container-managed persistence mappings at deployment. Filed under
+      data-population as the closest listed capability: this is datastore provisioning,
+      not a business capability of its own.
+    confidence: medium
+    confidence_basis: >
+      Declared clearly in one place (install script). Whether the separation is a
+      business requirement or only a deployment choice is not stated anywhere in this
+      shard.
+    risk_class: operational
+    basis: >
+      Three distinct datasource registrations with createDatabase=create, and table
+      generation as part of deployment.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 199
+        line_end: 227
+        excerpt: |
+          <arg line="-addJdbcXADatasource jdbc/petstore/PetStoreDB COM.cloudscape.core.RemoteXaDataSource -props createDatabase=create databaseName=PetStoreDB remoteDataSourceProtocol=rmi"/>
+          ...
+          <arg line="-addJdbcXADatasource jdbc/supplier/SupplierDB COM.cloudscape.core.RemoteXaDataSource -props createDatabase=create databaseName=SupplierDB remoteDataSourceProtocol=rmi"/>
+          ...
+          <arg line="-addJdbcXADatasource jdbc/opc/OPCDB COM.cloudscape.core.RemoteXaDataSource -props createDatabase=create databaseName=OPCDB remoteDataSourceProtocol=rmi"/>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 229
+        line_end: 236
+        excerpt: |
+          <target name="deploy" depends="init">
+            <echo message="Deploying ears ...."/>
+            <exec executable="${deploytool}">
+                <arg line="-generateSQL petstore.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-deploy petstore.ear ${j2ee.server.name}" />
+    stack_metadata:
+      db.object: [jdbc/petstore/PetStoreDB, jdbc/supplier/SupplierDB, jdbc/opc/OPCDB]
+      datasource.type: XA (Cloudscape RemoteXaDataSource)
+
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/setup.xml
+    description: >
+      No legacy-analysis/sources/**/extracted.md documents exist in the tree, so no
+      document trace could be cited for this module. Message flow directions in
+      NOTIF-INT-0001, APPR-INT-0001 and FUL-INT-0001 are inferred from destination names
+      only and should be confirmed against the producer/consumer modules.
+
+suspected_defects:
+  - capability_key: sign-on
+    record_keys: [SIGN-REQ-0001, SIGN-REQ-0002]
+    severity: high
+    category: other
+    title: Privileged accounts are installed with fixed, guessable passwords
+    description: >
+      Installation creates the administrator account with password "admin" and the
+      supplier account with password "supplier", hard-coded in the install script, with
+      no step that forces or prompts a change. Anyone who knows the default install can
+      sign in to the administration and supplier areas.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 188
+        line_end: 195
+        excerpt: |
+          <arg line="-add jps_admin admin default"/>
+          ...
+          <arg line="-add supplier supplier default"/>
