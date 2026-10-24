@@ -1,0 +1,433 @@
+# EXTRACTED FROM LEGACY SOURCE — evidence of what exists, not a build target. Where this disagrees with a capability delta spec, the delta spec wins.
+#
+# Java Pet Store 1.3.2: the HTTP surface the legacy application exposes, recorded by spec
+# extraction SX-0001 (branch vortex/legacy-spec/sx-0001). It is NOT the rebuild's API. The
+# legacy app is a server-rendered J2EE site: almost every endpoint returns an HTML page, takes
+# form-encoded parameters, and keeps state in the servlet session. The rebuild (Vite SPA +
+# Nitro routes) designs its own JSON routes from the capability delta specs under
+# openspec/changes/sx-*/specs/, using this file only to see what the old system accepted.
+#
+# Sources: apps/petstore/src/docroot/WEB-INF/{web.xml,mappings.xml,signon-config.xml},
+# apps/admin/src/docroot/WEB-INF/web.xml, apps/supplier/src/docroot/WEB-INF/web.xml, the
+# *HTMLAction classes, SignOnFilter.java, ApplRequestProcessor.java, RcvrRequestProcessor.java,
+# PopulateServlet.java and the JSP pages named on each operation. Paths are relative to
+# legacy-source/petstore1.3.2/src/.
+openapi: 3.0.3
+info:
+  title: Java Pet Store 1.3.2 legacy HTTP surface (extracted evidence)
+  version: 1.3.2-legacy
+  description: >-
+    EXTRACTED FROM LEGACY SOURCE — evidence of what exists, not a build target. Where this
+    disagrees with a capability delta spec, the delta spec wins. Four web applications are
+    deployed under the context roots /petstore, /admin, /supplier and /opc; /opc has no
+    servlets and is reached only through JMS (see x-legacy-messaging). Each path below carries
+    its context root. Storefront "*.do" requests run an action and then render the named
+    screen; "*.screen" requests render a page template only.
+servers:
+  - url: http://localhost:8000
+    description: J2EE 1.3 reference implementation default (docs/using.html)
+tags:
+  - name: catalog-browsing
+  - name: shopping-cart
+  - name: sign-on
+  - name: customer-account
+  - name: checkout
+  - name: localization
+  - name: order-approval
+  - name: sales-reporting
+  - name: supplier-inventory
+  - name: data-population
+components:
+  securitySchemes:
+    storefrontSession:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: >-
+        Servlet session established by SignOnFilter after POST /petstore/j_signon_check.
+        A request for a protected page without a signed-on user is answered with the
+        sign-on page itself (a server-side forward, still HTTP 200), and the original URL is
+        kept in j_signon_original_url for after sign-on. Required only for the pages listed
+        in signon-config.xml (customer.screen, customer.do,
+        enter_order_information.screen, signon_welcome.screen). Idle timeout 15 minutes
+        (petstore web.xml line 162). No role check is applied.
+    adminFormLogin:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: >-
+        Container FORM login (admin web.xml login-config, /login.jsp) with role
+        "administrator". Idle timeout 54 minutes.
+    supplierFormLogin:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: >-
+        Container FORM login (supplier web.xml login-config, /login.jsp) with role
+        "administrator". Idle timeout 54 minutes.
+  responses:
+    HtmlPage:
+      description: Server-rendered HTML page (UTF-8).
+      content:
+        text/html:
+          schema: { type: string }
+  schemas:
+    CustomerForm:
+      description: >-
+        Account form posted to createcustomer.do and customer.do. Contact fields carry the
+        suffix _a. All contact fields except address_2_a and email_a must be non-blank
+        (CustomerHTMLAction.java lines 185-245). Card fields are captured as text with no
+        format check.
+      type: object
+      properties:
+        action: { type: string, enum: [create, update] }
+        language: { type: string, description: "preferred language, e.g. en_US" }
+        favorite_category: { type: string }
+        mylist_on: { type: string }
+        banners_on: { type: string }
+        credit_card_number: { type: string }
+        credit_card_type: { type: string }
+        credit_card_expiry_month: { type: string }
+        credit_card_expiry_year: { type: string }
+        family_name_a: { type: string }
+        given_name_a: { type: string }
+        address_1_a: { type: string }
+        address_2_a: { type: string }
+        city_a: { type: string }
+        state_or_province_a: { type: string }
+        postal_code_a: { type: string }
+        country_a: { type: string }
+        telephone_number_a: { type: string }
+        email_a: { type: string }
+    AdminRequest:
+      type: object
+      description: >-
+        XML document <Request> posted by the admin rich client (HttpPostPetStoreProxy.java
+        lines 151-157). Shown here as an object; the wire format is XML.
+      xml: { name: Request }
+      required: [Type]
+      properties:
+        Type:
+          type: string
+          enum: [GETORDERS, UPDATESTATUS, REVENUE, ORDERS]
+        Status:
+          type: string
+          description: GETORDERS only. Order status to list (PENDING, APPROVED, DENIED, COMPLETED, ...).
+        Start:
+          type: string
+          description: REVENUE/ORDERS only. Date as M/D/YYYY, parsed to local midnight (ApplRequestProcessor.java lines 319-326).
+        End:
+          type: string
+          description: REVENUE/ORDERS only. Date as M/D/YYYY, parsed to local midnight, so the end day is effectively excluded.
+        ReqCategory:
+          type: string
+          description: REVENUE/ORDERS only. When present, figures are broken down per item of this category instead of per category.
+        Order:
+          type: array
+          description: UPDATESTATUS only. Each entry carries OrderId and the new OrderStatus. Status values are not validated server-side.
+          items:
+            type: object
+            properties:
+              OrderId: { type: string }
+              OrderStatus: { type: string }
+    AdminResponse:
+      type: object
+      description: >-
+        XML document <Response> (ApplRequestProcessor.java lines 73-74, 168-305). On any
+        failure the body is <Response><Error>message</Error></Response> with HTTP 200.
+      xml: { name: Response }
+      properties:
+        Type: { type: string }
+        Status: { type: string }
+        TotalCount: { type: integer }
+        Order:
+          type: array
+          items:
+            type: object
+            properties:
+              OrderId: { type: string }
+              UserId: { type: string }
+              OrderDate: { type: string }
+              OrderAmount: { type: number }
+              OrderStatus: { type: string }
+        Category:
+          type: array
+          description: REVENUE/ORDERS without ReqCategory. One element per category, attribute name, value = revenue (float) or summed line quantity (integer).
+          items: { type: object }
+        Item:
+          type: array
+          description: REVENUE/ORDERS with ReqCategory. One element per item.
+          items: { type: object }
+        TotalSales:
+          type: number
+          description: Sum of the listed values. For ORDERS it is a unit count, not an order count.
+        Error: { type: string }
+paths:
+  /petstore/main.screen:
+    get:
+      tags: [catalog-browsing]
+      summary: Home page with the pet selection map (main.jsp)
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/category.screen:
+    get:
+      tags: [catalog-browsing]
+      summary: Products of a category in the session locale, paged (category.jsp)
+      parameters:
+        - { name: category_id, in: query, required: true, schema: { type: string } }
+        - { name: start, in: query, required: false, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, required: false, schema: { type: integer, default: 2 }, description: "start/count apply only when count is supplied; otherwise start=0, count=2" }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/product.screen:
+    get:
+      tags: [catalog-browsing]
+      summary: Items of a product in the session locale, paged (product.jsp)
+      parameters:
+        - { name: product_id, in: query, required: true, schema: { type: string } }
+        - { name: start, in: query, required: false, schema: { type: integer } }
+        - { name: count, in: query, required: false, schema: { type: integer } }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/item.screen:
+    get:
+      tags: [catalog-browsing]
+      summary: Item detail with Add to Cart link (item.jsp)
+      parameters:
+        - { name: item_id, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/search.screen:
+    get:
+      tags: [catalog-browsing]
+      summary: Keyword search over items in the session locale, paged (search.jsp)
+      parameters:
+        - { name: keywords, in: query, required: true, schema: { type: string } }
+        - { name: start, in: query, required: false, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, required: false, schema: { type: integer, default: 2 } }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/cart.do:
+    get:
+      tags: [shopping-cart]
+      summary: Add, remove or update cart lines, then render cart.screen (CartHTMLAction.java lines 85-121)
+      description: >-
+        Anonymous access. The cart lives in the session only. action=purchase sets the item's
+        quantity to 1 (also when already present). action=update reads every
+        itemQuantity_<itemId> parameter; a non-numeric value becomes 0, and 0 or less removes
+        the line. Also reached by POST from the cart form.
+      parameters:
+        - name: action
+          in: query
+          required: false
+          schema: { type: string, enum: [purchase, remove, update] }
+          description: Absent renders the cart unchanged.
+        - { name: itemId, in: query, required: false, schema: { type: string }, description: "purchase/remove only" }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/j_signon_check:
+    post:
+      tags: [sign-on]
+      summary: Storefront sign-on, intercepted by SignOnFilter (SignOnFilter.java lines 71-79, 118, 160-200)
+      description: >-
+        Checks the credentials against the sign-on user store (case-sensitive). On success
+        marks the session signed on, loads the customer and its preferred language, and
+        forwards to j_signon_original_url or the welcome screen. On failure renders
+        signon_error.screen. j_remember_username=on sets cookie bp_signon to the user name
+        for 2678400 seconds; otherwise removes it.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [j_username, j_password]
+              properties:
+                j_username: { type: string }
+                j_password: { type: string }
+                j_remember_username: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/signoff.do:
+    get:
+      tags: [sign-on]
+      summary: Sign out; invalidates the session (and with it the cart), renders signoff.screen
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/signon.screen:
+    get:
+      tags: [sign-on]
+      summary: Sign-on page with returning-customer and new-customer forms (signon.jsp)
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/createuser.do:
+    post:
+      tags: [customer-account]
+      summary: Sign-up step 1, create sign-on credentials, then render create_customer.screen
+      description: >-
+        j_password_2 is posted but not compared. Any failure is reported as the
+        duplicate-account screen (exception-mapping DuplicateAccountException, mappings.xml line 111).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                j_username: { type: string }
+                j_password: { type: string }
+                j_password_2: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/createcustomer.do:
+    post:
+      tags: [customer-account]
+      summary: Sign-up step 2, create the customer record (CustomerHTMLAction action=create), then main.screen
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/CustomerForm" }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/customer.screen:
+    get:
+      tags: [customer-account]
+      summary: Account screen (protected)
+      security: [{ storefrontSession: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/customer.do:
+    post:
+      tags: [customer-account]
+      summary: Update account and profile (CustomerHTMLAction.java lines 89-245), then customer.screen (protected)
+      security: [{ storefrontSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: "#/components/schemas/CustomerForm" }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/enter_order_information.screen:
+    get:
+      tags: [checkout]
+      summary: Billing and shipping entry, pre-filled from the account (protected)
+      security: [{ storefrontSession: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/order.do:
+    post:
+      tags: [checkout]
+      summary: Place the order from the session cart (OrderHTMLAction / OrderEJBAction), then order_complete.screen
+      description: >-
+        Not listed in signon-config.xml, so the action itself is not protected; the form that
+        posts to it is. Issues the order id from counter "1001", attaches the fixed card
+        1234-2334 / Duke Express / 10/2001, sends the purchase order to jms/opc/OrderQueue and
+        empties the cart. An empty cart renders cart_empty_order_error.screen.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              description: Contact fields posted twice, suffix _a (billing) and _b (shipping) - family_name, given_name, address_1, address_2, city, state_or_province, postal_code, country, telephone_number, email. All but address_2 and email must be non-blank (OrderHTMLAction.java lines 80-150).
+              additionalProperties: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/changelocale.do:
+    get:
+      tags: [localization]
+      summary: Change the session locale and return to the referring screen (ChangeLocaleHTMLAction, ClientStateFlowHandler)
+      parameters:
+        - { name: locale, in: query, required: true, schema: { type: string, example: ja_JP } }
+        - { name: referring_screen, in: query, required: false, schema: { type: string } }
+        - { name: cacheId, in: query, required: false, schema: { type: string } }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /petstore/Populate:
+    get:
+      tags: [data-population]
+      summary: Seed or force-reset the storefront data, then chain to the supplier loader (PopulateServlet.java lines 55-63, 111-113)
+      description: No sign-on required (petstore web.xml maps it outside signon-config).
+      parameters:
+        - { name: forcefully, in: query, required: false, schema: { type: string, enum: ["true", "false"] } }
+        - { name: success_page, in: query, required: false, schema: { type: string } }
+        - { name: error_page, in: query, required: false, schema: { type: string } }
+      responses:
+        "302": { description: Redirect to success_page or error_page }
+  /admin/AdminRequestProcessor:
+    get:
+      tags: [sign-on, order-approval]
+      summary: Admin landing page, logout, or launch of the rich client (role administrator)
+      security: [{ adminFormLogin: [] }]
+      parameters:
+        - name: currentScreen
+          in: query
+          required: false
+          schema: { type: string, enum: [logout, manageorders] }
+          description: Absent renders index.jsp; manageorders returns a Java Web Start descriptor bound to the session.
+      responses:
+        "200":
+          description: HTML page, or application/x-java-jnlp-file for manageorders
+  /admin/ApplRequestProcessor:
+    post:
+      tags: [order-approval, sales-reporting]
+      summary: XML data service for the admin rich client (ApplRequestProcessor.java lines 85-305)
+      description: >-
+        NOT covered by the admin web.xml security-constraint (only /AdminRequestProcessor is).
+        It only checks that a servlet session exists; with no session it returns
+        <Error>Session Timed Out...</Error>.
+      requestBody:
+        required: true
+        content:
+          text/xml:
+            schema: { $ref: "#/components/schemas/AdminRequest" }
+      responses:
+        "200":
+          description: XML response document
+          content:
+            text/xml:
+              schema: { $ref: "#/components/schemas/AdminResponse" }
+  /supplier/RcvrRequestProcessor:
+    get:
+      tags: [supplier-inventory, sign-on]
+      summary: Supplier home, inventory display, inventory update or logout (role administrator)
+      security: [{ supplierFormLogin: [] }]
+      description: >-
+        currentScreen=updateinventory reads every item_<itemId> parameter and, for each, the
+        matching qty_<itemId>; a blank quantity is skipped, a negative one ignored, otherwise
+        the stock quantity is overwritten. Pending supplier orders are then re-attempted and
+        back.jsp is rendered (RcvrRequestProcessor.java lines 110-190).
+      parameters:
+        - name: currentScreen
+          in: query
+          required: false
+          schema: { type: string, enum: [logout, displayinventory, updateinventory] }
+      responses:
+        "200": { $ref: "#/components/responses/HtmlPage" }
+  /supplier/Populate:
+    get:
+      tags: [data-population]
+      summary: Seed or force-reset supplier inventory (chained from /petstore/Populate)
+      parameters:
+        - { name: forcefully, in: query, required: false, schema: { type: string, enum: ["true", "false"] } }
+        - { name: success_page, in: query, required: false, schema: { type: string } }
+        - { name: error_page, in: query, required: false, schema: { type: string } }
+      responses:
+        "302": { description: Redirect to success_page or error_page }
+x-legacy-messaging:
+  description: >-
+    Asynchronous JMS destinations that carry XML documents between the storefront, the admin
+    tool, the order processing centre (OPC) and the supplier. Bindings from
+    apps/{petstore,admin,opc,supplier}/src/sun-j2ee-ri.xml. These are the only links between
+    the three datasources.
+  queues:
+    - { name: jms/opc/OrderQueue, producers: [petstore order placement (AsyncSender, petstore sun-j2ee-ri.xml line 498)], consumer: PurchaseOrderMDB (opc line 87), payload: PurchaseOrder XML }
+    - { name: jms/opc/OrderApprovalQueue, producers: [PurchaseOrderMDB auto-approval (opc line 126), admin status updates (AsyncSender, admin line 97)], consumer: OrderApprovalMDB (opc line 185), payload: OrderApproval XML batch }
+    - { name: jms/supplier/PurchaseOrderQueue, producers: [OrderApprovalMDB (opc line 228)], consumer: SupplierOrderMDB (supplier line 310), payload: SupplierOrder XML }
+    - { name: jms/opc/MailOrderApprovalQueue, producers: [OrderApprovalMDB (opc line 224)], consumer: MailOrderApprovalMDB (opc line 283) }
+    - { name: jms/opc/MailCompletedOrderQueue, producers: [InvoiceMDB (opc line 175)], consumer: MailCompletedOrderMDB (opc line 329) }
+    - { name: jms/opc/MailQueue, producers: [MailInvoiceMDB, MailOrderApprovalMDB, MailCompletedOrderMDB], consumer: MailerMDB (opc line 377), payload: Mail XML (address, subject, content) }
+  topics:
+    - { name: jms/opc/InvoiceTopic, producers: [SupplierOrderMDB and the inventory update (supplier lines 70, 314)], consumers: [InvoiceMDB (opc line 136), MailInvoiceMDB (opc line 237)], payload: Invoice XML }
