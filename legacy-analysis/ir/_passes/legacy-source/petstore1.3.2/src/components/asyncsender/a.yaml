@@ -1,0 +1,298 @@
+# Pass A — legacy-source/petstore1.3.2/src/components/asyncsender
+# No legacy-analysis/sources/**/extracted.md documents exist in the tree, so no document traces are cited.
+# The component is a generic "put one text message on a queue" service. Which queue it targets is
+# decided per deploying application (sun-j2ee-ri.xml), so its business meaning is filed under the
+# capability of each deploying application: checkout (storefront -> order queue) and
+# order-approval (admin -> order approval queue).
+records:
+  - record_key: CHECKOUT-INTEGRATION-0001
+    kind: integration
+    capability_key: checkout
+    requirement: >
+      The system SHALL hand a submitted purchase order to order processing asynchronously, by
+      placing the order document, as a single text message, on the order processing queue, so
+      that order submission does not wait for order processing to complete.
+    plain_text: >
+      When a customer places an order, the shop passes the whole order on to the back-office
+      order processing system as one message and does not wait for it to be processed.
+    technical_note: >
+      AsyncSenderEJB.sendAMessage(String) wraps the string in a JMS TextMessage and sends it to the
+      queue bound to java:comp/env/jms/AsyncSenderQueue. In the petstore application that reference
+      is bound to jms/opc/OrderQueue (apps/petstore/src/sun-j2ee-ri.xml), and the caller is
+      OrderEJBAction, which sends purchaseOrder.toXML().
+    confidence: high
+    confidence_basis: >
+      The send is visible in the bean code, the queue reference is declared in ejb-jar.xml, and the
+      binding to the order queue plus the calling action are visible in the petstore application.
+      Not higher-risk-checked: what the consumer does with the message is outside this shard.
+    risk_class: operational
+    basis: >
+      sendAMessage creates a TextMessage with the caller's text and sends it to the configured
+      queue; the storefront binds that queue to the OPC order queue and passes the purchase order XML.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+        line_start: 73
+        line_end: 79
+        excerpt: |
+              try {
+                qConnect = qFactory.createQueueConnection();
+                session = qConnect.createQueueSession(true,0);
+                qSender = session.createSender(q);
+                TextMessage jmsMsg = session.createTextMessage();
+                jmsMsg.setText(msg);
+                qSender.send(jmsMsg);
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/ejb-jar.xml
+        line_start: 64
+        line_end: 67
+        excerpt: |
+                <resource-env-ref>
+                  <resource-env-ref-name>jms/AsyncSenderQueue</resource-env-ref-name>
+                  <resource-env-ref-type>javax.jms.Queue</resource-env-ref-type>
+                </resource-env-ref>
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/sun-j2ee-ri.xml
+        line_start: 497
+        line_end: 498
+        excerpt: |
+                  <resource-env-ref-name>jms/AsyncSenderQueue</resource-env-ref-name>
+                  <jndi-name>jms/opc/OrderQueue</jndi-name>
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/com/sun/j2ee/blueprints/petstore/controller/ejb/actions/OrderEJBAction.java
+        line_start: 152
+        line_end: 153
+        excerpt: |
+                AsyncSender  sender= home.create();
+                sender.sendAMessage(purchaseOrder.toXML());
+    stack_metadata:
+      framework: EJB 2.0
+      ejb.bean: AsyncSenderEJB (Stateless, local)
+      ejb.transaction: Required
+      jms.queue: jms/AsyncSenderQueue -> jms/opc/OrderQueue (petstore)
+
+  - record_key: ORDER-APPROVAL-INTEGRATION-0001
+    kind: integration
+    capability_key: order-approval
+    requirement: >
+      The system SHALL deliver an administrator's order approval or denial decisions to order
+      processing asynchronously, by placing the decision document, as a single text message, on
+      the order approval queue.
+    plain_text: >
+      When an administrator approves or denies orders, the decisions are passed on to order
+      processing as one message, without the administrator waiting for them to be acted on.
+    technical_note: >
+      The same AsyncSenderEJB is deployed in the admin application, where jms/AsyncSenderQueue is
+      bound to jms/opc/OrderApprovalQueue (apps/admin/src/sun-j2ee-ri.xml). AdminRequestBD calls
+      sendAMessage(oa.toXML()) with the order-approval document.
+    confidence: high
+    confidence_basis: >
+      Send logic, the queue declaration and the admin binding plus caller are each visible.
+      Content of the approval document is outside this shard.
+    risk_class: operational
+    basis: >
+      Admin deployment binds the sender's queue to the order approval queue and passes the
+      approval XML to sendAMessage.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+        line_start: 68
+        line_end: 79
+        excerpt: |
+            public void sendAMessage(String msg)  {
+              QueueSession session = null;
+              QueueConnection qConnect = null;
+              QueueSender qSender = null;
+
+              try {
+                qConnect = qFactory.createQueueConnection();
+                session = qConnect.createQueueSession(true,0);
+                qSender = session.createSender(q);
+                TextMessage jmsMsg = session.createTextMessage();
+                jmsMsg.setText(msg);
+                qSender.send(jmsMsg);
+      - path: legacy-source/petstore1.3.2/src/apps/admin/src/sun-j2ee-ri.xml
+        line_start: 96
+        line_end: 97
+        excerpt: |
+                  <resource-env-ref-name>jms/AsyncSenderQueue</resource-env-ref-name>
+                  <jndi-name>jms/opc/OrderApprovalQueue</jndi-name>
+      - path: legacy-source/petstore1.3.2/src/apps/admin/src/admin/com/sun/j2ee/blueprints/admin/web/AdminRequestBD.java
+        line_start: 119
+        line_end: 120
+        excerpt: |
+                      AsyncSender sender= home.create();
+                      sender.sendAMessage(oa.toXML());
+    stack_metadata:
+      framework: EJB 2.0
+      ejb.bean: AsyncSenderEJB (Stateless, local)
+      ejb.transaction: Required
+      jms.queue: jms/AsyncSenderQueue -> jms/opc/OrderApprovalQueue (admin)
+
+  - record_key: CHECKOUT-BUSINESS-RULE-0001
+    kind: business-rule
+    capability_key: checkout
+    requirement: >
+      The system SHALL enqueue the hand-off message within the caller's unit of work, joining the
+      caller's transaction if one exists and starting one otherwise, so that the message is
+      delivered only if that unit of work commits.
+    plain_text: >
+      An order (or approval decision) is only passed on to processing if the step that sent it
+      completes successfully; if that step is undone, the message is not delivered.
+    technical_note: >
+      ejb-jar.xml declares trans-attribute Required on sendAMessage(String), and the bean opens a
+      transacted JMS session (createQueueSession(true,0)). Under container-managed transactions the
+      send is enlisted in the JTA transaction and is released on commit.
+    confidence: medium
+    confidence_basis: >
+      The transaction attribute is declared and the session is transacted, but the commit-coupled
+      delivery depends on the container enlisting the JMS session, which cannot be observed in source.
+    risk_class: operational
+    basis: >
+      Declared container transaction Required on the only business method, plus a transacted session.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/ejb-jar.xml
+        line_start: 122
+        line_end: 132
+        excerpt: |
+              <container-transaction>
+                <method>
+                  <ejb-name>AsyncSenderEJB</ejb-name>
+                  <method-intf>Local</method-intf>
+                  <method-name>sendAMessage</method-name>
+                  <method-params>
+                    <method-param>java.lang.String</method-param>
+                  </method-params>
+                </method>
+                <trans-attribute>Required</trans-attribute>
+              </container-transaction>
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+        line_start: 75
+        line_end: 75
+        excerpt: |
+                session = qConnect.createQueueSession(true,0);
+    stack_metadata:
+      ejb.transaction: Required
+      ejb.bean: AsyncSenderEJB
+
+  - record_key: CHECKOUT-BUSINESS-RULE-0002
+    kind: business-rule
+    capability_key: checkout
+    requirement: >
+      GIVEN a message is being handed off to order processing
+      WHEN the queue cannot be reached or the send fails for any reason
+      THEN the system SHALL report the failure to the caller as an error and SHALL NOT report the
+      hand-off as successful.
+    plain_text: >
+      If the order cannot be passed on to processing, the sending step fails rather than silently
+      pretending it worked.
+    technical_note: >
+      sendAMessage catches every Exception, prints the stack trace and rethrows it as
+      EJBException("askMDBToSendAMessage: Error!"). A failure to look up the queue or connection
+      factory at bean creation is likewise rethrown as EJBException("AsyncSenderEJB.ejbCreate failed").
+      An EJBException is a system exception and causes the container to roll back the transaction.
+      How each caller handles that exception is outside this shard.
+    confidence: medium
+    confidence_basis: >
+      One clear place each for the send path and the creation path; caller-side handling was only
+      glanced at and not graded here.
+    risk_class: operational
+    basis: >
+      Catch-all around the send rethrows as EJBException; ejbCreate rethrows lookup failure.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+        line_start: 80
+        line_end: 82
+        excerpt: |
+              }catch  (Exception e) {
+                e.printStackTrace();
+                throw new EJBException("askMDBToSendAMessage: Error!",e);
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+        line_start: 58
+        line_end: 66
+        excerpt: |
+            public void ejbCreate( ) throws CreateException {
+                  try {
+                ServiceLocator serviceLocator = new ServiceLocator();
+                qFactory = serviceLocator.getQueueConnectionFactory(JNDINames.QUEUE_CONNECTION_FACTORY);
+                q = serviceLocator.getQueue(JNDINames.ASYNC_SENDER_QUEUE);
+                  } catch (ServiceLocatorException sle) {
+                throw new EJBException("AsyncSenderEJB.ejbCreate failed", sle);
+                  }
+            }
+    stack_metadata:
+      ejb.bean: AsyncSenderEJB
+
+  - record_key: SIGN-ON-BUSINESS-RULE-0001
+    kind: business-rule
+    capability_key: sign-on
+    requirement: >
+      The system SHALL NOT apply any role check of its own to the message hand-off service; it SHALL
+      be available to any in-process caller and SHALL run under the caller's identity.
+    plain_text: >
+      The internal "pass this message on" service has no access restriction of its own; who may
+      trigger it is decided by the screens and actions that use it.
+    technical_note: >
+      ejb-jar.xml grants <unchecked/> method permission on every local and local-home method,
+      including sendAMessage, and the security identity is use-caller-identity. The bean is exposed
+      only through local interfaces.
+    confidence: medium
+    confidence_basis: >
+      Single declarative source (ejb-jar.xml); no programmatic check exists to corroborate or contradict.
+      Filed under sign-on as the closest capability to access control; it is infrastructure, not a
+      user-facing access rule.
+    risk_class: operational
+    basis: >
+      method-permission unchecked over all methods; use-caller-identity.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/ejb-jar.xml
+        line_start: 54
+        line_end: 57
+        excerpt: |
+                <security-identity>
+                  <description></description>
+                  <use-caller-identity></use-caller-identity>
+                </security-identity>
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/ejb-jar.xml
+        line_start: 107
+        line_end: 114
+        excerpt: |
+                <method>
+                  <ejb-name>AsyncSenderEJB</ejb-name>
+                  <method-intf>Local</method-intf>
+                  <method-name>sendAMessage</method-name>
+                  <method-params>
+                    <method-param>java.lang.String</method-param>
+                  </method-params>
+                </method>
+    stack_metadata:
+      ejb.bean: AsyncSenderEJB
+      ejb.method_permission: unchecked
+
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+    record_key: CHECKOUT-BUSINESS-RULE-0001
+    description: >
+      The bean opens a transacted JMS session (createQueueSession(true,0)) and never calls
+      session.commit(). Inside a container-managed transaction the container ignores these
+      arguments and commits with the JTA transaction, so the message is delivered. If the bean were
+      ever invoked without a JTA transaction the message would never be committed. The Required
+      attribute should prevent that; a human should confirm the rebuild must keep "deliver on commit
+      of the caller's work" semantics.
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+    description: >
+      The message carries no properties, priority, expiry or delivery mode override; message
+      format is whatever XML the caller passes. Durability and retry of delivery are left to the
+      JMS provider defaults, which are not visible in source. No requirement emitted for them.
+
+suspected_defects:
+  - capability_key: checkout
+    record_keys: [CHECKOUT-BUSINESS-RULE-0002]
+    severity: low
+    category: error-swallowed
+    title: Failure to close the queue connection is silently ignored
+    description: >
+      After every send, any exception raised while closing the queue connection is caught and
+      discarded with no logging. A connection that fails to close leaves no trace, which can mask
+      resource leaks in the messaging provider.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/asyncsender/src/com/sun/j2ee/blueprints/asyncsender/ejb/AsyncSenderEJB.java
+        line_start: 83
+        line_end: 89
