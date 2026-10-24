@@ -1,0 +1,209 @@
+recommendations:
+  - record_key: ORDER-APPROVAL-BR-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Code (PurchaseOrderMDB.canIApprove, strict < 500) and the English and Japanese
+      guides agree on the US threshold. Production behaviour at exactly 500.00 is
+      pending; the guides' "greater than $500" and the Chinese guide's "not exceeding
+      $500" conflict with that, and the conflict goes to Intent for the Business Owner.
+  - record_key: ORDER-APPROVAL-BR-0002
+    recommendation: accept
+    confidence: medium
+    reason: >
+      One clear code branch, no document. Accept as what production does (Japan < 50000,
+      every other locale never auto-approved). The code calls it a demo stub and the
+      guides promise auto-approval for all small orders, so whether zh_CN orders should
+      be auto-approved goes to Intent.
+  - record_key: ORDER-APPROVAL-WF-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Docs-only in its pass, but the admin client code (DataSource.commit, read by the
+      admin-module passes) confirms the batch commit and the refresh. Duplicates
+      ORDER-APPROVAL-WF-0003, OAPP-WF-0003 and ORDA-WF-0004 and is merged into one
+      requirement.
+  - record_key: ORDER-APPROVAL-WF-0003
+    recommendation: accept
+    confidence: high
+    reason: >
+      The docs statement matches the code-read commit records. Note that the commit is
+      two separate requests (approvals, then denials), not one atomic save.
+  - record_key: ORDER-APPROVAL-SCR-0004
+    recommendation: edit
+    confidence: high
+    reason: >
+      The code confirms the two panes. OrdersViewTableModel lists APPROVED, COMPLETED and
+      DENIED read-only, and the client loads it at start-up as well as on Refresh, not
+      only "on request" as the guide says.
+    edited_requirement: >
+      The system SHALL present a View Non-Pending Orders screen, separate from the
+      pending-orders screen, listing orders whose status is APPROVED, DENIED or COMPLETED
+      with ID, User ID, Date, Amount and Status, read-only and sortable, loaded at
+      start-up and on refresh.
+  - record_key: OAPP-REQ-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The table-model filter, the edit restriction and the combo-box choices agree, and
+      pass B (ORDA-SCR-0003) reads the same code. Merge the two into one screen
+      requirement.
+  - record_key: ORDA-SCR-0003
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same screen as OAPP-REQ-0001, with the column labels and buttons confirmed in
+      petstore.properties. Merge the two. The colour clause is also covered by OAPP-SCR-0009.
+  - record_key: OAPP-SCR-0009
+    recommendation: accept
+    confidence: high
+    reason: >
+      The status renderer in OrdersApprovePanel lines 154-171 sets exactly these
+      backgrounds. It is presentational, and the rebuild may treat it as such.
+  - record_key: OAPP-REQ-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      The Approve/Deny handlers iterate the selected rows and setValueAt only replaces
+      the cached order, so marking is local until commit. Pass B's ORDA-WF-0004 agrees.
+  - record_key: OAPP-WF-0003
+    recommendation: accept
+    confidence: high
+    reason: >
+      DataSource.commit is explicit, and ORDA-WF-0004 reads it identically. The
+      approvals-then-denials order is statement sequence only. Merge with ORDA-WF-0004.
+  - record_key: ORDA-WF-0004
+    recommendation: accept
+    confidence: high
+    reason: >
+      Matches OAPP-WF-0003 and the per-batch request builder in HttpPostPetStoreProxy.
+      Merge the two.
+  - record_key: OAPP-BR-0005
+    recommendation: accept
+    confidence: high
+    reason: >
+      The code scan and the dedicated resource message agree, and ORDA-BR-0006 is the
+      same rule. Merge the two.
+  - record_key: ORDA-BR-0006
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicate of OAPP-BR-0005 from pass B. Merge.
+  - record_key: ORDA-BR-0007
+    recommendation: edit
+    confidence: high
+    reason: >
+      The start-up and refresh loading of the four status lists is explicit in code. The
+      chart-data part belongs to sales-reporting and should be recorded there.
+    edited_requirement: >
+      WHEN the administration tool starts, and whenever the administrator refreshes,
+      the system SHALL load the orders in each of the statuses PENDING, APPROVED, DENIED
+      and COMPLETED.
+  - record_key: OAPP-BR-0007
+    recommendation: accept
+    confidence: high
+    reason: >
+      The DISABLE/ENABLE events and their listeners agree with ORDA-BR-0008. Merge the
+      two and keep the chart-button clause under sales-reporting.
+  - record_key: ORDA-BR-0008
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicate of OAPP-BR-0007 from pass B. Merge.
+  - record_key: OAPP-BR-0008
+    recommendation: accept
+    confidence: high
+    reason: >
+      fatalServerError shows the dialog and calls System.exit(1) from every ServerAction.
+      Confirm this is what the code does. Whether closing the tool and losing uncommitted
+      decisions is acceptable is the Business Owner's call in the defect register.
+  - record_key: ORDA-BR-0009
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicate of OAPP-BR-0008. Merge. The error-swallowing chain behind it is a
+      suspected defect for the register.
+  - record_key: APR-REQ-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The EJB-QL finder (SELECT DISTINCT ... WHERE status = ?1) and the session method
+      agree. Merge with ORDA-REQ-0002, which describes the admin-facing reply.
+  - record_key: ORDA-REQ-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      The client request builder, the servlet dispatcher and the delegate agree on the
+      message and the delegated call.
+  - record_key: ORDA-ENT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The same five fields appear in the server response builder and the client parser,
+      and the status constants are re-checked in the parser.
+  - record_key: OAPP-BR-0006
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The servlet's null-skip and the empty checkStatus confirm that no value validation
+      exists. Confirm that as code behaviour. Whether the server should restrict values
+      to APPROVED/DENIED and to orders still PENDING is a defect-register decision.
+  - record_key: OAPP-INT-0004
+    recommendation: accept
+    confidence: high
+    reason: >
+      The servlet, the delegate and the queue binding agree, and ORDA-INT-0005 is the
+      same behaviour. Merge. "SUCCESS" means queued, not applied.
+  - record_key: ORDA-INT-0005
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicate of OAPP-INT-0004 plus OAPP-BR-0006's null-skip. Merge.
+  - record_key: ORDER-APPROVAL-INTEGRATION-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The bean, the queue declaration, the admin binding and the caller all agree (both
+      asyncsender passes). Merge with order-approval-INT-0001.
+  - record_key: order-approval-INT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Queue creation in setup.xml plus the admin binding. It also carries
+      PurchaseOrderMDB's auto-approvals, which raises confidence above the pass's medium.
+      Merge with ORDER-APPROVAL-INTEGRATION-0001.
+  - record_key: APPR-INT-0001
+    recommendation: reject
+    confidence: medium
+    reason: >
+      The pass inferred the flow from the queue name alone and got the direction wrong:
+      the queue carries approval decisions, not orders awaiting approval (admin binding,
+      PurchaseOrderMDB.doTransition). ORDER-APPROVAL-INTEGRATION-0001 and
+      order-approval-INT-0001 cover the behaviour correctly.
+  - record_key: OA-ENT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The DTD and the fromDOM checks agree, and pass A (OAPP-ENT-0001) reads the same
+      code. Pass B says the Java reader accepts zero entries, but pass A cites
+      fromDOM requiring the first Order child, which the code supports. Merge the two.
+  - record_key: OAPP-ENT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The DTD content model plus the Java deserializer are two independent enforcements.
+      The writer-side null defect is for the register.
+  - record_key: OA-BR-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The DTD declares OrderStatus as #PCDATA with no enumeration and ChangedOrder stores
+      it raw. Whether a closed set should be enforced is a defect-register question
+      tied to OAPP-BR-0006.
+  - record_key: OAPP-BR-0002
+    recommendation: accept
+    confidence: low
+    reason: >
+      The default constant is clear, but production consumers pass a deployment flag
+      whose value was not read. Settle it by checking XML_VALIDATION_ORDER_APPROVAL in the
+      OPC deployment descriptor before approving.
