@@ -1,0 +1,243 @@
+# SX-0001 synthesize shopping-cart: recommendations, not decisions.
+# Record keys repeat across pass files with different content, so each entry
+# names the pass file it refers to in `source` (relative to
+# legacy-analysis/ir/_passes/legacy-source/petstore1.3.2/).
+recommendations:
+  # src/components/cart/a.yaml
+  - record_key: SC-ENT-0001
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The item-id-keyed map in ShoppingCartLocalEJB and the Stateful descriptor agree. Pass B's
+      SC-RULE-0006 and petstore CART-RULE-0005 say the same.
+  - record_key: SC-ENT-0002
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The CartItem fields and getTotalCost match getItems(). It duplicates pass B's SC-ENT-0001.
+  - record_key: SC-BR-0001
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The code says put(itemId, 1), and CartEJBAction is the only caller and calls it without
+      a lookup. That raises the pass's medium confidence. Whether a reset-on-re-add is right is
+      a Business Owner decision in the defect register (design.md D1).
+  - record_key: SC-BR-0002
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The remove-then-conditional-put code and its comment agree. Add-if-absent is read
+      correctly from the code.
+  - record_key: SC-REQ-0001
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: deleteItem is reached from the Remove link through CartEJBAction DELETE_ITEM.
+  - record_key: SC-REQ-0002
+    source: src/components/cart/a.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      The caller is visible: OrderEJBAction line 167 empties the cart after the order is sent.
+      Pass B's SC-REQ-0002 states the trigger. This record should too.
+    edited_requirement: >
+      The system SHALL remove every line from the shopper's cart once an order has been placed
+      from it.
+  - record_key: SC-BR-0003
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: getCount and ShoppingCartModel.getSize both count lines. The empty-cart screen check uses the same count.
+  - record_key: SC-BR-0004
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The same formula is implemented twice and matches pass B's SC-RULE-0003. Checkout's
+      order total states the same rule for the order.
+  - record_key: SC-BR-0005
+    source: src/components/cart/a.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The catch block exists, but the trigger is wrong. On the EJB path the cart uses,
+      GenericCatalogDAO.getItem returns null for a missing item, which causes a
+      NullPointerException. A SQL failure is wrapped in an EJBException. Only a failure to
+      create the catalog EJB raises CatalogException. Confirm on a running instance. Whether
+      a missing item crashing the cart is acceptable is a Business Owner decision (design.md D2).
+    edited_requirement: >
+      GIVEN a cart line for which the catalog cannot be consulted WHEN the cart contents or
+      subtotal are read THEN the system SHALL leave that line out of the listed contents and
+      the subtotal, SHALL keep it in the cart, and SHALL still count it in the item count.
+  - record_key: SC-BR-0007
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The web tier agrees with the descriptor: cart.do is not in signon-config.xml's protected
+      list, as petstore CART-REQ-0001 also notes. The "may be stricter" caveat is resolved.
+  - record_key: SC-BR-0008
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The cart has no persistence anywhere. The petstore pass also shows sign-out replacing the
+      cart (CART-RULE-0005), which confirms session-only lifetime.
+  - record_key: SC-BR-0009
+    source: src/components/cart/a.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      addItem(String, int) is not on the local interface and has no descriptor entry. Pass B
+      found no caller across legacy-source. It is dead code. The reachability question goes to
+      Intent (design.md Q1), and the record is left out of the spec.
+  - record_key: SC-BR-0010
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      cart.jsp iterates cart.items without sorting, so HashMap order reaches the screen. It is
+      written as a MAY, so the rebuild is free to sort.
+  # src/components/cart/b.yaml
+  - record_key: SC-RULE-0001
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      It agrees with SC-BR-0001 and cites the caller. It overrides petstore pass A's
+      "each click adds one unit" wording.
+  - record_key: SC-RULE-0002
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      It matches the code. The only upper bound is the markup maxlength of 10 on the cart
+      page, which is not a server rule.
+  - record_key: SC-REQ-0001
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: It duplicates cart pass A's SC-REQ-0001 and petstore CART-REQ-0002.
+  - record_key: SC-RULE-0003
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: It duplicates SC-BR-0004, and both implementations agree.
+  - record_key: SC-RULE-0004
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: It duplicates SC-BR-0003.
+  - record_key: SC-RULE-0005
+    source: src/components/cart/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The locale default of Locale.US is right. The omission clause has the same wrong trigger
+      as SC-BR-0005: a not-found item causes a NullPointerException rather than being skipped.
+      The pass itself suspected this. Keep the locale rule and move the omission rule to the
+      narrower failure case.
+    edited_requirement: >
+      The system SHALL read cart line details (product name, attribute, category and unit
+      price) from the catalog in the shopper's current locale, and SHALL use US English when
+      no locale has been set.
+  - record_key: SC-REQ-0002
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: OrderEJBAction line 167 calls cart.empty() at the end of order placement.
+  - record_key: SC-RULE-0006
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: The descriptor and the bean agree. It duplicates SC-ENT-0001 and SC-BR-0008.
+  - record_key: SC-RULE-0007
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The descriptor marks cart methods unchecked, and cart.do is absent from the sign-on
+      protected list.
+  - record_key: SC-ENT-0001
+    source: src/components/cart/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: It duplicates cart pass A's SC-ENT-0002. The key collides with cart pass A's SC-ENT-0001 entity record.
+  - record_key: SC-RULE-0008
+    source: src/components/cart/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      This is dead code, the same as SC-BR-0009. No interface, descriptor entry or caller
+      exposes it. Reachability goes to Intent (design.md Q1).
+  # src/apps/petstore/a.yaml
+  - record_key: CART-REQ-0001
+    source: src/apps/petstore/a.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      The add path is correct, but "adding a quantity of 1 per action" and "each click adds one
+      unit" read as an increment. The cart component resets the quantity to 1 (SC-BR-0001,
+      SC-RULE-0001).
+    edited_requirement: >
+      The system SHALL let a shopper, signed on or not, add an item to the shopping cart from
+      the product list, the item page or search results, setting that item's cart quantity to 1.
+  - record_key: CART-REQ-0002
+    source: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: The screen link, web action and EJB action agree.
+  - record_key: CART-BR-0003
+    source: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The open point (zero-removes enforced only by comment) is settled by the cart component's
+      updateItemQuantity. That code also removes negative quantities, which this record left
+      open.
+  - record_key: CART-SCR-0004
+    source: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      It matches cart.jsp lines 42-110. The record omits the Update Cart control, which pass B
+      includes. The spec's screen requirement carries both.
+  # src/apps/petstore/b.yaml
+  - record_key: CART-REQ-0001
+    source: src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      "Adding it with a quantity of one" is correct for a new line. It should state that a
+      re-add resets to 1, now that the cart component has been read.
+    edited_requirement: >
+      The system SHALL let a shopper add an item to the shopping cart from the product
+      listing, the item detail page or search results, setting that item's cart quantity to
+      one, including when the item is already in the cart.
+  - record_key: CART-REQ-0002
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: It duplicates petstore pass A's CART-REQ-0002.
+  - record_key: CART-RULE-0003
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: It duplicates CART-BR-0003, and the cart component confirms zero removes.
+  - record_key: CART-SCR-0004
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: It matches cart.jsp, including the Update Cart button, and the screen definition.
+  - record_key: CART-RULE-0005
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The lazy single creation and the sign-off replacement are both read in code. Removal of
+      the old stateful beans depends on the framework, but the shopper sees an empty cart
+      either way.
