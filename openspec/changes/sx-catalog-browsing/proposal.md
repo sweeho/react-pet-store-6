@@ -4,8 +4,8 @@ The Java Pet Store 1.3.2 catalog (categories, products, items, keyword search an
 
 ## What Changes
 
-- Add the `catalog-browsing` capability with its two SME-approved requirements: keyword search (CAT-BR-0002, SWHR2-R-0001) and the catalog read paths with failure reporting (CAT-INT-0001, SWHR2-R-0002).
-- The other 24 records of this capability, including both screen records (home pet-selection screen, item detail screen), are not yet approved and are Not specified; `design.md` keeps the legacy notes behind them for when they are.
+- Add the `catalog-browsing` capability with its 17 SME-approved requirements: category, product and item data model and category codes; per-locale details and locale-scoped item visibility; category listing and paging defaults; keyword tokenizing and search; read paths and failure reporting; the shared 5-minute page cache; the home screen, category navigation panel, category product list and item detail page; and the home-to-item browse flow.
+- The remaining records of this capability, including the item screen record CAT-SCR-0005, are not yet approved and are Not specified; `design.md` keeps the legacy notes behind them.
 - Records disputed in the IR (search case sensitivity, active DAO, unreachable keyword parser) are flagged in `design.md` and in `legacy-analysis/ir/_recommendations/catalog-browsing.yaml`; suspected legacy defects are listed for the Business Owner and are not specified as required behaviour.
 
 ## Capabilities
@@ -20,5 +20,5 @@ None.
 
 ## Impact
 
-- `spec.md` carries exactly the two approved requirement keys; pending records enter it only once approved.
+- `spec.md` carries exactly the 17 approved requirement keys; pending records enter it only once approved.
 - Touches neighbouring capabilities: Add to Cart hands off to the shopping cart; locale selection and the language switch belong to localization; unit price is what checkout charges.

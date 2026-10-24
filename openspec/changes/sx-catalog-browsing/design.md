@@ -4,7 +4,17 @@ How Java Pet Store 1.3.2 implements the behaviour in `specs/catalog-browsing/spe
 
 ## Source of the records
 
-50 IR records under `capability_key: catalog-browsing` were read from the pass files for `src/components/catalog` (a, b), `src/apps/petstore` (a, b), `src/waf` (a, b), `src/components/util` (a) and `docs` (a, b, c). Several record keys are reused across modules with different content (for example `CAT-ENT-0001`, `CAT-REQ-0001`..`0005`, `CAT-BR-0001`, `CAT-BR-0006`), so recommendations are listed per pass file. The server reports 26 ingested records and 2 screens. In the pass files, `CAT-SCR-0001` and `CAT-SCR-0002` both describe the home screen (`CAT-SCR-0002` adds the side panel), and `CAT-SCR-0005` describes the item screen. That gives two distinct screens. Neither screen record is approved yet, so both are Not specified in `spec.md`; only CAT-BR-0002 (SWHR2-R-0001) and CAT-INT-0001 (SWHR2-R-0002) are approved and specified. The notes below cover all records so the pending ones can be specified once approved.
+IR records under `capability_key: catalog-browsing` were read from the pass files for `src/components/catalog` (a, b), `src/apps/petstore` (a, b), `src/waf` (b), `src/components/util` (a) and `docs` (a, b, c). 17 records are approved and each is one requirement in `spec.md`; the rest are Not specified and carry a recommendation in `legacy-analysis/ir/_recommendations/catalog-browsing.yaml`. The two screen requirements are `CAT-SCR-0001` (home pet selection, `main.jsp`) and `CAT-SCR-0002` (home plus the category side panel, `main.jsp` and `sidebar.jsp`); the item screen record `CAT-SCR-0005` is pending, though approved `CAT-REQ-0005` already states the item detail page.
+
+Several record keys are reused across pass files with different text. Where an approved key has more than one text, `spec.md` uses the text from the first pass file in path order (`docs` < `src/apps` < `src/components` < `src/waf`), and the other text is listed in the recommendations file for re-keying:
+
+- `CAT-BR-0001`: catalog/a (item needs a localized product) is used; waf/b (`I18nUtil.parseKeywords`, no caller) is not.
+- `CAT-ENT-0001`: apps/a (three-level hierarchy) is used; catalog/a (category field lengths) is not. Category id length and uniqueness are carried by `CATALOG-BROWSING-ENT-0001` and `CATALOG-BROWSING-ENTITY-0001`.
+- `CAT-REQ-0001`: catalog/a (list categories) is used; util/a (compiled-out debug helper) is not.
+- `CAT-REQ-0003`: apps/a (category product list with Previous/Next) is used; catalog/a (items of a product, no order) is not.
+- `CAT-REQ-0005`: apps/a (item detail page) is used; catalog/a (catalog reads need no sign-on) is not.
+
+If the SME approved the other text for any of these, the requirement under that ID must be rewritten from it.
 
 ## Data model
 

@@ -1,74 +1,14 @@
 # SX-0001 synthesize catalog-browsing: recommendations, not decisions.
 # Record keys repeat across pass files with different content, so each entry
-# names the pass file it refers to in `source`.
+# names the pass file it refers to in `source`. Approved texts used in spec.md are omitted.
 recommendations:
-  # docs/a.yaml
-  - record_key: CATALOG-BROWSING-REQ-0001
-    source: docs/a.yaml
-    recommendation: accept
-    confidence: medium
-    reason: >
-      The configuration guide agrees with the DAO SQL (locale filter, ORDER BY name) and
-      with code-derived records CAT-REQ-0001 and CAT-ENT-0001. It duplicates them.
-  - record_key: CATALOG-BROWSING-ENTITY-0001
-    source: docs/a.yaml
-    recommendation: accept
-    confidence: high
-    reason: >
-      The documented DDL matches PopulateSQL.xml lines 51-52 exactly. It duplicates CAT-ENT-0001.
-  # docs/b.yaml
-  - record_key: CATALOG-BROWSING-BR-0001
-    source: docs/b.yaml
-    recommendation: accept
-    confidence: medium
-    reason: Same content as CATALOG-BROWSING-REQ-0001, and confirmed by CatalogDAOSQL.xml.
-  - record_key: CATALOG-BROWSING-ENT-0001
-    source: docs/b.yaml
-    recommendation: accept
-    confidence: high
-    reason: Same content as CATALOG-BROWSING-ENTITY-0001, and confirmed by the DDL.
-  # docs/c.yaml
-  - record_key: CATALOG-BROWSING-WF-0001
-    source: docs/c.yaml
-    recommendation: accept
-    confidence: medium
-    reason: >
-      The user guide's home → category → product → item flow matches the links in main.jsp,
-      category.jsp and product.jsp.
-  # src/apps/petstore/a.yaml
-  - record_key: CAT-ENT-0001
-    source: src/apps/petstore/a.yaml
-    recommendation: accept
-    confidence: high
-    reason: The DDL constraints and the DAO joins agree.
-  - record_key: CAT-SCR-0002
-    source: src/apps/petstore/a.yaml
-    recommendation: edit
-    confidence: medium
-    reason: >
-      main.jsp and sidebar.jsp support it. It combines two surfaces, so split it into the
-      home screen and the navigation panel. The panel's 5-category cap comes from sidebar.jsp.
-    edited_requirement: >
-      The home screen SHALL display a pet selection picture whose regions link to the
-      category pages for Birds, Fish, Dogs, Reptiles and Cats, alongside the category
-      navigation panel.
-  - record_key: CAT-REQ-0003
-    source: src/apps/petstore/a.yaml
-    recommendation: accept
-    confidence: medium
-    reason: category.jsp paging and GET_PRODUCTS ORDER BY name agree. It duplicates CAT-RULE-0003.
   - record_key: CAT-REQ-0004
     source: src/apps/petstore/a.yaml
     recommendation: accept
     confidence: medium
     reason: >
-      product.jsp prints listCost. The list-price vs unit-price inconsistency with search
-      (design D8) goes to the Business Owner as a suspected defect.
-  - record_key: CAT-REQ-0005
-    source: src/apps/petstore/a.yaml
-    recommendation: accept
-    confidence: high
-    reason: item.jsp labels listCost "List Price" and unitCost "Your Price", and GET_ITEM returns both.
+      product.jsp prints listCost. The list-price vs unit-price inconsistency with search (design
+      D8) goes to the Business Owner as a suspected defect.
   - record_key: CAT-BR-0006
     source: src/apps/petstore/a.yaml
     recommendation: accept
@@ -76,33 +16,13 @@ recommendations:
     reason: >
       search.jsp and SEARCH_ITEMS agree on OR matching and the no-results message.
       Case-insensitivity depends on the active DAO, which is disputed (see CAT-BR-0002).
-  - record_key: CAT-BR-0007
-    source: src/apps/petstore/a.yaml
-    recommendation: edit
-    confidence: medium
-    reason: >
-      The waf:cache tags confirm 5-minute application-scope caching. The cache is a legacy
-      performance device, so the rebuild should be allowed (not required) to cache, as long
-      as the 5-minute staleness bound holds.
-    edited_requirement: >
-      The system MAY serve the category page, product page and category navigation panel
-      from a copy shared by all shoppers that SHALL be no older than 5 minutes.
-  # src/apps/petstore/b.yaml
-  - record_key: CAT-SCR-0001
-    source: src/apps/petstore/b.yaml
-    recommendation: accept
-    confidence: high
-    reason: >
-      The main.jsp image map links to exactly these five categories (BIRDS appears twice).
-      It is the same screen as CAT-SCR-0002.
   - record_key: CAT-REQ-0002
     source: src/apps/petstore/b.yaml
     recommendation: accept
     confidence: high
     reason: >
-      sidebar.jsp sets count=5 and start=0, and GET_CATEGORIES orders by name. The panel's
-      locale is hard-coded en_US in the legacy code, so the localization capability owns
-      which locale applies.
+      sidebar.jsp sets count=5 and start=0, and GET_CATEGORIES orders by name. The panel's locale is
+      hard-coded en_US in the legacy code, so the localization capability owns which locale applies.
   - record_key: CAT-RULE-0003
     source: src/apps/petstore/b.yaml
     recommendation: accept
@@ -123,47 +43,44 @@ recommendations:
     recommendation: accept
     confidence: medium
     reason: >
-      search.jsp displays unit price, two per page. The reachability dispute (which DAO is
-      deployed) does not change what the page displays. Settle it with the unredacted web.xml.
+      search.jsp displays unit price, two per page. The reachability dispute (which DAO is deployed)
+      does not change what the page displays. Settle it with the unredacted web.xml.
   - record_key: CAT-RULE-0007
     source: src/apps/petstore/b.yaml
     recommendation: edit
     confidence: medium
     reason: Same as apps/a CAT-BR-0007. Make caching permissive with a staleness bound.
     edited_requirement: >
-      The system MAY serve the category page, product page and category navigation panel
-      from a copy shared by all shoppers, keyed by page address and query, that SHALL be
-      no older than 5 minutes.
+      The system MAY serve the category page, product page and category navigation panel from a copy
+      shared by all shoppers, keyed by page address and query, that SHALL be no older than 5
+      minutes.
   - record_key: CAT-ENT-0008
     source: src/apps/petstore/b.yaml
     recommendation: accept
     confidence: high
     reason: >
-      Matches the PopulateSQL.xml DDL column by column. The category and product image
-      columns exist but are never read (catalog/a CAT-ENT-0001).
-  # src/components/catalog/a.yaml
+      Matches the PopulateSQL.xml DDL column by column. The category and product image columns exist
+      but are never read (catalog/a CAT-ENT-0001).
   - record_key: CAT-ENT-0001
     source: src/components/catalog/a.yaml
     recommendation: accept
     confidence: high
-    reason: The DDL (PK, NOT NULL, FK) and the Category model agree.
+    reason: This key is approved as SWHR2-R-0037, but spec.md uses the src/apps/petstore/a.yaml text of
+      it, not this one. Give this text its own record key so it can be reviewed separately. The DDL
+      (PK, NOT NULL, FK) and the Category model agree.
   - record_key: CAT-ENT-0002
     source: src/components/catalog/a.yaml
     recommendation: accept
     confidence: high
-    reason: The DDL and the Product model agree. The NULL-description crash is filed separately (design D3).
+    reason: The DDL and the Product model agree. The NULL-description crash is filed separately (design
+      D3).
   - record_key: CAT-ENT-0003
     source: src/components/catalog/a.yaml
     recommendation: accept
     confidence: high
     reason: >
-      The DDL types and nullability are explicit. Carrying prices as double is a suspected
-      defect (D4) and not part of the requirement.
-  - record_key: CAT-REQ-0001
-    source: src/components/catalog/a.yaml
-    recommendation: accept
-    confidence: high
-    reason: Both DAO SQL sources contain the same GET_CATEGORIES statement.
+      The DDL types and nullability are explicit. Carrying prices as double is a suspected defect
+      (D4) and not part of the requirement.
   - record_key: CAT-REQ-0002
     source: src/components/catalog/a.yaml
     recommendation: accept
@@ -173,60 +90,32 @@ recommendations:
     source: src/components/catalog/a.yaml
     recommendation: accept
     confidence: medium
-    reason: >
-      GET_ITEMS has no ORDER BY in either source. Whether the rebuild should impose an order
-      is a product choice. The swapped category/product ids (D2) go to the defect register.
+    reason: This key is approved as SWHR2-R-0039, but spec.md uses the src/apps/petstore/a.yaml text of
+      it, not this one. Give this text its own record key so it can be reviewed separately.
+      GET_ITEMS has no ORDER BY in either source. Whether the rebuild should impose an order is a
+      product choice. The swapped category/product ids (D2) go to the defect register.
   - record_key: CAT-REQ-0004
     source: src/components/catalog/a.yaml
     recommendation: accept
     confidence: high
-    reason: >
+    reason: |
       Both DAOs return null on an empty result set, and no code has a locale fallback.
-  - record_key: CAT-BR-0001
-    source: src/components/catalog/a.yaml
-    recommendation: accept
-    confidence: high
-    reason: The b.locale = c.locale inner join is present in GET_ITEM, GET_ITEMS and SEARCH_ITEMS in both SQL sources.
-  - record_key: CAT-BR-0002
-    source: src/components/catalog/a.yaml
-    recommendation: accept
-    confidence: medium
-    reason: >
-      Tokenizing and substring matching agree across both DAOs. On case, I would trust the
-      lower-cased columns as intent and treat the GenericCatalogDAO behaviour as a defect
-      (D1). The conflict goes to Intent for the Business Owner, and the deployed
-      param/CatalogDAOClass value settles what production does today.
   - record_key: CAT-BR-0003
     source: src/components/catalog/a.yaml
     recommendation: accept
     confidence: high
     reason: >
-      The paging loop and Page.java are unambiguous. Confirm the previous-start formula and
-      the count<=0 behaviour are what the code does. Whether they are right is the Business
-      Owner's call in the defect register (D5, D6).
-  - record_key: CAT-BR-0004
-    source: src/components/catalog/a.yaml
-    recommendation: accept
-    confidence: medium
-    reason: The CatalogHelper defaults and the JSP fallbacks both set 2/0. The value is a bare literal with no stated rationale.
+      The paging loop and Page.java are unambiguous. Confirm the previous-start formula and the
+      count<=0 behaviour are what the code does. Whether they are right is the Business Owner's call
+      in the defect register (D5, D6).
   - record_key: CAT-REQ-0005
     source: src/components/catalog/a.yaml
     recommendation: accept
     confidence: high
-    reason: >
-      ejb-jar.xml declares method-permission unchecked, and the fast-lane path has no
-      security check. The two sources are independent.
-  - record_key: CAT-INT-0001
-    source: src/components/catalog/a.yaml
-    recommendation: edit
-    confidence: medium
-    reason: >
-      The dual read path and DAO selection are legacy implementation detail. Only the
-      failure-reporting behaviour is a requirement, and it is already stated by CATB-RULE-0015.
-    edited_requirement: >
-      The system MUST report an error to the caller when the catalog store cannot be
-      reached or a catalog query fails.
-  # src/components/catalog/b.yaml
+    reason: This key is approved as SWHR2-R-0040, but spec.md uses the src/apps/petstore/a.yaml text of
+      it, not this one. Give this text its own record key so it can be reviewed separately.
+      ejb-jar.xml declares method-permission unchecked, and the fast-lane path has no security
+      check. The two sources are independent.
   - record_key: CATB-REQ-0001
     source: src/components/catalog/b.yaml
     recommendation: accept
@@ -262,11 +151,6 @@ recommendations:
     recommendation: accept
     confidence: medium
     reason: Same as catalog/a CAT-BR-0004.
-  - record_key: CATB-RULE-0008
-    source: src/components/catalog/b.yaml
-    recommendation: accept
-    confidence: high
-    reason: Both DAOs use the same StringTokenizer-into-HashSet logic and short-circuit on an empty set.
   - record_key: CATB-RULE-0009
     source: src/components/catalog/b.yaml
     recommendation: accept
@@ -277,9 +161,9 @@ recommendations:
     recommendation: accept
     confidence: low
     reason: >
-      Case-insensitive matching is the evident intent, but the two DAOs disagree. The
-      conflict goes to Intent for the Business Owner, and the deployed param/CatalogDAOClass
-      settles what production does.
+      Case-insensitive matching is the evident intent, but the two DAOs disagree. The conflict goes
+      to Intent for the Business Owner, and the deployed param/CatalogDAOClass settles what
+      production does.
   - record_key: CATB-ENT-0011
     source: src/components/catalog/b.yaml
     recommendation: accept
@@ -290,39 +174,38 @@ recommendations:
     recommendation: edit
     confidence: medium
     reason: >
-      The item shape is confirmed by DDL. The attribute-index-out-of-range fallback is an
-      accessor quirk of the legacy model, not behaviour a user can observe.
+      The item shape is confirmed by DDL. The attribute-index-out-of-range fallback is an accessor
+      quirk of the legacy model, not behaviour a user can observe.
     edited_requirement: >
-      The system SHALL model an Item as an identifier belonging to one product and
-      carrying, per locale, an image location, a description, up to five free-text
-      attributes, a list price and a unit price.
+      The system SHALL model an Item as an identifier belonging to one product and carrying, per
+      locale, an image location, a description, up to five free-text attributes, a list price and a
+      unit price.
   - record_key: CATB-RULE-0015
     source: src/components/catalog/b.yaml
     recommendation: accept
     confidence: high
     reason: >
-      Both read paths convert SQL and naming errors into exceptions that reach the caller.
-      The connection leak is a separate defect (D7).
-  # src/components/util/a.yaml
+      Both read paths convert SQL and naming errors into exceptions that reach the caller. The
+      connection leak is a separate defect (D7).
   - record_key: CAT-REQ-0001
     source: src/components/util/a.yaml
     recommendation: reject
     confidence: high
-    reason: >
-      A debug helper compiled out by a constant is not catalog behaviour and not a
-      requirement the rebuild should copy. Whether to require operational logging is a
-      separate decision, and the silent swallowing goes to the defect register (D9).
-  # src/waf/a.yaml
+    reason: This key is approved as SWHR2-R-0038, but spec.md uses the src/components/catalog/a.yaml
+      text of it, not this one. Give this text its own record key so it can be reviewed separately.
+      A debug helper compiled out by a constant is not catalog behaviour and not a requirement the
+      rebuild should copy. Whether to require operational logging is a separate decision, and the
+      silent swallowing goes to the defect register (D9).
   - record_key: CAT-BR-0006
     source: src/waf/a.yaml
     recommendation: edit
     confidence: medium
     reason: >
-      This is a generic fragment-cache mechanism. The catalog requirement is the staleness
-      bound on the three cached pages, so merge it into the cache requirement.
+      This is a generic fragment-cache mechanism. The catalog requirement is the staleness bound on
+      the three cached pages, so merge it into the cache requirement.
     edited_requirement: >
-      The system MAY serve catalog pages from a shared copy that SHALL be discarded and
-      re-rendered once it is older than 5 minutes.
+      The system MAY serve catalog pages from a shared copy that SHALL be discarded and re-rendered
+      once it is older than 5 minutes.
   - record_key: CAT-WF-0009
     source: src/waf/a.yaml
     recommendation: accept
@@ -330,11 +213,11 @@ recommendations:
     reason: >
       TemplateServlet and ClientStateFlowHandler are wired through mappings.xml. It overlaps
       localization, and the SME may prefer to move it there.
-  # src/waf/b.yaml
   - record_key: CAT-BR-0001
     source: src/waf/b.yaml
     recommendation: reject
     confidence: medium
-    reason: >
+    reason: This key is approved as SWHR2-R-0127, but spec.md uses the src/components/catalog/a.yaml
+      text of it, not this one. Give this text its own record key so it can be reviewed separately.
       I18nUtil.parseKeywords has no caller in the tree, and the catalog DAOs tokenize with
       StringTokenizer. Confirm no out-of-tree caller exists before rejecting.
