@@ -44,27 +44,19 @@ No screen records were extracted for this capability; its user interface is unsp
 
 ## Decisions and disputes
 
-- **D1 Notification default is not stated in the spec.** `docs/configuring.html` 49-51 says the e-mails are disabled by default, while its own snippets (145, 151, 157) show `true` and tell the reader to "ensure" it is true. The deployed values in `opc/src/ejb-jar.xml` (417, 507, 593) are redacted. The spec requires independent switches and omits the default. The conflict goes to Intent for the Business Owner; the unredacted descriptor or a test deployment settles what production does.
+- **D1 Notification default is disputed.** `docs/configuring.html` 49-51 says the e-mails are disabled by default, while its own snippets (145, 151, 157) show `true` and tell the reader to "ensure" it is true. The deployed values in `opc/src/ejb-jar.xml` (417, 507, 593) are redacted. The approved record CUSTOMER-NOTIFICATIONS-BR-0001 states the documented default (disabled unless enabled at deployment), so the spec carries it; the conflict still goes to Intent for the Business Owner, and the unredacted descriptor or a test deployment settles what production does.
 - **D2 Silent discard is specified as current behaviour.** The code is unambiguous and both mailer passes agree. Whether losing a customer e-mail without retry or alert is acceptable is a Business Owner decision in the defect register.
-- **D3 Duplicate records merged.** Passes a and b of each module produced near-identical records (`CN-*` vs `NOTIF-*`, the three `CUSTOMER-NOTIFICATIONS-REQ-0001` variants). Each pair became one requirement; the recommendation file maps them.
+- **D3 Only approved records are specified.** `spec.md` carries the four records an SME approved (table below). The other records of this capability (asynchronous delivery, channels, request format, message composition, content as supplied, send-failure discard, malformed-request rollback, the order e-mail sequence, missing-switch startup failure) are pending review and are Not specified; the legacy notes above still describe them, and `legacy-analysis/ir/_recommendations/customer-notifications.yaml` carries a recommendation for each.
 - **D4 Approval-denial e-mail.** Neither the docs nor the extracted records mention an e-mail when an order is denied. Nothing is specified for it; it is not known whether the legacy sends one.
 
 ## Requirement-to-record traceability
 
-| Requirement                                | Records                                                                                                  |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Asynchronous e-mail delivery               | CN-INT-0001, NOTIF-INT-0001 (mailer/b)                                                                   |
-| Dedicated notification channels            | customer-notifications-INT-0001, NOTIF-INT-0001 (setup.xml/b)                                            |
-| E-mail request format                      | CN-ENT-0001, NOTIF-ENT-0001                                                                              |
-| E-mail message composition                 | CN-REQ-0001, NOTIF-RULE-0001                                                                             |
-| Content delivered as supplied              | CN-REQ-0002, NOTIF-RULE-0004                                                                             |
-| Recipient address list                     | CN-REQ-0003                                                                                              |
-| Send failure handling                      | CN-BR-0001, NOTIF-RULE-0002                                                                              |
-| Malformed request rejection                | CN-BR-0002, NOTIF-RULE-0003                                                                              |
-| Order notification e-mails                 | CUSTOMER-NOTIFICATIONS-REQ-0001 (docs/b), CUSTOMER-NOTIFICATIONS-BR-0002, CUSTOMER-NOTIFICATIONS-WF-0001 |
-| Independent notification switches          | CUSTOMER-NOTIFICATIONS-REQ-0001 (docs/a, docs/c), CUSTOMER-NOTIFICATIONS-BR-0001                         |
-| Missing notification setting fails startup | CUSTNOTIF-BR-0001, NOTIFY-BUSINESS-RULE-0001                                                             |
-| Configurable mail server and sender        | CUSTOMER-NOTIFICATIONS-REQ-0002, CUSTOMER-NOTIFICATIONS-INT-0001                                         |
+| Requirement                                               | ID           | Record                          |
+| --------------------------------------------------------- | ------------ | ------------------------------- |
+| Independently switchable order notifications              | SWHR2-R-0015 | CUSTOMER-NOTIFICATIONS-REQ-0001 |
+| Order notifications disabled unless enabled at deployment | SWHR2-R-0014 | CUSTOMER-NOTIFICATIONS-BR-0001  |
+| Recipient address list                                    | SWHR2-R-0016 | CN-REQ-0003                     |
+| Configurable mail server and sender                       | SWHR2-R-0017 | CUSTOMER-NOTIFICATIONS-REQ-0002 |
 
 ## Risks / gaps
 

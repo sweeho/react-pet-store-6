@@ -58,13 +58,6 @@ recommendations:
     confidence: high
     reason: >
       Same behaviour as CN-REQ-0002 plus the UTF-8 encoding already in CN-REQ-0001. Merge.
-  - record_key: CN-REQ-0003
-    recommendation: accept
-    confidence: low
-    reason: >
-      InternetAddress.parse(addr, false) does accept a comma-separated list, but nothing says
-      producers rely on it; they probably send one customer address. Accept it as what the code
-      allows, but ask the SME whether the rebuild has to support multiple recipients.
   - record_key: CN-BR-0001
     recommendation: accept
     confidence: high
@@ -90,29 +83,6 @@ recommendations:
     confidence: medium
     reason: >
       Duplicate of CN-BR-0002. Merge into it.
-  - record_key: CUSTOMER-NOTIFICATIONS-REQ-0001
-    recommendation: edit
-    confidence: medium
-    reason: >
-      Three passes (docs/a, docs/b, docs/c) used this key for two rules. docs/b describes the
-      e-mail sequence (duplicate of CUSTOMER-NOTIFICATIONS-WF-0001). docs/a and docs/c describe
-      the independent switches plus a disputed "disabled by default". The switches are confirmed
-      by the descriptor and the approval-mail gate. The default contradicts the same guide's
-      snippets, and the deployed values are redacted, so the default goes to Intent for the
-      Business Owner. Approve the switches without the default.
-    edited_requirement: >
-      The system SHALL allow each of the three order notifications (approval, fulfilment
-      confirmation, completion) to be enabled or disabled independently by deployment
-      configuration, and MUST NOT send a notification of a kind that is disabled.
-  - record_key: CUSTOMER-NOTIFICATIONS-BR-0001
-    recommendation: edit
-    confidence: medium
-    reason: >
-      Same switches-plus-default rule as CUSTOMER-NOTIFICATIONS-REQ-0001 (docs/a, c), with the same
-      documentation conflict on the default. Drop the default clause and send the conflict to Intent.
-    edited_requirement: >
-      The system SHALL allow each of the three order notifications to be enabled or disabled
-      independently by deployment configuration.
   - record_key: CUSTOMER-NOTIFICATIONS-WF-0001
     recommendation: accept
     confidence: medium
@@ -125,13 +95,6 @@ recommendations:
     confidence: medium
     reason: >
       Duplicate of CUSTOMER-NOTIFICATIONS-WF-0001 from the same document paragraph. Merge.
-  - record_key: CUSTOMER-NOTIFICATIONS-REQ-0002
-    recommendation: accept
-    confidence: high
-    reason: >
-      The sender literal in the docs matches sun-j2ee-ri.xml line 404, which
-      CUSTOMER-NOTIFICATIONS-INT-0001 cites, so the low confidence on this record can be raised.
-      Duplicate of that record; merge.
   - record_key: CUSTOMER-NOTIFICATIONS-INT-0001
     recommendation: accept
     confidence: high
