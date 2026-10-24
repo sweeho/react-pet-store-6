@@ -1,38 +1,41 @@
 # SX-0001 extract-b, shard legacy-source/petstore1.3.2/src/components/util
-# The shard contains one class (Debug.java, a stderr/stdout debug-print helper)
-# and its Ant build file. No business rule, entity, screen, workflow or
-# integration lives here, so no requirement records are emitted.
-# No legacy-analysis/sources/**/extracted.md documents exist in the tree, so no
-# document traces could be cited.
+# The shard holds one Java class (tracer/Debug.java, a debug-print helper gated by a
+# compile-time constant) and its Ant build file (tracer/src/build.xml). Neither states a
+# business rule, entity, screen, workflow or integration, so no requirement record is
+# emitted. No legacy-analysis/sources/**/extracted.md exists in the tree, so no document
+# trace could be cited.
 records: []
 findings:
   - kind: ambiguity
     path: legacy-source/petstore1.3.2/src/components/util/tracer/src/com/sun/j2ee/blueprints/util/tracer/Debug.java
     description: >
-      The util shard is a pure technical helper (com.sun.j2ee.blueprints.util.tracer.Debug,
-      lines 44-80) used by 19 files across cart, catalog and the WAF controller. Its only
-      behaviour is printing diagnostic text when the compile-time constant
-      debuggingOn (line 46) is true; it is false, so every call is a no-op in the shipped
-      build. None of the capabilities in legacy-analysis/discovery/capabilities.csv covers
-      diagnostics/logging, so no record was filed. A human should decide whether the
-      rebuild needs an operational logging requirement (none is stated by this code)
-      and confirm that dropping this module produces no business requirement.
+      The util shard is a technical diagnostics helper only. Debug (lines 44-80) prints
+      to stderr/stdout only when the constant debuggingOn (line 46) is true; it is
+      hard-coded false, so every call is a no-op in the shipped build. The helper is
+      imported by 14 Java files (catalog, cart, the web/EJB request controller, the
+      i18n utility and the petstore controllers). No capability in
+      legacy-analysis/discovery/capabilities.csv covers diagnostics or logging, and the
+      code states no operational logging rule, so no record was filed. A human should
+      confirm that this module yields no business requirement and decide separately
+      whether the rebuild needs an operational logging requirement. The build file
+      (build.xml lines 45-98) only compiles and jars the class into tracer.jar.
 suspected_defects:
   - capability_key: catalog-browsing
     record_keys: []
     severity: low
     category: error-swallowed
-    title: Diagnostics routed through the debug helper are always discarded
+    title: A failure while splitting a search phrase into keywords is silently discarded
     description: >
-      The debug helper is switched off by a hard-coded constant, so every message and
-      every exception passed to it produces no output at all in the shipped build; the
-      exception-printing variants (lines 60-79) print neither the message nor the stack
-      trace. Callers that handle a caught exception only by passing it to this helper
-      therefore leave no trace of the failure anywhere, e.g. the catalog bean, which on
-      failure to obtain its data-access object logs the exception through the helper and
-      carries on. Filed under catalog-browsing only because that is the cited caller; the
-      helper is used by 19 files across cart, catalog and the request controller, and
-      the affected behaviour belongs to those callers' shards.
+      The debug helper is switched off by a hard-coded constant, so any exception passed
+      to it produces no output: neither the message nor the stack trace is printed.
+      The keyword parser used by catalog search catches every Throwable while splitting
+      the search phrase into words, hands it only to this helper, and then returns no
+      keyword list, so a parsing failure leaves no trace anywhere and the search proceeds
+      as if no keywords were given. Filed under catalog-browsing because keyword search
+      is that capability; the parser itself belongs to the request-controller (waf)
+      shard, which owns any record about search behaviour. Other callers that log only
+      through this helper (for example the ignored bean-removal failures in the web
+      controllers) are likewise silent but have no business effect.
     traces:
       - path: legacy-source/petstore1.3.2/src/components/util/tracer/src/com/sun/j2ee/blueprints/util/tracer/Debug.java
         line_start: 46
@@ -51,9 +54,14 @@ suspected_defects:
                   t.printStackTrace();
               }
           }
-      - path: legacy-source/petstore1.3.2/src/components/catalog/src/com/sun/j2ee/blueprints/catalog/ejb/CatalogEJB.java
-        line_start: 69
-        line_end: 70
-        excerpt: |
-          catch (CatalogDAOSysException se) {
-              Debug.println("Exception getting dao " + se);
+      - path: legacy-source/petstore1.3.2/src/waf/src/controller/com/sun/j2ee/blueprints/waf/util/I18nUtil.java
+        line_start: 128
+        line_end: 134
+        excerpt: |2
+                          return keywords;
+                      } catch (Throwable e){
+                          Debug.print(e, "Error while parsing search string");
+                      }
+                  }
+                  return null;
+              }
