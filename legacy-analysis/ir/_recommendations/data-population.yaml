@@ -1,0 +1,161 @@
+recommendations:
+  - record_key: POP-REQ-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Passes A and B agree, and the start-page text, the populating page and the
+      PopulateServlet check all say the same thing. Pass A's wording, which
+      names the populated-state criteria, is the more precise of the two.
+  - record_key: POP-REQ-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      The forced link on index.jsp, the forcefully branch in PopulateServlet and
+      the remove-then-create in both populators agree. Who may run it is a
+      separate question, recorded on POP-RULE-0006.
+  - record_key: POP-RULE-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      Confirmed against PopulateServlet 145-177 and CatalogPopulator.check:
+      the check needs categories, products and items all non-empty, plus at
+      least one customer and one user. Separately, confirm the swallowed-exception
+      wipe (defect D2) is what production does. Whether it is acceptable is the
+      Business Owner's call in the defect register.
+  - record_key: POP-RULE-0003
+    recommendation: accept
+    confidence: high
+    reason: >
+      CustomerPopulator and UserPopulator both remove by primary key before
+      create, and only seed ids are touched. Pass B is the only pass to state
+      that other accounts are preserved, and the code supports it.
+  - record_key: POP-RULE-0004
+    recommendation: accept
+    confidence: high
+    reason: >
+      session.invalidate() runs before populate() in doPost, so even a no-op
+      entry signs the visitor out. Whether to keep that in the rebuild is
+      question Q4, since the stated reason is specific to the legacy container.
+  - record_key: POP-BR-0003
+    recommendation: accept
+    confidence: high
+    reason: >
+      populating.jsp passes success_page=//supplier/populating.jsp with the same
+      forcefully value, and the supplier populating page goes on to
+      //petstore/main.screen. The chain is confirmed across both modules.
+  - record_key: POP-REQ-0005
+    recommendation: accept
+    confidence: high
+    reason: >
+      Re-counted in the seed file: 4 users, 4 customers, 5 categories, 16
+      products, 28 items. Duplicates POP-ENT-0004; keep one.
+  - record_key: POP-ENT-0004
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same content as POP-REQ-0005, with prices mentioned explicitly. Counts
+      re-verified. Merge with POP-REQ-0005 and keep this wording.
+  - record_key: POP-RULE-0006
+    recommendation: edit
+    confidence: high
+    reason: >
+      The code fact is certain: /Populate has no security constraint in either
+      application. As a requirement, though, it codifies defect D1, so the
+      conflict goes to Intent for the Business Owner. The edit below records the
+      likely intent and leaves the role open.
+    edited_requirement: >
+      The system SHALL populate an empty store on first entry without requiring
+      sign-on, and SHALL restrict forced repopulation to a role the Business
+      Owner designates.
+  - record_key: DPOP-REQ-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Matches the supplier PopulateServlet gate and InventoryPopulator
+      remove-then-create. It duplicates the supplier/b DATA-REQ-0001; keep this
+      one, which leaves the access question to POP-RULE-0006.
+  - record_key: DPOP-BR-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Re-verified: 29 Inventory elements, all quantity="10000". The 0 default is
+      reachable because the supplier parser is non-validating. Note finding F1:
+      EST-29 has no catalog item, which the Business Owner should confirm.
+  - record_key: DATA-BR-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicate of DPOP-BR-0001 (supplier pass B), and adds "non-numeric" to the
+      default rule, which XMLDBHandler.getValue supports. Merge it into
+      DPOP-BR-0001.
+  - record_key: DPOP-WF-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The redirect branches are confirmed in doPost. Accept it with a single
+      redirect per outcome, and send the double-redirect (D5) and the
+      absolute-Referer mangling (D6) to the defect register rather than
+      specifying them.
+  - record_key: DATA-BR-0002
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicate of DPOP-WF-0001 from supplier pass B, and the two agree.
+      Merge it into DPOP-WF-0001.
+  - record_key: DATA-REQ-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      This key names three different records (contactinfo/b, supplier/b,
+      setup.xml/b), and an SME decision on it is ambiguous until it is re-keyed.
+      contactinfo/b: accept, since ContactInfoEJB 93-107 and the
+      ContactInfoPopulator caller confirm it. supplier/b: duplicate of
+      DPOP-REQ-0001 plus the access issue, so merge it. setup.xml/b: duplicate of
+      data-population-REQ-0001. The edited text below is the contactinfo
+      record's.
+    edited_requirement: >
+      WHEN a contact-information record is created from a given name, family
+      name, telephone, e-mail and an already stored postal address, the system
+      SHALL store the four values as supplied and SHALL link the existing address
+      rather than copying it.
+  - record_key: CUST-REQ-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The finder and its EJB-QL are declared, but the only caller is the
+      populated-state check. Keep it as a supporting query of this capability,
+      not as a user-facing feature. Duplicates CUST-REQ-0010.
+  - record_key: CUST-REQ-0010
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Same finder and same sole caller as CUST-REQ-0001 (customer pass B).
+      Merge it into CUST-REQ-0001.
+  - record_key: DATA-POPULATION-REQ-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Docs passes A, B and C all cite configuring.html only. The code has two
+      seed files, one per application, not "a single file", and the per-database
+      statement selection is an implementation detail for a single-datastore
+      rebuild. The document's claim conflicts with the code, so the question goes
+      to Intent. Trust the code.
+    edited_requirement: >
+      The system SHALL take its initial catalog, customer and inventory data from
+      a bundled UTF-8 seed data set that operators may edit, and SHALL create the
+      datastore structures it needs when they are absent.
+  - record_key: data-population-REQ-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Three XA datasource registrations in setup.xml are explicit, and setup.xml
+      pass B agrees. Nothing in the source says whether the separation is a
+      business requirement or a deployment choice, so raise question Q2 with the
+      Business Owner before treating it as binding.
+  - record_key: data-population-WF-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The deploy target's generateSQL-then-deploy sequence and the /petstore echo
+      are explicit. The deploy order is recorded as observed, not as a
+      constraint. Keeping the "/petstore" path is question Q3.
