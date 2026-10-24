@@ -1,0 +1,607 @@
+# SME recommendations for capability order-fulfillment (SX-0001 synthesize).
+# Record keys collide across modules (93 records, 67 distinct keys), so every entry
+# carries pass_file, relative to legacy-analysis/ir/_passes/legacy-source/petstore1.3.2/.
+# These are recommendations, not decisions.
+recommendations:
+  # ---------------------------------------------------------------- docs / setup
+  - record_key: ORDER-FULFILLMENT-WF-0001
+    pass_file: docs/a.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The docs say the supplier notifies OPC of inventory changes, but the supplier code
+      re-runs its own PENDING orders and publishes invoices; no inventory message to OPC
+      exists. Trust the code (OFUL-WF-0002, supplier/b). The wording conflict goes to Intent.
+    edited_requirement: >
+      WHEN the supplier saves an inventory update, the system SHALL re-attempt fulfilment of
+      every PENDING supplier order, publish an invoice for each order that ships a line, and
+      mark COMPLETED each order that is now fully shipped.
+  - record_key: ORDER-FULFILLMENT-WF-0001
+    pass_file: docs/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Same document statement as docs/a; code shows the retry happens inside the supplier and
+      reaches OPC only as invoices. Accept the code behaviour; doc conflict to Intent.
+    edited_requirement: >
+      WHEN the supplier saves an inventory update, the system SHALL re-attempt fulfilment of
+      every PENDING supplier order and publish an invoice for each order that ships a line.
+  - record_key: ORDER-FULFILLMENT-WF-0001
+    pass_file: docs/c.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Third copy of the same documentary rule; merge with OFUL-WF-0002 (supplier/b), which
+      reads the code at both ends.
+    edited_requirement: >
+      WHEN the supplier saves an inventory update, the system SHALL re-attempt fulfilment of
+      every PENDING supplier order and publish an invoice for each order that ships a line.
+  - record_key: ORDER-FULFILLMENT-WF-0002
+    pass_file: docs/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Documentary overview confirmed by code: SupplierOrderMDB/OrderFulfillmentFacadeEJB ship
+      line by line and invoice per shipment; InvoiceMDB completes the order only when all lines ship.
+  - record_key: ORDER-FULFILLMENT-WF-0002
+    pass_file: docs/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Fuller statement of the same staged flow; every stage it names is confirmed by a code-reading
+      record (PurchaseOrderMDB, OrderApprovalMDB, SupplierOrderMDB, InvoiceMDB).
+  - record_key: ORDER-FULFILLMENT-INT-0002
+    pass_file: docs/c.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates the staged-flow record; the asynchronous hand-off is confirmed by the JMS
+      destinations in setup.xml. Merge into the staged-processing requirement.
+  - record_key: order-fulfillment-INT-0001
+    pass_file: setup.xml/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Destination names and queue/topic types are declared in setup.xml, and the supplier code
+      confirms the invoice topic producer (SupplierOrderTD) and the PO queue consumer (SupplierOrderMDB).
+  - record_key: FUL-INT-0001
+    pass_file: setup.xml/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same destinations as setup.xml/a; flow direction is now confirmed by the supplier pass. Merge.
+  # ---------------------------------------------------------------- apps/supplier pass a
+  - record_key: OFUL-WF-0001
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both supplier passes read the same MDB and facade and agree; the transaction attribute is
+      declared in ejb-jar.xml.
+  - record_key: OFUL-BR-0001
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Pass b reads the same lines (checkInventory compares stock to full line quantity and
+      reduceQuantity takes the whole amount). Two passes agree on whole-line shipping.
+  - record_key: OFUL-BR-0002
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Completion rule matches pass b (OFUL-BR-0003); the PENDING initial status it could not see
+      is confirmed by supplierpo (ORDF-BR-0002).
+  - record_key: OFUL-BR-0003
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Invoice content matches pass b and the code. The fixed "Dear PetStore Customer" user id is
+      a suspected defect; whether the rebuild keeps it is the Business Owner's decision in the
+      defect register.
+  - record_key: OFUL-BR-0004
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Explicit catch of FinderException returning false, read identically by pass b (OFUL-BR-0005).
+  - record_key: OFUL-INT-0001
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Queue binding and XSL conversion are declared and implemented; validation switch values are
+      redacted, so whether invalid documents are refused is not established.
+  - record_key: OFUL-INT-0002
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Publish code read directly and the topic resource is declared in both ejb-jar.xml and web.xml;
+      matches pass b OFUL-INT-0001.
+  # ---------------------------------------------------------------- apps/supplier pass b
+  - record_key: OFUL-WF-0001
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same flow as pass a, independently read; merge.
+  - record_key: OFUL-BR-0001
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Agrees with pass a and adds the stock-short scenario; code confirms stock is reduced only
+      when the full line quantity is available.
+  - record_key: OFUL-BR-0002
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Skip-shipped-lines check is the first statement in the line loop; consistent with pass a
+      OFUL-BR-0001. Merged into whole-line fulfilment.
+  - record_key: OFUL-BR-0003
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same completion rule as pass a OFUL-BR-0002; merge.
+  - record_key: OFUL-BR-0004
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same invoice-content rule as pass a OFUL-BR-0003; merge.
+  - record_key: OFUL-BR-0005
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same missing-stock-record rule as pass a OFUL-BR-0004; merge.
+  - record_key: OFUL-WF-0002
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Read at both ends (servlet and facade) with the PENDING finder declared in deployment SQL.
+      This is the authoritative statement of the restock retry over the docs records.
+  - record_key: OFUL-INT-0001
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Matches pass a OFUL-INT-0002 and adds the asymmetric failure handling (MDB fails, servlet
+      swallows). The swallowed restock failure is a suspected defect for the defect register.
+  - record_key: OFUL-INT-0002
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      XSL line mapping is visible; rejection on unparseable input follows from the declared
+      XMLDocumentException path. Validation flags are redacted.
+  - record_key: OFUL-BR-0006
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Rethrow-as-EJBException under Required is visible; rollback and redelivery are container
+      semantics. Note the invoice-build failure path returns null instead of failing, which keeps
+      the shipment without an invoice; that exception goes to the defect register.
+  - record_key: OFUL-ENT-0001
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      DDL in sun-j2ee-ri.xml (PK, NOT NULL) agrees with the CMP declarations in supplierpo and
+      lineitem.
+  # ---------------------------------------------------------------- contactinfo
+  - record_key: FUL-BR-0001
+    pass_file: src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Element order is in both DTD and parser. The optional e-mail comes from a commented-out
+      edit (`true /*false*/`), so confirm with the Business Owner whether e-mail is meant to be
+      optional; record what the code does.
+  - record_key: FUL-BR-0002
+    pass_file: src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Writer order and null-to-empty substitution read in code. The writer can produce documents
+      the reader rejects (blank name/phone); flag the round-trip gap to the defect register.
+  # ---------------------------------------------------------------- lineitem
+  - record_key: order-fulfillment-BR-0001
+    pass_file: src/components/lineitem/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both line-item passes and the purchaseorder and supplierpo passes see the same create(li, 0)
+      call sites. Four records agree.
+  - record_key: order-fulfillment-BR-0002
+    pass_file: src/components/lineitem/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The local interface exposes one setter and the descriptor lists one setter transaction; pass
+      b agrees.
+  - record_key: order-fulfillment-REQ-0001
+    pass_file: src/components/lineitem/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Confirms what the code does (getData copies six fields). Dropping the shipped quantity is a
+      suspected defect; whether the rebuild includes it is the Business Owner's decision.
+  - record_key: OFUL-BR-0001
+    pass_file: src/components/lineitem/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same immutability rule as order-fulfillment-BR-0002 (lineitem/a); merge.
+  - record_key: OFUL-BR-0002
+    pass_file: src/components/lineitem/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same zero-shipped-on-create rule as order-fulfillment-BR-0001; merge.
+  - record_key: OFUL-INT-0001
+    pass_file: src/components/lineitem/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      DTD content model, writer and reader agree on the element order, and the rejection behaviour
+      was verified in XMLDocumentUtils.getNextSibling.
+  - record_key: OFUL-BR-0003
+    pass_file: src/components/lineitem/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      The code does accept unbounded quantities and prices, but the record describes an absence of
+      validation, not a behaviour to build. It belongs in the defect register ("No bounds on
+      quantity, unit price or quantity shipped"), where the Business Owner decides the bounds.
+  # ---------------------------------------------------------------- processmanager pass a
+  - record_key: ORDFUL-ENT-0001
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Descriptor primkey and bean accessors agree; pass b FUL-ENT-0001 agrees.
+  - record_key: ORDFUL-BR-0001
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Constants plus javadoc; the OPC callers assign PENDING, APPROVED, DENIED, SHIPPED_PART and
+      COMPLETED. The store does not restrict values; that gap goes to the defect register.
+  - record_key: ORDFUL-WF-0001
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The lifecycle exists only in a comment, but the OPC callers follow it (PurchaseOrderMDB sets
+      PENDING, OrderApprovalMDB guards on PENDING, InvoiceMDB sets SHIPPED_PART/COMPLETED).
+      Terminal DENIED/COMPLETED is inferred, so confirm with the Business Owner.
+  - record_key: ORDFUL-REQ-0001
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Create path read in code; duplicate refusal is a primary-key guarantee. Pass b agrees.
+  - record_key: ORDFUL-REQ-0002
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Find-then-set read directly; pass b FUL-BR-0003 agrees on the not-found failure.
+  - record_key: ORDFUL-REQ-0003
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Read in code; pass b FUL-REQ-0002 agrees.
+  - record_key: ORDFUL-INT-0001
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The factory and its exception wrapping are clear. Class-by-name loading is a legacy
+      mechanism; the requirement is the configurable hand-off and cause-preserving failure.
+  # ---------------------------------------------------------------- processmanager pass b
+  - record_key: FUL-ENT-0001
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same workflow record as ORDFUL-ENT-0001; merge. Note this key also names a document record in xmldocuments/a.
+  - record_key: FUL-BR-0001
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same five-status vocabulary as ORDFUL-BR-0001; merge. Key collides with contactinfo/b FUL-BR-0001.
+  - record_key: FUL-WF-0001
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same comment-only lifecycle as ORDFUL-WF-0001; merge.
+  - record_key: FUL-REQ-0001
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same workflow-start rule as ORDFUL-REQ-0001; merge.
+  - record_key: FUL-BR-0003
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      The code does update without any value or transition check, but "SHALL update without
+      checking" codifies a suspected defect. Keep the replace and not-found behaviour as the
+      requirement; whether guards are added is the Business Owner's decision in the defect register.
+    edited_requirement: >
+      The system SHALL record a new status for an existing order by replacing its previous
+      status, and SHALL fail with a not-found error when no workflow record exists for the order
+      identifier.
+  - record_key: FUL-REQ-0002
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same status-read rule as ORDFUL-REQ-0003; merge.
+  - record_key: FUL-REQ-0003
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Twelve container-transaction entries, all Required, declared for every method.
+  - record_key: FUL-INT-0001
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same hand-off contract as ORDFUL-INT-0001; merge. Key collides with setup.xml/b FUL-INT-0001.
+  - record_key: FUL-BR-0004
+    pass_file: src/components/processmanager/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Unchecked method permissions and local-only interfaces are declared. "SHALL NOT restrict"
+      states a missing control; the buildable property is internal-only access. Whether role checks
+      are required goes to the defect register ("No access control on order status changes").
+    edited_requirement: >
+      Order workflow status operations SHALL be reachable only by order-processing components
+      inside the application and MUST NOT be exposed to external clients.
+  # ---------------------------------------------------------------- purchaseorder
+  - record_key: ORDFUL-BR-0001
+    pass_file: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Helper code, its javadoc and the InvoiceMDB caller agree. Key collides with processmanager/a
+      ORDFUL-BR-0001 (status vocabulary). The over-shipment and duplicate-item completion problem
+      goes to the defect register.
+  - record_key: FUL-ENTITY-0001
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Descriptor field set plus the create(li, 0) call; agrees with the lineitem passes. Merge.
+  - record_key: FUL-RULE-0001
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Code and javadoc agree and a live caller (InvoiceMDB) exists; matches purchaseorder/a.
+  - record_key: FUL-RULE-0002
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Exact-equality completion read directly; InvoiceMDB maps the result to COMPLETED or
+      SHIPPED_PART. Matches purchaseorder/a.
+  - record_key: FUL-RULE-0003
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Cascade-delete is declared, but no caller deletes purchase orders, so reachability is
+      unestablished. Confirm with the Business Owner whether orders are ever deleted in production.
+  # ---------------------------------------------------------------- supplierpo pass a
+  - record_key: ORDF-ENT-0001
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Descriptor and accessors agree; supplierpo/b and the supplier DDL agree.
+  - record_key: ORDF-BR-0001
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Declared primary key set from the incoming order id; supplierpo/b agrees.
+  - record_key: ORDF-BR-0002
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      One assignment in ejbCreate, but the supplier facade's PENDING finder depends on it, and
+      supplierpo/b agrees. Two passes plus a consumer.
+  - record_key: ORDF-BR-0003
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: low
+    reason: >
+      The four constants exist, but only PENDING and COMPLETED are ever assigned, and OPC uses a
+      different five-value set. Which vocabulary a supplier order should carry goes to Intent.
+  - record_key: ORDF-REQ-0001
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Declared EJB-QL finder with a real caller (processPendingPO).
+  - record_key: ORDF-BR-0004
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: create(li, 0) call site confirmed by the lineitem passes; merge into initial supplier order state.
+  - record_key: ORDF-BR-0005
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Cascade-delete declared; no code removes supplier orders, so reachability is unestablished.
+      Confirm whether supplier orders are ever deleted.
+  - record_key: ORDF-REQ-0002
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Required transaction and CreateException path are visible. Atomicity holds in practice
+      because the calling MDB turns CreateException into EJBException (rollback), which this pass
+      did not trace; OFUL-BR-0006 shows it.
+  - record_key: ORDF-INT-0001
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: DTD plus validating parse by default; supplierpo/b agrees.
+  - record_key: ORDF-BR-0006
+    pass_file: src/components/supplierpo/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Confirms what runs: unreadable dates become today. The "FIX ME!" comment marks it as a
+      suspected defect; whether to reject such orders is the Business Owner's decision.
+  # ---------------------------------------------------------------- supplierpo pass b
+  - record_key: OF-ENT-0001
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same entity as ORDF-ENT-0001 with the line fields; merge. Key collides with xmldocuments/b OF-ENT-0001.
+  - record_key: OF-BR-0001
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same identity rule as ORDF-BR-0001 plus retrieval by key; merge.
+  - record_key: OF-BR-0002
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same initial-state rule as ORDF-BR-0002/0004; merge.
+  - record_key: OF-WF-0001
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The documented PENDING -> APPROVED -> COMPLETED path is never followed: the facade moves
+      PENDING straight to COMPLETED. Record what runs; the vocabulary question goes to Intent.
+    edited_requirement: >
+      The system SHALL track a supplier order with the statuses PENDING, APPROVED, DENIED and
+      COMPLETED, and fulfilment SHALL move an order directly from PENDING to COMPLETED.
+  - record_key: OF-REQ-0001
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same finder as ORDF-REQ-0001; merge.
+  - record_key: OF-BR-0003
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same cascade as ORDF-BR-0005; same reachability caveat.
+  - record_key: OF-BR-0004
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same atomic-creation rule as ORDF-REQ-0002; merge.
+  - record_key: OF-INT-0001
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same document structure as ORDF-INT-0001; merge. Key collides with xmldocuments/b OF-INT-0001.
+  - record_key: OF-BR-0005
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same date fallback as ORDF-BR-0006; confirm the code behaviour, defect decision to the Business Owner.
+  - record_key: OF-REQ-0002
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Confirms what getData does: no status, and the shipping contact is always null because it
+      copies from the new empty object. That is plainly a coding slip; whether the rebuild includes
+      contact and status is the Business Owner's decision.
+  # ---------------------------------------------------------------- xmldocuments pass a
+  - record_key: FUL-ENT-0001
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: DTD, XSD and builder agree; xmldocuments/b OF-ENT-0001 agrees.
+  - record_key: FUL-ENT-0002
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: DTD, XSD and builder agree; the unused locale attribute is a DTD-only detail.
+  - record_key: FUL-BR-0003
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Required in DTD and XSD and always written by the builder; key collides with processmanager/b FUL-BR-0003.
+  - record_key: FUL-BR-0004
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: low
+    reason: >
+      Stated only in the XSD; DTD mode (the default) enforces nothing and the production flag
+      value is redacted. Production behaviour is unknown until someone reads the deployed flag.
+  - record_key: FUL-BR-0005
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: low
+    reason: Same XSD-only caveat as FUL-BR-0004 (xmldocuments/a).
+  - record_key: FUL-BR-0006
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Formatter in both builders and xsd:date in both schemas agree.
+  - record_key: FUL-INT-0007
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Builder constructors, serializer, catalog and resolver all read directly.
+  - record_key: FUL-BR-0008
+    pass_file: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Confirms what the code does; accepting documents with no DOCTYPE is a deliberate workaround
+      but a suspected defect. Whether to keep it is the Business Owner's decision.
+  # ---------------------------------------------------------------- xmldocuments pass b
+  - record_key: OF-ENT-0001
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same document as FUL-ENT-0001 (xmldocuments/a); adds the OPC caller. Merge.
+  - record_key: OF-ENT-0002
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same invoice document as FUL-ENT-0002; merge.
+  - record_key: OF-ENT-0003
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same mandatory attributes as FUL-BR-0003 (xmldocuments/a); merge.
+  - record_key: OF-BR-0001
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: low
+    reason: Same XSD-only value ranges as FUL-BR-0004 (xmldocuments/a); same caveat.
+  - record_key: OF-BR-0002
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: low
+    reason: Same XSD-only uniqueness as FUL-BR-0005; same caveat.
+  - record_key: OF-BR-0003
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same date rule as FUL-BR-0006; merge.
+  - record_key: OF-BR-0004
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The null-throws vs null-to-empty asymmetry is visible in the two helpers; nothing states it
+      is intended. Record the behaviour; intent is unconfirmed.
+  - record_key: OF-INT-0001
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Mechanism is clear, but non-fatal validation errors are only printed, so "refuse" holds
+      only for fatal errors. That gap goes to the defect register.
+  - record_key: OF-INT-0002
+    pass_file: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Catalog file, resolver and builders agree; matches FUL-INT-0007.
