@@ -1,0 +1,225 @@
+# Recommendations for localization records. Record keys repeat across modules, so each
+# entry names the pass file it refers to in `source`.
+recommendations:
+  - record_key: LOCALIZATION-REQ-0001
+    source: docs/a.yaml, docs/b.yaml, docs/c.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      Code (web.xml locales, three screen-definition files, zh JSPs, zh-CN seed rows) and the
+      ja/zh guides agree on en_US, ja_JP and zh_CN; only the English guide omits zh_CN and is
+      stale. The documentation conflict goes to Intent for the Business Owner.
+    edited_requirement: >
+      The storefront SHALL be available in en_US, ja_JP and zh_CN, each with its own localized
+      pages, with en_US as the default.
+  - record_key: LOCALIZATION-BR-0002
+    source: docs/c.yaml
+    recommendation: accept
+    confidence: high
+    reason: Guide, seed data and locale-keyed catalog queries all agree.
+  - record_key: LOC-REQ-0001
+    source: src/apps/admin/a.yaml, src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Both passes read the same bundle loader and the two bundles. Selection by JVM default
+      locale is implicit; confirm with the Business Owner whether German-only admin translation
+      is still wanted given the storefront's locale set.
+  - record_key: LOC-RULE-0001
+    source: src/apps/opc/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Same parsing rule as the WAF, catalog and XML-document copies; merged into one requirement.
+      The dead variant branch is a suspected defect for the defect register.
+  - record_key: LOC-BR-0001
+    source: src/apps/opc/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Patterns read directly from every locale template. The dollar format for zh_CN prices that
+      are not dollar amounts looks like a legacy defect; confirm the code does this and let the
+      Business Owner decide in the defect register.
+  - record_key: LOC-REQ-0001
+    source: src/apps/petstore/a.yaml, src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Declared in web.xml and realised in three screen sets and the banner links.
+  - record_key: LOC-BR-0002
+    source: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: ChangeLocaleEJBAction and SignOnEJBAction both call cart.setLocale; cart pass confirms the effect.
+  - record_key: LOC-BR-0003
+    source: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: DDL key on locale, seed data and per-locale JSP literals agree.
+  - record_key: LOC-BR-0004
+    source: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicates the encoding-filter records, which read both the filter code and the web.xml configuration.
+  - record_key: LOC-REQ-0002
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Banner links, URL mapping, flow handler and EJB action agree.
+  - record_key: LOC-RULE-0003
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Filter configuration plus page content-type directive.
+  - record_key: LOC-RULE-0004
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Consistent per-page literals across en/ja/zh JSPs; no central rule, but no counter-example found.
+  - record_key: LOC-RULE-0005
+    source: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Schema key plus seed data show stated, not converted, prices. The example figures are demo
+      data and should not be treated as required values.
+  - record_key: SC-BR-0006
+    source: src/components/cart/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Locale.US default with a confirming comment; setLocale used on every catalog lookup.
+  - record_key: LOC-REQ-0001
+    source: src/components/catalog/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Locale is in every details-table primary key and bound in every catalog query.
+  - record_key: LOC-BR-0001
+    source: src/components/catalog/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same parsing rule as the other three copies; merged. Variant handling goes to the defect register.
+  - record_key: CATB-RULE-0014
+    source: src/components/catalog/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Pass B agrees with pass A on CatalogHelper.getLocaleFromString.
+  - record_key: LOCALIZATION-REQ-0001
+    source: src/components/encodingfilter/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Filter code and web.xml configuration agree; passes a, b and c all read it the same way.
+  - record_key: LOCALIZATION-RULE-0001
+    source: src/components/encodingfilter/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Filter-mapping order in web.xml puts encoding before sign-on; intent is inferred but the effect is real.
+  - record_key: LOC-REQ-0001
+    source: src/components/encodingfilter/b.yaml, src/components/encodingfilter/c.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same as LOCALIZATION-REQ-0001 (encodingfilter/a); the build file confirms packaging.
+  - record_key: LOC-RULE-0001
+    source: src/components/encodingfilter/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The configurable encoding is real; the "no encoding when unset" outcome is a suspected
+      defect (ASCII default discarded) that production does not hit. Keep the configurable rule,
+      confirm the null path in the defect register.
+    edited_requirement: >
+      The request decoding encoding SHALL be supplied by deployment configuration, and the shipped
+      storefront configuration SHALL supply UTF-8.
+  - record_key: LOC-BR-0002
+    source: src/components/encodingfilter/c.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same ordering rule as LOCALIZATION-RULE-0001 (encodingfilter/a).
+  - record_key: LOC-BR-0003
+    source: src/components/encodingfilter/c.yaml
+    recommendation: edit
+    confidence: medium
+    reason: Same finding as LOC-RULE-0001 (encodingfilter/b); state the configured behaviour and send the null path to the defect register.
+    edited_requirement: >
+      The request decoding encoding SHALL be supplied by deployment configuration, and the shipped
+      storefront configuration SHALL supply UTF-8.
+  - record_key: LOC-BR-0001
+    source: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Default declared in DTD and Java; round trip visible in ejbCreate and getData.
+  - record_key: LOC-RULE-0001
+    source: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Agrees with purchaseorder pass A.
+  - record_key: LOC-BR-0001
+    source: src/components/xmldocuments/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Same parsing rule; merged with the other copies.
+  - record_key: LOC-BR-0001
+    source: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: One constant applied at serializer and byte-to-string conversion in all three writers.
+  - record_key: LOC-BR-0002
+    source: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: low
+    reason: >
+      DTD default is clear, but the XSD omits the attribute and no consumer of the invoice locale
+      was traced. Accept as stated; the Business Owner may judge it immaterial.
+  - record_key: LOC-BR-0003
+    source: src/components/xmldocuments/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Agrees with xmldocuments pass A.
+  - record_key: LOC-BR-0001
+    source: src/waf/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Controller code plus default_locale=en_US in both the WAF sample and Pet Store web.xml.
+  - record_key: LOC-REQ-0001
+    source: src/waf/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same rule as LOC-BR-0001 (waf/a); Pet Store web.xml confirms en_US.
+  - record_key: LOC-REQ-0002
+    source: src/waf/a.yaml, src/waf/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Action mapped in Pet Store mappings.xml; success and error paths read directly.
+  - record_key: LOC-BR-0003
+    source: src/waf/a.yaml, src/waf/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Two-part and "default" behaviour read directly; variant branch goes to the defect register.
+  - record_key: LOC-BR-0004
+    source: src/waf/a.yaml, src/waf/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Fallback branches in TemplateServlet plus locales/default_locale configuration agree.
+  - record_key: LOC-SCR-0005
+    source: src/waf/a.yaml, src/waf/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      The screen belongs to the WAF framework's sample application, not the Pet Store WAR, which
+      uses header flags instead; it offers German, which has no pages. Reject unless the
+      Business Owner confirms the sample WAR is deployed to users.
+  - record_key: LOC-WF-0006
+    source: src/waf/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Tag and flow handler agree on field names; Pet Store wires the handler to changelocale.do.
+  - record_key: LOC-BR-0010
+    source: src/waf/a.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      No caller found anywhere in legacy-source; storefront price formatting is done per page
+      instead. Reject unless a caller outside the tree is found.
+  - record_key: LOC-BR-0007
+    source: src/waf/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: Same unreached utility as LOC-BR-0010.
