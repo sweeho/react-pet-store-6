@@ -6,15 +6,13 @@ The Java Pet Store 1.3.2 rebuild needs a verifiable statement of how customer ac
 
 ## What changes
 
-- Adds the `customer-account` capability as a draft delta spec of 31 requirements extracted from the legacy source, covering:
-  - the customer / account / profile / contact / address / payment-card record structure and its one-to-one ownership;
-  - customer creation defaults, blank dependent records, atomic creation and cascading removal;
-  - two-step sign-up, user-name uniqueness and user-name/password rules;
-  - captured account fields, required contact fields and the browser-side empty-field check;
-  - the account screen (one screen requirement), account edit and preferred-language handling;
-  - the My List panel and pet-tips banner driven by profile preferences;
-  - address document exchange rules and payment-card storage rules.
-- None of the requirements carries an `ID:` line: no record of this capability has been approved yet.
+- Adds the `customer-account` capability as a delta spec of the 5 requirements an SME approved, each carrying its minted key:
+  - `SWHR2-R-0009` (ACCT-BR-0003) password entered twice at sign-up, with only an empty-field check;
+  - `SWHR2-R-0010` (ACCT-RULE-0009) payment card type and expiry year options;
+  - `SWHR2-R-0011` (CUST-BR-0003, customer module) customer profile defaults at creation;
+  - `SWHR2-R-0012` (CUST-BR-0005) account status values;
+  - `SWHR2-R-0013` (CUST-WF-0001, signon module) stand-alone user registration.
+- The other 25 records of the capability, including the one account-screen record (ACCT-SCR-0009, with its pass-b counterparts ACCT-SCR-0004 / ACCT-SCR-0007), are not yet approved and are Not specified here. Recommendations for them are in `legacy-analysis/ir/_recommendations/customer-account.yaml`.
 
 ## Impact
 

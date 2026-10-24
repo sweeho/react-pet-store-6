@@ -58,7 +58,7 @@ These notes record how Java Pet Store 1.3.2 implements the capability. They are 
 - **Q3 Password maximum length.** Redacted in the ingested source. Needs the original 1.3.2 source.
 - **Q4 Password confirmation.** Redacted lines 77-78 of `CreateUserHTMLAction` leave open whether a comparison exists. The visible condition does not compare.
 - **Q5 Account status "disabled".** Declared but never set or read anywhere in the tree (unresolved reachability). The spec states the two values and attaches no behaviour to "disabled".
-- **Q6 Stand-alone registration servlet.** `components/signon/.../CreateUserServlet` is excluded from the petstore build (`build.xml:204-205`), and no `web.xml` maps it. It is treated as dead code and kept out of the spec. Its record (signon `CUST-WF-0001`) is recommended for rejection.
+- **Q6 Stand-alone registration servlet.** `components/signon/.../CreateUserServlet` is excluded from the petstore build (`build.xml:204-205`), and no `web.xml` maps it. The SME approved its record (signon `CUST-WF-0001`), so it is specified as SWHR2-R-0013; whether it is deployed anywhere remains open.
 - **Q7 Preferred language switch.** Pass a says the store language switches on save. Pass b shows the save writes a different session key from the one the cart and orders read. The spec follows pass b, which traces the key mismatch.
 
 ## Suspected legacy defects (for the Business Owner's defect register)
@@ -82,39 +82,22 @@ These notes record how Java Pet Store 1.3.2 implements the capability. They are 
 
 ## Record-to-requirement map
 
-| Requirement                                    | Source records (pass module)                                                                                              |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Customer identity and record structure         | CUST-ENT-0001, CUST-ENTITY-0001, CUST-BR-0008 (customer b); ACCT-ENT-0005, ACCT-ENT-0010 (petstore)                       |
-| Duplicate customer refused                     | CUST-BR-0001 (customer a), CUST-ENTITY-0001                                                                               |
-| Account attributes and status                  | CUST-ENT-0003, CUST-ENTITY-0005, CUST-BR-0005 (customer)                                                                  |
-| Customer profile attributes                    | CUST-ENT-0002, CUST-ENTITY-0006 (customer)                                                                                |
-| Contact information record                     | CUST-ENT-0001 (contactinfo)                                                                                               |
-| Postal address record                          | CUST-ENT-0001, CUST-REQ-0002 (address)                                                                                    |
-| Payment card record                            | CUST-ENT-0001 (creditcard)                                                                                                |
-| Customer creation defaults                     | CUST-BR-0002, CUST-BR-0003 (customer)                                                                                     |
-| Blank dependent records on account creation    | CUST-BR-0004 (customer); ACCT-REQ-0001 (creditcard); CUST-REQ-0001, CUST-BR-0003 (contactinfo); CUST-REQ-0001 (address b) |
-| Atomic customer creation                       | CUST-BR-0008 (customer a), CUST-BR-0009 (customer)                                                                        |
-| Cascading removal of customer data             | CUST-BR-0006, CUST-BR-0007 (customer); CUST-BR-0001, CUST-BR-0002 (contactinfo)                                           |
-| No record-level access control                 | CUST-RULE-0005, CUST-RULE-0006 (address); CUST-REQ-0004 (contactinfo); CUST-REQ-0001 (creditcard)                         |
-| Field-level update and detached copies         | CUST-REQ-0001 (address a, address b); CUST-REQ-0002 (contactinfo)                                                         |
-| Address storage without content validation     | CUST-BR-0004, CUST-RULE-0001 (address)                                                                                    |
-| Exchanged address document reading             | CUST-BR-0002, CUST-BR-0003, CUST-RULE-0002, CUST-RULE-0003 (address)                                                      |
-| Exchanged address document writing             | CUST-BR-0001, CUST-RULE-0004 (address)                                                                                    |
-| Payment card stored as supplied                | CUST-BR-0003 (creditcard), ACCT-BR-0007 (petstore)                                                                        |
-| Card expiry month and year                     | CUST-BR-0001, CUST-BR-0002 (creditcard)                                                                                   |
-| Two-step account sign-up                       | CUSTOMER-ACCOUNT-WF-0001 (docs), ACCT-WF-0001, ACCT-WF-0006, ACCT-REQ-0001 (petstore)                                     |
-| Unique user names at sign-up                   | ACCT-BR-0002 (petstore), CUST-BR-0001 (signon), SIGN-REQ-0009 (signon)                                                    |
-| Sign-up failures reported as a taken user name | ACCT-RULE-0002 (petstore)                                                                                                 |
-| Sign-on user name and password rules           | CUST-BR-0002, CUST-BR-0003, CUST-BR-0004 (signon)                                                                         |
-| Password entered twice at sign-up              | ACCT-BR-0003, ACCT-RULE-0003 (petstore)                                                                                   |
-| Account information captured                   | ACCT-REQ-0004, ACCT-SCR-0004, ACCT-RULE-0009 (petstore)                                                                   |
-| Required contact fields                        | ACCT-BR-0006, ACCT-RULE-0005 (petstore)                                                                                   |
-| Browser-side empty-field check                 | CUST-BR-0007 (waf a), CUST-BR-0001 (waf b)                                                                                |
-| Account screen (screen)                        | ACCT-SCR-0007, ACCT-SCR-0009 (petstore)                                                                                   |
-| Account edit                                   | ACCT-REQ-0008 (petstore)                                                                                                  |
-| Preferred language on account save             | ACCT-RULE-0011, ACCT-REQ-0008 (petstore)                                                                                  |
-| My List panel                                  | ACCT-BR-0010, ACCT-RULE-0012 (petstore)                                                                                   |
-| Pet-tips banner                                | ACCT-BR-0011, ACCT-RULE-0013 (petstore)                                                                                   |
-| Not specified (dead code)                      | CUST-WF-0001 (signon)                                                                                                     |
+| Requirement (ID)                                         | Source record (pass module)                  |
+| -------------------------------------------------------- | -------------------------------------------- |
+| Password entered twice at sign-up (SWHR2-R-0009)         | ACCT-BR-0003 (petstore a)                    |
+| Payment card type and expiry year options (SWHR2-R-0010) | ACCT-RULE-0009 (petstore b)                  |
+| Customer profile defaults at creation (SWHR2-R-0011)     | CUST-BR-0003 (customer a; customer b agrees) |
+| Account status values (SWHR2-R-0012)                     | CUST-BR-0005 (customer a)                    |
+| Stand-alone user registration (SWHR2-R-0013)             | CUST-WF-0001 (signon a)                      |
 
-Record keys are reused across modules: `CUST-BR-0001`, for example, names a different rule in the address, contactinfo, creditcard, customer, signon and waf passes. The module in parentheses identifies which one is meant.
+Every other record of the capability is pending SME review and is Not specified in `spec.md`; that includes the account-screen record, so `spec.md` carries no screen requirement until it is approved. The legacy notes above still cover those records as evidence for the reviewers.
+
+Record keys are reused across modules: `CUST-BR-0003`, for example, names a different rule in the address, contactinfo, creditcard, customer and signon passes. The approved key `SWHR2-R-0011` is read as the customer-module record (profile defaults), the only one of them that both customer passes state identically. If the SME approved a different module's `CUST-BR-0003`, that requirement must be rewritten from that record.
+
+Legacy notes behind the approved requirements:
+
+- SWHR2-R-0009: `signon.jsp` carries `j_password` and `j_password_2`; `CreateUserHTMLAction.java:76-87` reads both (lines 77-78 redacted) and tests only for null. The empty-field check is the waf smart-form taglib. See Q4 and SD4.
+- SWHR2-R-0010: option lists exist only in `create_customer.jsp:143-147` and `edit_customer.jsp`; the two disagree on the Meow value and the year window (see Q2). The requirement fixes the labels and that the year is chosen from a fixed list; the window itself is the SME decision in Q2.
+- SWHR2-R-0011: `ProfileLocalHome.java:44-47` constants passed by `CustomerEJB.ejbPostCreate`; the sign-up flow may overwrite them with form values.
+- SWHR2-R-0012: `AccountLocalHome.java:48-49`; only "active" is ever used, and nothing reads the status (see Q5). No behaviour is attached to "disabled".
+- SWHR2-R-0013: `CreateUserServlet.java:70-74`, excluded by `apps/petstore/src/build.xml:204-205` and mapped by no `web.xml` (see Q6). The SME approved it as stated, so it is specified despite the reachability dispute.
