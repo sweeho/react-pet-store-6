@@ -1,0 +1,401 @@
+# Recommendations for the checkout capability (SX-0001 synthesize).
+# Record keys repeat across module passes (e.g. CHK-ENT-0001 names four different
+# records), so each entry also carries pass_file to say which record it addresses.
+recommendations:
+  - record_key: CHECKOUT-WF-0001
+    pass_file: docs/a.yaml, docs/b.yaml, docs/c.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      All three document passes agree on the add-to-cart, check out, pre-filled form, submit
+      flow, and the code (mappings.xml, OrderEJBAction, AsyncSender) confirms the asynchronous
+      hand-off the user guide only asserts.
+  - record_key: CHECKOUT-REQ-0001
+    pass_file: docs/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The document claim is low confidence on its own, but enter_order_information.jsp pre-fills
+      every field from the account contact details, which settles it.
+  - record_key: CHK-INT-0001
+    pass_file: src/apps/opc/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      PurchaseOrderMDB rethrows parse failures and rolls back. The validation toggle value is
+      redacted in this copy, so whether schema validation is on in production is unknown.
+  - record_key: CHK-ENT-0001
+    pass_file: src/apps/opc/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The OPC table definitions state the stored fields. The clear-text card number is a
+      suspected defect for the defect register, not a reason to reject the record.
+  - record_key: CHK-REQ-0001
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      JSP validation attributes and OrderHTMLAction.extractContactInfo agree field by field;
+      pass B (CHK-RULE-0002) reaches the same list. What happens on a server-side miss is a
+      suspected defect for the register.
+  - record_key: CHK-BR-0002
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The option lists are read directly from both language JSPs. Whether the narrow state
+      lists and the missing shipping China option are intended is a Business Owner question.
+  - record_key: CHK-BR-0003
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Code, exception mapping and error page agree, and pass B (CHK-RULE-0003) is identical.
+  - record_key: CHK-BR-0004
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      OrderEJBAction lines 122-146 are unambiguous and pass B agrees. Float accumulation is a
+      rounding defect for the register.
+  - record_key: CHK-BR-0005
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The post-incremented counter from 0 is explicit in the code and pass B agrees.
+  - record_key: CHK-BR-0006
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      The uidgen passes settle that "1001" is a prefix, not a starting value, so ids are
+      "10011", "10012" and so on.
+    edited_requirement: >
+      The system SHALL give every order a unique order id formed from the prefix "1001"
+      followed by the next value of that prefix's sequence.
+  - record_key: CHK-INT-0007
+    pass_file: src/apps/petstore/a.yaml, src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both passes read the same code. Pass B's failure scenario should be narrowed: lookup and
+      document-build failures are swallowed, but a send failure raises an error that is not
+      caught (asyncsender CHECKOUT-BUSINESS-RULE-0002). The swallowing is a defect for the register.
+  - record_key: CHK-BR-0008
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Accept as the true legacy behaviour; both passes cite the literal card in
+      OrderHTMLAction. Whether the rebuild captures a real card is the Business Owner's
+      decision in the defect register.
+  - record_key: CHK-SCR-0009
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same screen as CHK-SCR-0008; mapping, response object and JSP agree. Merge with
+      CHK-SCR-0008, whose wording (e-mail address shown) matches the JSP more closely.
+  - record_key: CHK-REQ-0010
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: edit
+    confidence: low
+    reason: >
+      The mapping points at an undefined screen, so whether the page is ever shown is
+      unresolved; settle by running the legacy app. The stack trace shown to shoppers should
+      not be carried into the requirement.
+    edited_requirement: >
+      WHEN an unexpected failure occurs while handling a storefront request the system SHOULD
+      display a Server Error page with the error message, asking the user to notify the
+      administrator.
+  - record_key: CHK-SCR-0001
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Read in full from the JSP and confirmed by pass A (CHK-REQ-0001, CHK-BR-0002) and the
+      user guide. It is a distinct screen from the order complete screen.
+  - record_key: CHK-RULE-0002
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Matches pass A's CHK-REQ-0001 and adds the trimming rule visible in extractContactInfo.
+  - record_key: CHK-RULE-0002
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The DTD content model and the ejb-jar relationship comment agree; pass A's CHK-BR-0001
+      says the same and adds the en_US default.
+  - record_key: CHK-RULE-0003
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of pass A CHK-BR-0003 with the same traces plus the exception javadoc.
+  - record_key: CHK-RULE-0003
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Accept as the legacy behaviour; pass A (CHK-BR-0002) agrees. Silent date replacement is
+      a defect for the register.
+  - record_key: CHK-RULE-0004
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Agrees with pass A CHK-BR-0004 and CHK-BR-0005, which it combines.
+  - record_key: CHK-RULE-0004
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: setPoValue(getTotalPrice()) with no summation; pass A CHK-BR-0004 agrees.
+  - record_key: CHK-REQ-0005
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Each header field is set in OrderEJBAction lines 98-127; consistent with pass A CHK-INT-0007.
+  - record_key: CHK-RULE-0006
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same as pass A CHK-BR-0008; the defect decision goes to the register.
+  - record_key: CHK-RULE-0006
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: ejbPostCreate creates the card from the order; consistent with creditcard CHK-REQ-0002.
+  - record_key: CHK-SCR-0008
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Mapping, doEnd and JSP agree; keep as the order complete screen and merge CHK-SCR-0009 into it.
+  - record_key: CHECKOUT-INTEGRATION-0001
+    pass_file: src/components/asyncsender/a.yaml, src/components/asyncsender/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Both passes read AsyncSenderEJB and the queue binding in sun-j2ee-ri.xml identically.
+  - record_key: CHECKOUT-INTEGRATION-0001
+    pass_file: src/components/uidgen/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      method-permission unchecked is declared in ejb-jar.xml; pass B CHK-BR-0008 agrees. The
+      key collides with the asyncsender record and should be renumbered at ingest.
+  - record_key: CHECKOUT-BUSINESS-RULE-0001
+    pass_file: src/components/asyncsender/a.yaml, src/components/asyncsender/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      trans-attribute Required plus a transacted session is declared and coded; both passes agree.
+  - record_key: CHECKOUT-BUSINESS-RULE-0002
+    pass_file: src/components/asyncsender/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The rethrow as EJBException is explicit. It holds for the send itself only; the checkout
+      caller swallows lookup and build failures before reaching it.
+  - record_key: CHK-BR-0001
+    pass_file: src/components/contactinfo/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      fromDOM is explicit, including the deliberately optional e-mail. Whether e-mail should
+      be mandatory goes to the defect register.
+  - record_key: CHK-REQ-0001
+    pass_file: src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: ejbCreate and ejbPostCreate copy values and create the address with no checks.
+  - record_key: CHK-ENT-0001
+    pass_file: src/components/creditcard/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Descriptor cmp-fields and abstract accessors agree on the three text fields.
+  - record_key: CHK-BR-0001
+    pass_file: src/components/creditcard/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: getExpiryMonth/getExpiryYear substring logic is explicit.
+  - record_key: CHK-BR-0002
+    pass_file: src/components/creditcard/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The 01/2010 fallback is a bare literal with no explanation. Confirm it is what the code
+      does; whether it should flag a malformed expiry is the Business Owner's decision.
+  - record_key: CHK-REQ-0001
+    pass_file: src/components/creditcard/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: No create path or setter checks content; this is the legacy behaviour as read.
+  - record_key: CHK-REQ-0002
+    pass_file: src/components/creditcard/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: create(CreditCard) copies values into a new row; confirmed by purchaseorder CHK-RULE-0006.
+  - record_key: CHK-INT-0001
+    pass_file: src/components/creditcard/a.yaml, src/components/creditcard/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: DTD, toDOM and fromDOM agree; both passes identical.
+  - record_key: checkout-ENTITY-0001
+    pass_file: src/components/lineitem/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Seven cmp-fields in ejb-jar.xml match the accessors; pass B CHK-ENT-0001 agrees.
+  - record_key: CHK-ENT-0001
+    pass_file: src/components/lineitem/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of lineitem pass A checkout-ENTITY-0001; merge.
+  - record_key: checkout-INT-0001
+    pass_file: src/components/lineitem/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: LineItem.dtd and fromDOM agree on order, required elements and types.
+  - record_key: checkout-BR-0001
+    pass_file: src/components/lineitem/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      float is declared at every layer. Accept as legacy fact; whether money stays binary
+      float is a defect-register decision.
+  - record_key: CHK-ENT-0001
+    pass_file: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: ejb-jar.xml CMP and CMR declarations agree with the accessors; pass B CHK-ENTITY-0001 agrees.
+  - record_key: CHK-ENTITY-0001
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of purchaseorder pass A CHK-ENT-0001, which also states cascade delete; merge into it.
+  - record_key: CHK-BR-0001
+    pass_file: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: DTD content model and validating parse agree; en_US default visible in the DTD and value class.
+  - record_key: CHK-BR-0002
+    pass_file: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Same as pass B CHK-RULE-0003; the silent replacement goes to the defect register.
+  - record_key: CHK-WF-0001
+    pass_file: src/components/purchaseorder/a.yaml, src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      ejbPostCreate under trans-attribute Required, with shipped quantity 0, is read the same
+      way by both passes.
+  - record_key: CHK-WF-0001
+    pass_file: src/waf/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      requestmappings.xml is not loaded by the 1.3 controller, which reads mappings.xml, and
+      the live mappings.xml has no multi-step validation flow. Keep it as historical only
+      unless a deployment is found that loads it.
+  - record_key: CHK-BR-0003
+    pass_file: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both passes read ejbPostCreate and getData the same way. Accept as legacy fact; the lost
+      billing contact is a high-severity defect for the register.
+  - record_key: CHK-RULE-0005
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of purchaseorder pass A CHK-BR-0003; merge.
+  - record_key: CHK-BR-0004
+    pass_file: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of purchaseorder pass B CHK-RULE-0004; merge.
+  - record_key: CHK-RULE-0001
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: poId primkey-field and findByPrimaryKey are declared.
+  - record_key: CHK-INT-0001
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: fromDOM root check and toXML are explicit.
+  - record_key: CHECKOUT-RULE-0001
+    pass_file: src/components/uidgen/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: getNextValue is explicit and pass B CHK-REQ-0001 and CHK-BR-0003 agree.
+  - record_key: CHECKOUT-RULE-0002
+    pass_file: src/components/uidgen/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: Find-or-create with ejbCreate setting 0 is explicit; pass B CHK-BR-0002 agrees.
+  - record_key: CHECKOUT-ENTITY-0001
+    pass_file: src/components/uidgen/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: The generated DDL states NOT NULL counter and the name primary key; pass B CHK-ENT-0004 agrees.
+  - record_key: CHECKOUT-RULE-0003
+    pass_file: src/components/uidgen/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: trans-attribute Required is declared on all three methods; isolation level is container-dependent.
+  - record_key: CHECKOUT-RULE-0004
+    pass_file: src/components/uidgen/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The "1001" literal is in OrderEJBAction and the generator semantics are read from
+      uidgen, so the "10011" form follows. No configuration explains the literal.
+  - record_key: CHECKOUT-RULE-0005
+    pass_file: src/components/uidgen/a.yaml
+    recommendation: accept
+    confidence: low
+    reason: >
+      Stated only in Javadoc and not enforced. Accept as intent; the missing check goes to
+      the defect register.
+  - record_key: CHK-REQ-0001
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of uidgen pass A CHECKOUT-RULE-0001; merge.
+  - record_key: CHK-BR-0002
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of uidgen pass A CHECKOUT-RULE-0002; merge.
+  - record_key: CHK-BR-0003
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Combines uidgen pass A CHECKOUT-RULE-0001 and CHECKOUT-RULE-0003; merge.
+  - record_key: CHK-ENT-0004
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of uidgen pass A CHECKOUT-ENTITY-0001; merge.
+  - record_key: CHK-BR-0005
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: Duplicate of uidgen pass A CHECKOUT-RULE-0004; merge.
+  - record_key: CHK-BR-0006
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: low
+    reason: Duplicate of uidgen pass A CHECKOUT-RULE-0005; merge.
+  - record_key: CHK-REQ-0007
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Both failure paths rethrow EJBException, which rolls back the Required transaction.
+  - record_key: CHK-BR-0008
+    pass_file: src/components/uidgen/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: Duplicate of uidgen pass A CHECKOUT-INTEGRATION-0001; merge.
