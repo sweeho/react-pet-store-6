@@ -1,0 +1,95 @@
+recommendations:
+  - record_key: SINV-ENT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both code passes agree, and pass B cites the deployment DDL (itemId primary key,
+      quantity INTEGER NOT NULL) on top of the ejb-jar.xml declaration. Prefer pass B's
+      wording, which states the quantity is mandatory. No CHECK constraint exists, so
+      a non-negative floor is not part of this record.
+  - record_key: SINV-BR-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Key collision: pass A uses SINV-BR-0001 for "inventory update replaces the
+      quantity" and pass B uses it for "reduce stock when a line ships". Both rules are
+      correct readings of the code (RcvrRequestProcessor.updateInventory lines 110-137;
+      InventoryEJB.reduceQuantity plus OrderFulfillmentFacadeEJB.checkInventory). Assign
+      this key to pass A's overwrite rule and SINV-BR-0002 to the draw-down rule, so
+      each rule keeps one key. Non-numeric input crashing the update is a suspected
+      defect for the register, not part of the rule.
+    edited_requirement: >
+      WHEN the supplier submits an inventory update THEN the system SHALL, for each item
+      marked for update whose new-quantity entry is non-empty and zero or greater,
+      replace that item's stock quantity with the entered value; unmarked items, empty
+      entries and negative entries SHALL be left unchanged without any message.
+  - record_key: SINV-BR-0002
+    recommendation: edit
+    confidence: high
+    reason: >
+      Mirror of the SINV-BR-0001 collision: pass A's SINV-BR-0002 is the draw-down rule
+      (guard and decrement read in the facade and the entity), pass B's is the overwrite
+      rule. Keep the draw-down rule under this key, adding pass B's point that the
+      reduction happens in the same unit of work that marks the line shipped.
+    edited_requirement: >
+      WHEN an order line is fulfilled THEN the system SHALL reduce the item's stock by
+      the full ordered quantity of that line, in the same unit of work that records the
+      line as shipped. GIVEN the stock on hand is less than the line's ordered quantity
+      WHEN fulfilment is attempted THEN the system SHALL not reduce stock for that line.
+  - record_key: SINV-BR-0003
+    recommendation: reject
+    confidence: high
+    reason: >
+      Pass B only. It states the same transaction bracket and confirmation as pass A's
+      SINV-WF-0001 (RcvrRequestProcessor lines 184-189, back.jsp). Merge it into
+      SINV-WF-0001 rather than keep two keys for one rule. Its note that failures forward
+      nowhere belongs to the suspected-defect register.
+  - record_key: SINV-WF-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The servlet sequence (begin, updateInventory, processPendingPO, sendInvoices,
+      commit, forward to back.jsp) is explicit and pass B's SINV-BR-0003 reads it the
+      same way. The home page text corroborates the purpose. Invoices are published on a
+      non-transacted session, so "one unit of work" is weaker in production than the
+      code suggests; that gap is recorded under order-fulfillment's defects.
+  - record_key: SINV-SCR-0001
+    recommendation: edit
+    confidence: high
+    reason: >
+      Both code passes and all three docs records agree on the columns, per-row marker
+      and single submit. Accept the display contract but separate the legacy defects:
+      the "no items" message appears only on a read failure (an empty inventory shows an
+      empty table), and the not-authorised text mentions orders. Whether to keep those
+      behaviours goes to the Business Owner in the defect register.
+    edited_requirement: >
+      The system SHALL provide a supplier inventory screen that lists every stock record
+      with its item identifier and existing quantity, and offers for each row a
+      new-quantity entry field and an update marker, with a single submit; only users in
+      the administrator role SHALL see the list, other users SHALL see a not-authorised
+      message, and when the inventory cannot be read the screen SHALL say so instead of
+      the list.
+  - record_key: SINV-SCR-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both code passes agree on index.jsp's text and its Display Inventory and Logout
+      actions, and the user guide says inventory is reached from the home screen. Pass
+      B's addition that a plain request lands here matches the doGet forward. The shared
+      routing flag is a suspected defect, not part of the screen contract.
+  - record_key: SUPPLIER-INVENTORY-SCREEN-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      User-guide-only record (docs passes A and B, using.html lines 267-288), fully
+      confirmed by displayinventory.jsp and RcvrRequestProcessor. It overlaps
+      SINV-SCR-0001; kept as the batch-submission requirement because that is the part
+      the guide states. Merging it into SINV-SCR-0001 is an acceptable alternative.
+  - record_key: SUPPLIER-INVENTORY-SCR-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Docs pass C, same guide section. Its "only rows explicitly marked" statement is
+      confirmed by the item_ parameter loop in updateInventory, which never reads an
+      unmarked row's quantity. Kept as the update-marking requirement; it also overlaps
+      SINV-SCR-0001.
