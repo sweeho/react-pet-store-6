@@ -32,6 +32,8 @@
 - [ ] 5.4 Add an independent deployment switch for each of the three notifications
 - [ ] 5.5 Suppress a notification whose switch is disabled
 - [ ] 5.6 Fail startup of a notification function whose switch is absent or not a boolean
+- [ ] 5.7 Compose the completion e-mail with subject "Java Pet Store Order COMPLETED: <order id>", every order line and the order's locale
+- [ ] 5.8 Consume the triggering message without sending mail when its notification is switched off
 
 ## 6. Verification
 

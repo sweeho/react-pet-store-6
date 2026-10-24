@@ -6,7 +6,7 @@ The legacy Java Pet Store (1.3.2) e-mails customers about the progress of their 
 
 - Adds the `customer-notifications` capability as 12 draft requirements extracted from 22 distinct IR records (25 pass-file entries; duplicates across passes merged).
 - Covers: asynchronous queued delivery, dedicated notification channels, the three-field e-mail request format, message composition (HTML, UTF-8, central sender), content delivered unchanged, recipient-list parsing, send-failure and malformed-request handling, the three order notifications, their independent switches, fail-on-missing-switch startup, and the configurable mail server/sender.
-- No requirement is approved yet; none carries a requirement key.
+- Thirteen records are approved and each is one requirement carrying its requirement key; the remaining records are pending review and are Not specified.
 
 ## Open points for the SME / Business Owner
 

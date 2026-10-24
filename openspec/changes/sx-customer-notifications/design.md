@@ -46,8 +46,9 @@ No screen records were extracted for this capability; its user interface is unsp
 
 - **D1 Notification default is disputed.** `docs/configuring.html` 49-51 says the e-mails are disabled by default, while its own snippets (145, 151, 157) show `true` and tell the reader to "ensure" it is true. The deployed values in `opc/src/ejb-jar.xml` (417, 507, 593) are redacted. The approved record CUSTOMER-NOTIFICATIONS-BR-0001 states the documented default (disabled unless enabled at deployment), so the spec carries it; the conflict still goes to Intent for the Business Owner, and the unredacted descriptor or a test deployment settles what production does.
 - **D2 Silent discard is specified as current behaviour.** The code is unambiguous and both mailer passes agree. Whether losing a customer e-mail without retry or alert is acceptable is a Business Owner decision in the defect register.
-- **D3 Only approved records are specified.** `spec.md` carries the four records an SME approved (table below). The other records of this capability (asynchronous delivery, channels, request format, message composition, content as supplied, send-failure discard, malformed-request rollback, the order e-mail sequence, missing-switch startup failure) are pending review and are Not specified; the legacy notes above still describe them, and `legacy-analysis/ir/_recommendations/customer-notifications.yaml` carries a recommendation for each.
-- **D4 Approval-denial e-mail.** Neither the docs nor the extracted records mention an e-mail when an order is denied. Nothing is specified for it; it is not known whether the legacy sends one.
+- **D3 Only approved records are specified.** `spec.md` carries the thirteen records an SME approved or that were accepted by rule (table below). The other records of this capability (message composition, send-failure discard, malformed-request rollback, approval/denial and shipment e-mail content, locale template selection, price formatting, missing-switch startup failure) are pending review and are Not specified; the legacy notes above still describe them, and `legacy-analysis/ir/_recommendations/customer-notifications.yaml` carries a recommendation for each.
+- **D4 Approval-denial e-mail.** The docs mention only an approval e-mail. The pending record CNOT-REQ-0001 reads the code as sending one status e-mail for an approval or a denial; until it is approved, the spec says nothing about a denial e-mail.
+- **D5 Overlapping approved records.** CUSTOMER-NOTIFICATIONS-BR-0002 and CUSTOMER-NOTIFICATIONS-WF-0001 restate the same documented e-mail sequence, CNOT-REQ-0006 overlaps CUSTOMER-NOTIFICATIONS-REQ-0001, and CUSTOMER-NOTIFICATIONS-INT-0001 overlaps CUSTOMER-NOTIFICATIONS-REQ-0002. Each approval minted its own key, so each one is a separate requirement; an implementation that satisfies one satisfies its pair.
 
 ## Requirement-to-record traceability
 
@@ -57,9 +58,18 @@ No screen records were extracted for this capability; its user interface is unsp
 | Order notifications disabled unless enabled at deployment | SWHR2-R-0014 | CUSTOMER-NOTIFICATIONS-BR-0001  |
 | Recipient address list                                    | SWHR2-R-0016 | CN-REQ-0003                     |
 | Configurable mail server and sender                       | SWHR2-R-0017 | CUSTOMER-NOTIFICATIONS-REQ-0002 |
+| E-mail request format                                     | SWHR2-R-0130 | CN-ENT-0001                     |
+| Asynchronous e-mail delivery from a queue                 | SWHR2-R-0062 | CN-INT-0001                     |
+| Content sent as supplied                                  | SWHR2-R-0131 | CN-REQ-0002                     |
+| Completed-order e-mail content                            | SWHR2-R-0132 | CNOT-REQ-0003                   |
+| Per-notification deployment switch consumes the trigger   | SWHR2-R-0063 | CNOT-REQ-0006                   |
+| Customer e-mail sequence for an order                     | SWHR2-R-0064 | CUSTOMER-NOTIFICATIONS-BR-0002  |
+| Configurable mail server account                          | SWHR2-R-0065 | CUSTOMER-NOTIFICATIONS-INT-0001 |
+| Notification sequence on enabled notifications            | SWHR2-R-0066 | CUSTOMER-NOTIFICATIONS-WF-0001  |
+| Separate durable notification channels                    | SWHR2-R-0067 | customer-notifications-INT-0001 |
 
 ## Risks / gaps
 
-- The producers' message content (what each e-mail says) was not extracted; the rebuild has no wording to match.
+- Only the completed-order e-mail's content is specified (CNOT-REQ-0003). The approval/denial and shipment e-mail content, locale template selection and price formatting were extracted (CNOT-REQ-0001, CNOT-REQ-0002, CNOT-RULE-0004, CNOT-RULE-0005) but are pending review.
 - Redelivery behaviour for malformed requests depends on server configuration absent from the source.
 - `NOTIFY-BUSINESS-RULE-0001` describes a locator used by other capabilities too (order approval, fulfilment XML-validation switches); only its notification use is specified here.
