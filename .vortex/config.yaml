@@ -84,3 +84,17 @@ commands:
 # Turn this off and the project runs a byte-identical pipeline without any of it.
 specDriven:
   enabled: true
+
+# Official test evidence (architecture doc 43, FR-TT-56). The command writes a
+# JUnit report; CI on dev uploads it as the `vortex-test-results` artifact.
+# Unit (src/**) and integration (routes/**) tests run in one vitest invocation,
+# and the CI workflow is a single job, so all three levels name it.
+testEvidence:
+  command: bun run test --reporter=default --reporter=junit --outputFile.junit=.vortex-results/junit.xml
+  junitPath: .vortex-results/junit.xml
+  testGlobs: ["**/*.test.ts", "**/*.test.tsx", "e2e/**/*.spec.ts"]
+  stubSentinel: VortexNotImplemented
+  ciJobs:
+    unit: build-and-test
+    integration: build-and-test
+    e2e: build-and-test

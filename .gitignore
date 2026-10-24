@@ -52,3 +52,6 @@ sqlite.db
 sqlite.db-journal
 sqlite.db-wal
 sqlite.db-shm
+
+# JUnit report written by the testEvidence command
+.vortex-results
