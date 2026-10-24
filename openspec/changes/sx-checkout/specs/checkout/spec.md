@@ -174,7 +174,7 @@ WHEN an order has been placed the system SHALL display an order complete screen 
 
 ### Requirement: Unexpected failure page
 
-WHEN an unexpected failure occurs while handling a storefront request the system SHOULD display a Server Error page carrying the error message and asking the user to notify the administrator.
+WHEN an unexpected failure occurs while handling a storefront request the system SHALL display a Server Error page carrying the error message and asking the user to notify the administrator.
 
 #### Scenario: General failure during order placement
 
