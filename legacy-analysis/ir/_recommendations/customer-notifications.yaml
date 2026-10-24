@@ -1,0 +1,157 @@
+recommendations:
+  - record_key: CN-INT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The queue-driven bean is declared in ejb-jar.xml and implemented in MailerMDB.onMessage;
+      both passes agree. NOTIF-INT-0001 (mailer/b) states the same rule and can be merged into this one.
+  - record_key: NOTIF-INT-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      This key was used by two different records: mailer/b (async one-mail-per-message delivery,
+      a duplicate of CN-INT-0001) and setup.xml/b (three dedicated channels, a duplicate of
+      customer-notifications-INT-0001). Keep one key per rule. Merge the mailer/b variant into
+      CN-INT-0001 and keep this key for the channels rule.
+    edited_requirement: >
+      The system SHALL provide separate durable asynchronous channels for order-approval
+      notifications, completed-order notifications, and general outbound mail delivery.
+  - record_key: customer-notifications-INT-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      setup.xml creates the three queues explicitly. Each queue's purpose comes only from its
+      name, and the confirmation (invoice) mailer listens on a topic, not one of these queues,
+      so the per-channel roles should be confirmed against the opc deployment descriptor.
+  - record_key: CN-ENT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The DTD content model and the validating parse with ordered child reads agree. NOTIF-ENT-0001
+      duplicates it. Whether empty values are accepted is still open.
+  - record_key: NOTIF-ENT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same evidence as CN-ENT-0001 and the same wording. Accept as a duplicate and merge.
+  - record_key: CN-REQ-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      MailHelper hard-codes text/html, setFrom() from session config and the send-time date;
+      ByteArrayDataSource hard-codes UTF-8. NOTIF-RULE-0001 agrees. The missing charset parameter
+      on the content type is a possible legacy defect worth confirming.
+  - record_key: NOTIF-RULE-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates CN-REQ-0001 and adds the lenient multi-address To list (see CN-REQ-0003).
+      Merge into CN-REQ-0001.
+  - record_key: CN-REQ-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      The javadoc says content arrives already formatted, and the locale parameter is never read.
+      NOTIF-RULE-0004 independently reads the same code.
+  - record_key: NOTIF-RULE-0004
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same behaviour as CN-REQ-0002 plus the UTF-8 encoding already in CN-REQ-0001. Merge.
+  - record_key: CN-REQ-0003
+    recommendation: accept
+    confidence: low
+    reason: >
+      InternetAddress.parse(addr, false) does accept a comma-separated list, but nothing says
+      producers rely on it; they probably send one customer address. Accept it as what the code
+      allows, but ask the SME whether the rebuild has to support multiple recipients.
+  - record_key: CN-BR-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both halves are visible: the catch-all in MailHelper and the empty catch in MailerMDB, with
+      a comment. Confirm this is what the code does. Losing customer e-mail silently is a suspected
+      legacy defect, and keeping it is the Business Owner's call in the defect register.
+  - record_key: NOTIF-RULE-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicate of CN-BR-0001 from the other pass; same code lines. Merge. The same
+      defect-register question applies.
+  - record_key: CN-BR-0002
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The EJBException rethrow and the Required transaction are visible, so receipt is rolled back.
+      The redelivery and dead-letter policy is server configuration not in the source, so the
+      rebuild needs an explicit decision on poison messages.
+  - record_key: NOTIF-RULE-0003
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicate of CN-BR-0002. Merge into it.
+  - record_key: CUSTOMER-NOTIFICATIONS-REQ-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Three passes (docs/a, docs/b, docs/c) used this key for two rules. docs/b describes the
+      e-mail sequence (duplicate of CUSTOMER-NOTIFICATIONS-WF-0001). docs/a and docs/c describe
+      the independent switches plus a disputed "disabled by default". The switches are confirmed
+      by the descriptor and the approval-mail gate. The default contradicts the same guide's
+      snippets, and the deployed values are redacted, so the default goes to Intent for the
+      Business Owner. Approve the switches without the default.
+    edited_requirement: >
+      The system SHALL allow each of the three order notifications (approval, fulfilment
+      confirmation, completion) to be enabled or disabled independently by deployment
+      configuration, and MUST NOT send a notification of a kind that is disabled.
+  - record_key: CUSTOMER-NOTIFICATIONS-BR-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Same switches-plus-default rule as CUSTOMER-NOTIFICATIONS-REQ-0001 (docs/a, c), with the same
+      documentation conflict on the default. Drop the default clause and send the conflict to Intent.
+    edited_requirement: >
+      The system SHALL allow each of the three order notifications to be enabled or disabled
+      independently by deployment configuration.
+  - record_key: CUSTOMER-NOTIFICATIONS-WF-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      A clear statement in the configuring guide, and its three e-mails map onto the three
+      producer beans. Only the approval bean's code was read. Ask the SME whether a denied order
+      also produces an e-mail; the docs are silent.
+  - record_key: CUSTOMER-NOTIFICATIONS-BR-0002
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicate of CUSTOMER-NOTIFICATIONS-WF-0001 from the same document paragraph. Merge.
+  - record_key: CUSTOMER-NOTIFICATIONS-REQ-0002
+    recommendation: accept
+    confidence: high
+    reason: >
+      The sender literal in the docs matches sun-j2ee-ri.xml line 404, which
+      CUSTOMER-NOTIFICATIONS-INT-0001 cites, so the low confidence on this record can be raised.
+      Duplicate of that record; merge.
+  - record_key: CUSTOMER-NOTIFICATIONS-INT-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      Documented in two procedures and the sender address is present in the vendor descriptor.
+  - record_key: CUSTNOTIF-BR-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      getBoolean has no fallback and MailInvoiceMDB.ejbCreate turns the failure into a creation
+      error. NOTIFY-BUSINESS-RULE-0001 shows the same for the completed-order mailer. The approval
+      mailer pre-initialises its flag to false, so check whether it really fails or falls back
+      before approving this for all three notifications.
+  - record_key: NOTIFY-BUSINESS-RULE-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The locator behaviour is real, but this record states it for every deployment setting.
+      Other capabilities (order approval, fulfilment XML-validation switches) also use it.
+      Scope it to notification switches here and let those capabilities state their own.
+    edited_requirement: >
+      The system SHALL treat a notification switch that is absent or not a true/false value as a
+      startup failure of the dependent notification function rather than substituting a default.
