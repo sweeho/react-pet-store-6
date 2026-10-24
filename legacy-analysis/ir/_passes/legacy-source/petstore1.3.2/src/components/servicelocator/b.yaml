@@ -1,0 +1,149 @@
+records:
+  - record_key: CUSTNOTIF-BR-0001
+    kind: business-rule
+    capability_key: customer-notifications
+    requirement: >
+      The system SHALL read on/off switches for customer notification e-mails
+      (for example the confirmation-mail switch) from named deployment
+      configuration entries, and SHALL fail to start the component that needs a
+      switch when that entry is missing or is not a true/false value, rather than
+      assuming a default.
+    plain_text: >
+      Whether customer confirmation e-mails are sent is a setting chosen when the
+      shop is installed, not something fixed in the program. If the setting is
+      missing or not a yes/no value, the e-mail sender does not start instead of
+      silently guessing.
+    technical_note: >
+      ServiceLocator.getBoolean(envName) (both the ejb and web variants) does a
+      JNDI lookup of a java.lang.Boolean env-entry and returns booleanValue().
+      A NamingException (entry absent) or ClassCastException (wrong type) is
+      wrapped in ServiceLocatorException. The javadoc names
+      SEND_CONFIRMATION_MAIL as the intended use; callers such as
+      opc MailInvoiceMDB.ejbCreate read JNDINames.SEND_CONFIRMATION_MAIL and turn
+      the ServiceLocatorException into an EJBException, so the bean is not
+      created. The actual switch values live in the opc deployment descriptors,
+      outside this shard.
+    confidence: medium
+    confidence_basis: >
+      The lookup-and-fail behaviour is clear in one method duplicated in two
+      classes, and the javadoc names the confirmation-mail switch. The link to
+      notification e-mails was confirmed by reading one caller outside this
+      shard (MailInvoiceMDB). The switch's default value and the per-notification
+      wiring are not visible here, so not high.
+    risk_class: operational
+    basis: >
+      getBoolean casts the looked-up env entry to Boolean and rethrows any lookup
+      failure; javadoc cites SEND_CONFIRMATION_MAIL as the example entry.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/servicelocator/src/com/sun/j2ee/blueprints/servicelocator/ejb/ServiceLocator.java
+        line_start: 213
+        line_end: 227
+        excerpt: |
+              /**
+               * @return the boolean value corresponding
+               * to the env entry such as SEND_CONFIRMATION_MAIL property.
+               */
+              public boolean getBoolean(String envName) throws ServiceLocatorException {
+                Boolean bool = null;
+                try {
+                  bool = (Boolean)ic.lookup(envName);
+                } catch (NamingException ne) {
+                      throw new ServiceLocatorException(ne);
+                } catch (Exception e) {
+                      throw new ServiceLocatorException(e);
+                }
+                return bool.booleanValue();
+              }
+      - path: legacy-source/petstore1.3.2/src/components/servicelocator/src/com/sun/j2ee/blueprints/servicelocator/web/ServiceLocator.java
+        line_start: 274
+        line_end: 288
+        excerpt: |
+              /**
+               * @return the boolean value corresponding
+               * to the env entry such as SEND_CONFIRMATION_MAIL property.
+               */
+              public boolean getBoolean(String envName) throws ServiceLocatorException {
+                Boolean bool = null;
+                try {
+                  bool = (Boolean)ic.lookup(envName);
+                } catch (NamingException ne) {
+                      throw new ServiceLocatorException(ne);
+                } catch (Exception e) {
+                      throw new ServiceLocatorException(e);
+                }
+                return bool.booleanValue();
+              }
+      - path: legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailInvoiceMDB.java
+        line_start: 94
+        line_end: 106
+        excerpt: |
+            public void ejbCreate() {
+              try {
+                ServiceLocator serviceLocator   = new ServiceLocator();
+                sendConfirmationMail = serviceLocator.getBoolean(JNDINames.SEND_CONFIRMATION_MAIL);
+                invoiceXDE = new TPAInvoiceXDE(serviceLocator.getUrl(JNDINames.XML_ENTITY_CATALOG_URL),
+                                               serviceLocator.getBoolean(JNDINames.XML_VALIDATION_INVOICE),
+                                               serviceLocator.getBoolean(JNDINames.XML_XSD_VALIDATION));
+                poHome = (PurchaseOrderLocalHome)serviceLocator.getLocalHome(JNDINames.PURCHASE_ORDER_EJB);
+                transitionDelegate = new MailInvoiceTransitionDelegate();
+                transitionDelegate.setup();
+                mailContentXDE = new MailContentXDE(INVOICE_STYLE_SHEET);
+              } catch (ServiceLocatorException se) {
+                throw new EJBException(se);
+    stack_metadata:
+      framework: j2ee-1.3
+      ejb.bean: ServiceLocator (plain helper, ejb tier and web tier variants)
+      db.object: none
+      config.source: JNDI env-entry (java:comp/env)
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/src/components/servicelocator
+    description: >
+      This module is technical plumbing (directory lookup of components, message
+      queues/topics, data sources, URLs and string/boolean settings, with
+      web-tier caching and a wrapping exception type). Apart from the
+      configuration-switch rule recorded as CUSTNOTIF-BR-0001, it states no
+      business rule, and capabilities.csv has no infrastructure capability, so no
+      further records were emitted. The web-tier "resolve once, reuse for the
+      life of the process" caching (web/ServiceLocator.java lines 70, 86,
+      109-114 and the other cached getters) and the ejb-tier "look up afresh on
+      every call" behaviour are implementation choices; a human should confirm
+      they need not be carried into the rebuild as requirements.
+  - kind: ambiguity
+    path: legacy-analysis/sources
+    description: >
+      No legacy-analysis/sources/**/extracted.md documents exist in the tree, so
+      no document trace could be cited for this module.
+suspected_defects:
+  - capability_key: customer-notifications
+    record_keys: []
+    severity: medium
+    category: error-swallowed
+    title: Web-tier locator start-up failure is printed and swallowed
+    description: >
+      The web-tier locator is created once when its class loads. If creating the
+      naming context fails, the error is only printed to standard error and the
+      shared instance is left empty; every later caller receives an empty
+      reference and fails with an unrelated null-reference error, far from the
+      original cause. The failure is not reported to the caller that triggered
+      it. (Filed under customer-notifications only because no infrastructure
+      capability exists; the web locator is used across the storefront.)
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/servicelocator/src/com/sun/j2ee/blueprints/servicelocator/web/ServiceLocator.java
+        line_start: 74
+        line_end: 96
+  - capability_key: customer-notifications
+    record_keys: []
+    severity: low
+    category: other
+    title: Cached web-tier resource references are never refreshed
+    description: >
+      Once a component home, queue, topic, connection factory or data source has
+      been looked up on the web tier it is kept in a process-wide cache with no
+      expiry or invalidation. If the referenced resource is redeployed or its
+      server restarts, the web tier keeps handing out the stale reference until
+      the web application itself is restarted.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/servicelocator/src/com/sun/j2ee/blueprints/servicelocator/web/ServiceLocator.java
+        line_start: 106
+        line_end: 121
