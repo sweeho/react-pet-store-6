@@ -1,0 +1,598 @@
+# SME recommendations for capability customer-account (SX-0001 synthesize).
+# Record keys are reused across modules, so each entry also names the pass file(s)
+# it refers to. These are recommendations, not decisions.
+recommendations:
+  - record_key: CUSTOMER-ACCOUNT-WF-0001
+    pass_file: docs/a.yaml, docs/b.yaml, docs/c.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      All three document passes agree, and the code flow (ACCT-WF-0001) confirms sign-up starts
+      on the sign-in page. Merged into "Two-step account sign-up".
+
+  - record_key: ACCT-WF-0001
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Traced through mappings.xml, both actions and CreateUserFlowHandler. Pass b (ACCT-WF-0006)
+      independently reads the same flow. The abandoned-sign-up defect (SD6) goes to the defect register.
+
+  - record_key: ACCT-WF-0006
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Matches ACCT-WF-0001. However, its claim that the save "switches the shopping language"
+      conflicts with ACCT-RULE-0011 from the same pass, which traces a different session key.
+      Drop the language clause and let ACCT-RULE-0011 carry it.
+    edited_requirement: >
+      The system SHALL complete account creation as: create the login and remember the user id;
+      show the account information form; on submit create a customer keyed by that user id, store
+      its contact, address, card and profile details, mark the visitor as signed on, and return them
+      to the page they were trying to reach, or to the main page if that page was the account page.
+
+  - record_key: ACCT-REQ-0001
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      signon.jsp, CreateUserEJBAction and mappings.xml all agree, and pass a's ACCT-BR-0002 matches it.
+
+  - record_key: ACCT-BR-0002
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The UserEJBTable primary key and the exception routing give two independent sources, and the
+      message text is quoted from duplicate_account.jsp.
+
+  - record_key: ACCT-RULE-0002
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The code clearly wraps lookup failures as DuplicateAccountException. This is what production
+      does, but it is a suspected defect (SD5); whether to keep it is the Business Owner's decision
+      in the defect register.
+
+  - record_key: ACCT-BR-0003
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: low
+    reason: >
+      The visible condition does not compare the passwords, but lines 77-78 are redacted. Confirm
+      against the unredacted source or by running the legacy app. If confirmed it is defect SD4 for
+      the Business Owner.
+
+  - record_key: ACCT-RULE-0003
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: low
+    reason: >
+      Same finding as ACCT-BR-0003 from an independent pass, with the same redaction caveat.
+
+  - record_key: ACCT-REQ-0004
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The field set matches both forms, CustomerHTMLAction and the DDL. Note the card-type and
+      expiry-year mismatch between forms (ACCT-RULE-0009), which is an SME decision.
+
+  - record_key: ACCT-SCR-0004
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      create_customer.jsp confirms the fields and the defaults (English, Birds). The demo pre-fill
+      values are sample data, not a requirement. Written into "Account information captured" rather
+      than as a separate screen requirement.
+
+  - record_key: ACCT-RULE-0009
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The create and edit forms disagree ("Meow Club" vs "Meow Card"; 2001-2004 vs 2002-2005), and
+      the seed data uses "Meow Card". Recommend "Meow Card" as canonical and an expiry window
+      relative to the current year. The fixed-list decision goes to Intent.
+    edited_requirement: >
+      The system SHALL offer payment card types Java(TM) Card, Duke Express and Meow Card, stored
+      under the same value on sign-up and edit, and SHALL offer expiry years from a list the
+      Business Owner defines.
+
+  - record_key: ACCT-ENT-0005
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Deployed DDL. It agrees with the customer component's ejb-jar.xml (CUST-ENT-0001, CUST-ENT-0002).
+
+  - record_key: ACCT-ENT-0010
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same DDL evidence as ACCT-ENT-0005, with the full attribute list confirmed by updateCustomer.
+
+  - record_key: ACCT-BR-0006
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      The code agrees that blank required contact fields prevent the save. The "general failure"
+      clause is defect SD2 and is not something to rebuild. Keep the rule and send the error
+      presentation to the defect register.
+    edited_requirement: >
+      The system SHALL treat first name, last name, street address, city, state/province, postal
+      code and telephone as required contact fields; GIVEN any of them is blank WHEN the account is
+      created or updated THEN the details SHALL NOT be saved.
+
+  - record_key: ACCT-RULE-0005
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      It lists language, category and card number as "required", but the same pass and ACCT-BR-0007
+      show those checks are discarded (SD3). Only the contact-field checks take effect. Restrict the
+      requirement to contact fields and the checkbox semantics.
+    edited_requirement: >
+      The system SHALL require last name, first name, street line 1, city, state or province, postal
+      code and telephone when creating or updating a customer, treat street line 2 and e-mail as
+      optional, and set MyList and banner preferences on only when their boxes are ticked.
+
+  - record_key: ACCT-BR-0007
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Lines 140-178 read unambiguously, and creditcard CUST-BR-0003 confirms there is no validation
+      on store. Whether the rebuild should validate cards is a Business Owner decision (SD3).
+
+  - record_key: ACCT-REQ-0008
+    pass_file: src/apps/petstore/a.yaml, src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Both passes agree on view and edit. Pass a's "store language SHALL switch on save" is
+      contradicted by ACCT-RULE-0011's trace of the session-key mismatch. Remove that clause.
+    edited_requirement: >
+      The system SHALL let a signed-on customer view their account details and edit every field on a
+      pre-filled form, saving all changes on Update.
+
+  - record_key: ACCT-RULE-0011
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Traced to the literal "locale" key versus PetstoreKeys.LOCALE read by OrderEJBAction. This is
+      what production does. Whether the language should switch immediately goes to Intent (SD7).
+
+  - record_key: ACCT-SCR-0007
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      customer.jsp confirms the fields, Yes/No rendering and edit link. The unmasked card number
+      (SD1) is a regulated-data defect for the Business Owner. I would approve the screen with the
+      card number masked, pending that decision.
+    edited_requirement: >
+      The system SHALL show a signed-on customer a read-only account screen listing their contact
+      details, card type, card number masked to its last four digits and expiry, preferred language,
+      favourite category and MyList / banner preferences as Yes/No, with a link to edit the account.
+
+  - record_key: ACCT-SCR-0009
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Duplicate of ACCT-SCR-0007 from pass a, carrying the same unmasked-card defect. Approve one
+      merged screen record (see ACCT-SCR-0007).
+    edited_requirement: >
+      The system SHALL show the account screen with the customer's contact details, card type, card
+      number masked to its last four digits, expiry month/year, and profile preferences.
+
+  - record_key: ACCT-BR-0010
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      mylist.jsp shows the condition and the count of 10 directly, and ACCT-RULE-0012 agrees.
+
+  - record_key: ACCT-RULE-0012
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same evidence as ACCT-BR-0010. Merge the two.
+
+  - record_key: ACCT-BR-0011
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      BannerHelper and the screen definitions confirm the mapping, the dogs fallback and that the
+      banner appears on home and cart only.
+
+  - record_key: ACCT-RULE-0013
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same evidence as ACCT-BR-0011. Merge the two.
+
+  - record_key: CUST-ENT-0001
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The ejb-jar.xml primary key and relations agree with the deployed DDL.
+
+  - record_key: CUST-ENTITY-0001
+    pass_file: src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same evidence as customer CUST-ENT-0001 and CUST-BR-0001. Merge.
+
+  - record_key: CUST-BR-0001
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Enforced by the primary key in both the descriptor and the DDL.
+
+  - record_key: CUST-BR-0002
+    pass_file: src/components/customer/a.yaml, src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both passes read the same ejbPostCreate and AccountLocalHome.Active constant.
+
+  - record_key: CUST-BR-0003
+    pass_file: src/components/customer/a.yaml, src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The ProfileLocalHome constants are read identically by both passes. The web tier overwrites
+      them right after creation during sign-up, so they are visible only on other creation paths.
+
+  - record_key: CUST-BR-0004
+    pass_file: src/components/customer/a.yaml, src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both create paths of AccountEJB are traced. contactinfo and creditcard records confirm the
+      blank creates.
+
+  - record_key: CUST-BR-0005
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: low
+    reason: >
+      The two constants exist, but "disabled" is never set or read (unresolved reachability). Accept
+      as a data value only. Whether disabling is an operational procedure goes to Intent.
+
+  - record_key: CUST-ENTITY-0005
+    pass_file: src/components/customer/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Agrees with CUST-ENT-0003 and CUST-BR-0005, with the same caveat on "disabled".
+
+  - record_key: CUST-ENT-0002
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The DDL NOT NULL on the two boolean preferences agrees with the descriptor fields.
+
+  - record_key: CUST-ENTITY-0006
+    pass_file: src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same as CUST-ENT-0002. Merge.
+
+  - record_key: CUST-ENT-0003
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The AccountEJB fields and relations agree with the DDL.
+
+  - record_key: CUST-BR-0006
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      cascade-delete is declared on all five relations. Pass b's CUST-BR-0007 agrees.
+
+  - record_key: CUST-BR-0007
+    pass_file: src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same declarative evidence as CUST-BR-0006. Merge.
+
+  - record_key: CUST-BR-0008
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Every transaction attribute is Required. Note the suspected defect that a lookup failure is
+      thrown as an application exception without rollback (SD11). Confirm what the code does; the
+      fix is a Business Owner decision.
+
+  - record_key: CUST-BR-0008
+    pass_file: src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      This is a different rule from pass a's key of the same name: one-to-one multiplicity on all
+      five relations, declared in ejb-jar.xml. Assign it a distinct key at approval.
+
+  - record_key: CUST-BR-0009
+    pass_file: src/components/customer/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Matches customer a CUST-BR-0008. The no-rollback edge case in SD11 is the open point.
+
+  - record_key: CUST-ENT-0001
+    pass_file: src/components/contactinfo/a.yaml, src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Both passes read the same descriptor fields and the one-to-one address relation.
+
+  - record_key: CUST-BR-0001
+    pass_file: src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Declarative cascade-delete. It duplicates contactinfo a CUST-BR-0002.
+
+  - record_key: CUST-BR-0002
+    pass_file: src/components/contactinfo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same evidence as contactinfo b CUST-BR-0001. Merge.
+
+  - record_key: CUST-BR-0003
+    pass_file: src/components/contactinfo/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The three create paths read correctly. The five-argument path may link a null address
+      (SD10), which goes to the defect register.
+
+  - record_key: CUST-REQ-0001
+    pass_file: src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      ejbPostCreate creates the blank address, and AccountEJB is the confirmed caller.
+
+  - record_key: CUST-REQ-0002
+    pass_file: src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      getData builds a value copy. Low business weight, but it is accurate.
+
+  - record_key: CUST-REQ-0004
+    pass_file: src/components/contactinfo/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Unchecked permission and Required transactions are declared for every method.
+
+  - record_key: CUST-ENT-0001
+    pass_file: src/components/address/a.yaml, src/components/address/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The descriptor, value object and DTD agree on six fields.
+
+  - record_key: CUST-REQ-0001
+    pass_file: src/components/address/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Per-field setters and getData are read directly from AddressLocal and AddressEJB.
+
+  - record_key: CUST-REQ-0001
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      This is a different rule under the same key: the three create paths, including blank creation
+      used by ContactInfoEJB. Assign it a distinct key at approval.
+
+  - record_key: CUST-REQ-0002
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      An Object primary key with only findByPrimaryKey is unambiguous in the descriptor.
+
+  - record_key: CUST-BR-0001
+    pass_file: src/components/address/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      toDOM/fromDOM and the DTD "StreetName?" agree. Merged with CUST-RULE-0004.
+
+  - record_key: CUST-BR-0002
+    pass_file: src/components/address/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The code requires Country but the DTD says optional. Production behaviour is the code
+      (required). The conflict goes to Intent (Q1).
+
+  - record_key: CUST-BR-0003
+    pass_file: src/components/address/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The sibling-walk ordering is enforced in XMLDocumentUtils, and the DTD sequence agrees.
+
+  - record_key: CUST-BR-0004
+    pass_file: src/components/address/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      There are no checks in any ejbCreate and no constraints in the descriptor. CUST-RULE-0001 agrees.
+
+  - record_key: CUST-RULE-0001
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same as address CUST-BR-0004. Merge.
+
+  - record_key: CUST-RULE-0002
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Agrees with address a CUST-BR-0002 and CUST-BR-0003.
+
+  - record_key: CUST-RULE-0003
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The code requires country. The DTD conflict goes to Intent (Q1).
+
+  - record_key: CUST-RULE-0004
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      toDOM and appendChild are read directly. The round-trip failure (SD9) goes to the defect register.
+
+  - record_key: CUST-RULE-0005
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Unchecked method permission is declared on every method.
+
+  - record_key: CUST-RULE-0006
+    pass_file: src/components/address/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Required is declared on local methods. Home create/find carry no entry, so the container
+      default applies.
+
+  - record_key: ACCT-REQ-0001
+    pass_file: src/components/creditcard/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The no-argument create and its AccountEJB caller are both traced. customer CUST-BR-0004 agrees.
+
+  - record_key: CUST-ENT-0001
+    pass_file: src/components/creditcard/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The descriptor fields and three creators agree. The DDL in sun-j2ee-ri.xml confirms the columns.
+
+  - record_key: CUST-BR-0001
+    pass_file: src/components/creditcard/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The split on "/" is in the getters, and CustomerHTMLAction builds "month/year".
+
+  - record_key: CUST-BR-0002
+    pass_file: src/components/creditcard/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The literal 01/2010 fallback is in the code and is what production does. It is a suspected
+      defect (SD8); whether to keep it is the Business Owner's decision.
+
+  - record_key: CUST-BR-0003
+    pass_file: src/components/creditcard/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      There is no validation anywhere in the component or the web tier (ACCT-BR-0007 agrees).
+
+  - record_key: CUST-REQ-0001
+    pass_file: src/components/creditcard/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Unchecked permission is declared. Card-data protection (SD1) is a Business Owner decision.
+
+  - record_key: CUST-BR-0001
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The userName primary key and the CreateException pass-through agree with petstore ACCT-BR-0002.
+
+  - record_key: CUST-BR-0002
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      There is an explicit MAX_USERID_LENGTH = 25 check with a message in UserEJB.ejbCreate.
+
+  - record_key: CUST-BR-0003
+    pass_file: src/components/signon/a.yaml
+    recommendation: edit
+    confidence: low
+    reason: >
+      The check exists, but the limit is redacted. Approve once an SME supplies the value from the
+      original 1.3.2 source.
+    edited_requirement: >
+      The system SHALL refuse to create a sign-on account whose password is longer than <value from
+      original UserLocal.MAX_PASSWD_LENGTH> characters.
+
+  - record_key: CUST-BR-0004
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      There is an explicit indexOf check with a message in UserEJB.ejbCreate.
+
+  - record_key: SIGN-REQ-0009
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Accurate for the component. The servlet error page it mentions is dead code; the live path is
+      petstore ACCT-BR-0002.
+
+  - record_key: CUST-WF-0001
+    pass_file: src/components/signon/a.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      CreateUserServlet is excluded from the petstore build and mapped by no web.xml in the tree, so
+      it is dead code. Confirm that no other deployment registers it before rejecting.
+
+  - record_key: CUST-BR-0007
+    pass_file: src/waf/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      FormTag/InputTag generate the check, and its use on the account edit form is traced. It also
+      applies to sign-on and checkout forms.
+
+  - record_key: CUST-BR-0001
+    pass_file: src/waf/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same as waf a CUST-BR-0007. Merge.
