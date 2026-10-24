@@ -295,12 +295,9 @@ records:
                   this.locale = locale;
               }
       - path: legacy-source/petstore1.3.2/src/components/cart/src/com/sun/j2ee/blueprints/cart/ejb/ShoppingCartLocalEJB.java
-        line_start: 93
+        line_start: 103
         line_end: 106
         excerpt: |
-                     try {
-                         item = catalog.getItem(key, locale);
-                         ...
                          items.add(ci);
                      } catch (CatalogException cce) {
                          System.out.println("ShoppingCartEJB caught: " + cce);
@@ -444,7 +441,7 @@ records:
     traces:
       - path: legacy-source/petstore1.3.2/src/components/cart/src/com/sun/j2ee/blueprints/cart/model/CartItem.java
         line_start: 46
-        line_end: 66
+        line_end: 54
         excerpt: |
           public class CartItem implements Serializable {
 
@@ -455,7 +452,6 @@ records:
               private String attribute;
               private int quantity;
               private double unitCost;
-              ...
     stack_metadata:
       framework: J2EE 1.3
 
