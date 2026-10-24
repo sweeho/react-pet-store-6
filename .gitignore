@@ -53,5 +53,9 @@ sqlite.db-journal
 sqlite.db-wal
 sqlite.db-shm
 
+# Stryker output
+.stryker-tmp
+reports
+
 # JUnit report written by the testEvidence command
 .vortex-results
