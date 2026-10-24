@@ -1,0 +1,621 @@
+# Pass B extraction for legacy-source/petstore1.3.2/src/components/customer
+# No legacy-analysis/sources/**/extracted.md documents exist in this tree, so no
+# document trace pointers could be cited.
+records:
+  - record_key: CUST-ENTITY-0001
+    kind: entity
+    capability_key: customer-account
+    requirement: >
+      The system SHALL identify each customer by a user id that is unique across all
+      customers, and SHALL refuse to create a second customer with a user id that
+      already exists.
+    plain_text: >
+      Every customer is known by their user id, and no two customers can share the
+      same user id.
+    technical_note: >
+      CustomerEJB is a CMP 2.x entity whose only CMP field, userId, is declared as the
+      primary key in ejb-jar.xml; CustomerLocalHome.create(String userId) is the only
+      creation path. Uniqueness is enforced by the container's primary-key constraint
+      (DuplicateKeyException), not by application code.
+    confidence: high
+    confidence_basis: >
+      Stated in two independent places: the deployment descriptor's primkey-field and
+      the create/findByPrimaryKey signatures keyed on userId. The exact behaviour on a
+      duplicate (the error shown) is container-supplied and not visible in this module,
+      which is why the refusal is stated generically.
+    risk_class: operational
+    basis: >
+      userId is the sole CMP field and the primary key; the home interface creates and
+      finds customers by that key only.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 57
+        line_end: 61
+        excerpt: |
+          <cmp-field>
+            <description>no description</description>
+            <field-name>userId</field-name>
+          </cmp-field>
+          <primkey-field>userId</primkey-field>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/ejb/CustomerLocalHome.java
+        line_start: 47
+        line_end: 49
+        excerpt: |
+          public CustomerLocal create(String userId) throws CreateException;
+
+          public CustomerLocal findByPrimaryKey(String userId) throws FinderException;
+    stack_metadata:
+      framework: EJB 2.0 CMP
+      ejb.bean: CustomerEJB
+      db.object: Customer (abstract schema)
+
+  - record_key: CUST-BR-0002
+    kind: business-rule
+    capability_key: customer-account
+    requirement: >
+      WHEN a new customer is created THEN the system SHALL create exactly one account
+      for that customer with status "active".
+    plain_text: >
+      A newly registered customer's account starts out active.
+    technical_note: >
+      CustomerEJB.ejbPostCreate looks up the Account home and calls
+      create(AccountLocalHome.Active), where Active = "active", then links it via the
+      account relationship. AccountEJB.ejbCreate and ejbPostCreate both set the status.
+    confidence: high
+    confidence_basis: >
+      The constant value and its use at creation are both read directly, and the
+      status is set in AccountEJB in two places (ejbCreate and ejbPostCreate).
+    risk_class: operational
+    basis: >
+      Customer creation unconditionally creates an Account with the Active constant.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/ejb/CustomerEJB.java
+        line_start: 74
+        line_end: 79
+        excerpt: |
+          public void ejbPostCreate(String userId) throws CreateException {
+              try {
+              InitialContext ic = new InitialContext();
+              AccountLocalHome alh = (AccountLocalHome) ic.lookup("java:comp/env/ejb/Account");
+              AccountLocal account = alh.create(AccountLocalHome.Active);
+              setAccount(account);
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/account/ejb/AccountLocalHome.java
+        line_start: 48
+        line_end: 49
+        excerpt: |
+          public static final String Active = "active";
+          public static final String Disabled = "disabled";
+    stack_metadata:
+      ejb.bean: CustomerEJB, AccountEJB
+      ejb.transaction: Required
+
+  - record_key: CUST-BR-0003
+    kind: business-rule
+    capability_key: customer-account
+    requirement: >
+      WHEN a new customer is created THEN the system SHALL create a profile for that
+      customer with preferred language "en_US", no favourite category, the MyList
+      option enabled, and the banner option enabled.
+    plain_text: >
+      A new customer's preferences start as: language US English, no favourite pet
+      category, "my list" shown, and banners shown.
+    technical_note: >
+      CustomerEJB.ejbPostCreate calls ProfileLocalHome.create with the constants
+      DefaultPreferredLanguage="en_US", DefaultFavoriteCategory=null,
+      DefaultMyListPreference=true, DefaultBannerPreference=true.
+    confidence: medium
+    confidence_basis: >
+      One clear place: the constants are defined in ProfileLocalHome and consumed once
+      in CustomerEJB. No test, comment or configuration restates the defaults. The
+      ProfileInfo class (default-named fields) is used elsewhere in the application,
+      not in this module, so it is not counted as a second source here.
+    risk_class: presentational
+    basis: >
+      Literal default constants passed to profile creation at customer creation time.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/profile/ejb/ProfileLocalHome.java
+        line_start: 44
+        line_end: 47
+        excerpt: |
+          public static final String DefaultPreferredLanguage = "en_US";
+          public static final String DefaultFavoriteCategory = null;
+          public static final boolean DefaultMyListPreference = true;
+          public static final boolean DefaultBannerPreference = true;
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/ejb/CustomerEJB.java
+        line_start: 81
+        line_end: 85
+        excerpt: |
+          ProfileLocalHome plh = (ProfileLocalHome) ic.lookup("java:comp/env/ejb/Profile");
+          ProfileLocal profile = plh.create(ProfileLocalHome.DefaultPreferredLanguage,
+          ProfileLocalHome.DefaultFavoriteCategory, ProfileLocalHome.DefaultMyListPreference,
+          ProfileLocalHome.DefaultBannerPreference);
+          setProfile(profile);
+    stack_metadata:
+      ejb.bean: CustomerEJB, ProfileEJB
+
+  - record_key: CUST-BR-0004
+    kind: business-rule
+    capability_key: customer-account
+    requirement: >
+      WHEN an account is created from a status alone THEN the system SHALL also create
+      an empty contact-information record and an empty credit-card record and attach
+      both to the account; WHEN an account is created with supplied contact
+      information and credit card THEN the system SHALL attach those instead.
+    plain_text: >
+      Every account always has a contact-details record and a payment-card record.
+      For a new sign-up they start blank; when existing details are supplied, those
+      are used.
+    technical_note: >
+      AccountEJB has two create paths. create(status) in ejbPostCreate calls
+      ContactInfoLocalHome.create() and CreditCardLocalHome.create() with no
+      arguments and sets both relationships. create(status, contactInfo, creditCard)
+      sets the supplied objects in ejbPostCreate. The customer sign-up path uses the
+      first form; the sample-data populator uses the second.
+    confidence: high
+    confidence_basis: >
+      Both creation paths are read directly in AccountEJB and declared in
+      AccountLocalHome, and the callers of each form were located (CustomerEJB for the
+      one-argument form; the populator outside this module for the three-argument form).
+    risk_class: regulated
+    basis: >
+      Account post-create logic always establishes contactInfo and creditCard
+      relationships; these hold personal data and card data.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/account/ejb/AccountEJB.java
+        line_start: 80
+        line_end: 99
+        excerpt: |
+          public void ejbPostCreate(String status) throws CreateException {
+              setStatus(status);
+              try {
+                  InitialContext ic = new InitialContext();
+                  ContactInfoLocalHome cih = (ContactInfoLocalHome) ic.lookup("java:comp/env/ejb/ContactInfo");
+                  ContactInfoLocal contactInfo = cih.create();
+                  setContactInfo(contactInfo);
+                  CreditCardLocalHome cch = (CreditCardLocalHome) ic.lookup("java:comp/env/ejb/CreditCard");
+                  CreditCardLocal creditCard = cch.create();
+                  setCreditCard(creditCard);
+              } catch (javax.naming.NamingException ne) {
+                  throw new CreateException("ContactInfoEJB error: naming exception looking up contact info or credit card");
+              }
+
+          }
+
+          public void ejbPostCreate(String status, ContactInfoLocal contactInfo, CreditCardLocal creditCard) throws CreateException {
+              setContactInfo(contactInfo);
+              setCreditCard(creditCard);
+          }
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/account/ejb/AccountLocalHome.java
+        line_start: 51
+        line_end: 54
+        excerpt: |
+          public AccountLocal create(String status) throws CreateException;
+
+          public AccountLocal create(String status, ContactInfoLocal contactInfo,
+          CreditCardLocal creditCard) throws CreateException;
+    stack_metadata:
+      ejb.bean: AccountEJB
+      ejb.transaction: Required
+
+  - record_key: CUST-ENTITY-0005
+    kind: entity
+    capability_key: customer-account
+    requirement: >
+      The system SHALL record for each account a status whose defined values are
+      "active" and "disabled", together with one contact-information record and one
+      credit-card record, each of which SHALL be readable and replaceable.
+    plain_text: >
+      An account holds a status (active or disabled), the customer's contact details
+      and their payment card, and each of these can be read and changed.
+    technical_note: >
+      AccountEJB CMP field status; CMR fields contactInfo and creditCard; AccountLocal
+      exposes getters and setters for all three. Status values are the constants
+      Active/Disabled in AccountLocalHome. The status is a free String; nothing
+      restricts it to the two constants.
+    confidence: medium
+    confidence_basis: >
+      The fields are declared in ejb-jar.xml and the interface, but the value set
+      "active"/"disabled" exists only as two constants; "disabled" is never assigned or
+      checked anywhere in the application, so its meaning is inferred from its name.
+    risk_class: regulated
+    basis: >
+      Account schema and local interface; status constants.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 240
+        line_end: 243
+        excerpt: |
+          <cmp-field>
+            <description>no description</description>
+            <field-name>status</field-name>
+          </cmp-field>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/account/ejb/AccountLocal.java
+        line_start: 46
+        line_end: 53
+        excerpt: |
+          public String getStatus();
+          public void setStatus(String status);
+
+          public CreditCardLocal getCreditCard();
+          public void setCreditCard(CreditCardLocal card);
+
+          public ContactInfoLocal getContactInfo();
+          public void setContactInfo(ContactInfoLocal contactInfo);
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/account/ejb/AccountLocalHome.java
+        line_start: 48
+        line_end: 49
+        excerpt: |
+          public static final String Active = "active";
+          public static final String Disabled = "disabled";
+    stack_metadata:
+      ejb.bean: AccountEJB
+      db.object: Account (abstract schema)
+
+  - record_key: CUST-ENTITY-0006
+    kind: entity
+    capability_key: customer-account
+    requirement: >
+      The system SHALL keep for each customer a profile holding a preferred language,
+      a favourite category, a MyList on/off preference and a banner on/off preference,
+      each of which SHALL be readable and changeable.
+    plain_text: >
+      Each customer has a set of preferences: language, favourite pet category,
+      whether "my list" is shown, and whether banners are shown. All can be changed.
+    technical_note: >
+      ProfileEJB CMP fields preferredLanguage, favoriteCategory, myListPreference
+      (boolean), bannerPreference (boolean), declared in ejb-jar.xml; ProfileLocal
+      exposes a getter and setter for each.
+    confidence: high
+    confidence_basis: >
+      Declared in the deployment descriptor and in the bean and local interface, with
+      interface comments describing each preference.
+    risk_class: presentational
+    basis: >
+      Profile schema and local interface with documented getters.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 101
+        line_end: 116
+        excerpt: |
+          <cmp-field>
+            <description>no description</description>
+            <field-name>preferredLanguage</field-name>
+          </cmp-field>
+          <cmp-field>
+            <description>no description</description>
+            <field-name>myListPreference</field-name>
+          </cmp-field>
+          <cmp-field>
+            <description>no description</description>
+            <field-name>favoriteCategory</field-name>
+          </cmp-field>
+          <cmp-field>
+            <description>no description</description>
+            <field-name>bannerPreference</field-name>
+          </cmp-field>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/profile/ejb/ProfileLocal.java
+        line_start: 46
+        line_end: 67
+        excerpt: |
+          public String getPreferredLanguage();
+          public void setPreferredLanguage(String preferredLanguage);
+          ...
+          public String getFavoriteCategory();
+          public void setFavoriteCategory(String category);
+          ...
+          public boolean getMyListPreference();
+          public void setMyListPreference(boolean myListPreference);
+          ...
+          public boolean getBannerPreference();
+          public void setBannerPreference(boolean bannerPreference);
+    stack_metadata:
+      ejb.bean: ProfileEJB
+      db.object: Profile (abstract schema)
+
+  - record_key: CUST-BR-0007
+    kind: business-rule
+    capability_key: customer-account
+    requirement: >
+      WHEN a customer is deleted THEN the system SHALL also delete that customer's
+      account and profile; WHEN an account is deleted THEN the system SHALL also delete
+      its contact information and credit card; WHEN contact information is deleted THEN
+      the system SHALL also delete its address.
+    plain_text: >
+      Removing a customer removes everything held about them: account, preferences,
+      contact details, address and payment card.
+    technical_note: >
+      ejb-jar.xml declares one-to-one container-managed relationships with
+      cascade-delete on the dependent side: Customer->Account, Customer->Profile,
+      Account->ContactInfo, Account->CreditCard, ContactInfo->Address.
+    confidence: high
+    confidence_basis: >
+      Declarative and explicit: five cascade-delete elements in the deployment
+      descriptor. Exercised in practice by the sample-data populator, which removes an
+      existing customer before re-creating it.
+    risk_class: regulated
+    basis: >
+      cascade-delete markers on Account, Profile, ContactInfo, CreditCard and Address
+      relationship roles.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 277
+        line_end: 283
+        excerpt: |
+          <ejb-relationship-role>
+            <ejb-relationship-role-name>AccountEJB</ejb-relationship-role-name>
+            <multiplicity>One</multiplicity>
+            <cascade-delete />
+            <relationship-role-source>
+              <ejb-name>AccountEJB</ejb-name>
+            </relationship-role-source>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 298
+        line_end: 303
+        excerpt: |
+          <ejb-relationship-role>
+            <ejb-relationship-role-name>AddressEJB</ejb-relationship-role-name>
+            <multiplicity>One</multiplicity>
+            <cascade-delete />
+            <relationship-role-source>
+              <ejb-name>AddressEJB</ejb-name>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 319
+        line_end: 324
+        excerpt: |
+          <ejb-relationship-role>
+            <ejb-relationship-role-name>ProfileEJB</ejb-relationship-role-name>
+            <multiplicity>One</multiplicity>
+            <cascade-delete />
+            <relationship-role-source>
+              <ejb-name>ProfileEJB</ejb-name>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 340
+        line_end: 345
+        excerpt: |
+          <ejb-relationship-role>
+            <ejb-relationship-role-name>ContactInfoEJB</ejb-relationship-role-name>
+            <multiplicity>One</multiplicity>
+            <cascade-delete />
+            <relationship-role-source>
+              <ejb-name>ContactInfoEJB</ejb-name>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 361
+        line_end: 366
+        excerpt: |
+          <ejb-relationship-role>
+            <ejb-relationship-role-name>CreditCardEJB</ejb-relationship-role-name>
+            <multiplicity>One</multiplicity>
+            <cascade-delete />
+            <relationship-role-source>
+              <ejb-name>CreditCardEJB</ejb-name>
+    stack_metadata:
+      framework: EJB 2.0 CMR
+      ejb.bean: CustomerEJB, AccountEJB, ProfileEJB, ContactInfoEJB, CreditCardEJB, AddressEJB
+
+  - record_key: CUST-BR-0008
+    kind: business-rule
+    capability_key: customer-account
+    requirement: >
+      The system SHALL hold exactly one account and exactly one profile per customer,
+      exactly one contact-information record and one credit card per account, and
+      exactly one address per contact-information record.
+    plain_text: >
+      A customer has one account and one set of preferences; an account has one set
+      of contact details and one payment card; contact details have one address.
+    technical_note: >
+      All five ejb-relation entries in ejb-jar.xml declare multiplicity One on both
+      roles; the corresponding CMR accessors are single-valued (getAccount,
+      getProfile, getContactInfo, getCreditCard).
+    confidence: high
+    confidence_basis: >
+      Declared multiplicity in the descriptor plus single-valued accessor types in the
+      bean classes.
+    risk_class: operational
+    basis: >
+      One-to-one multiplicity on every customer-module relationship.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 265
+        line_end: 285
+        excerpt: |
+          <ejb-relation>
+            <ejb-relation-name></ejb-relation-name>
+            <ejb-relationship-role>
+              <ejb-relationship-role-name>CustomerEJB</ejb-relationship-role-name>
+              <multiplicity>One</multiplicity>
+              ...
+              <cmr-field>
+                <cmr-field-name>account</cmr-field-name>
+              </cmr-field>
+            </ejb-relationship-role>
+            <ejb-relationship-role>
+              <ejb-relationship-role-name>AccountEJB</ejb-relationship-role-name>
+              <multiplicity>One</multiplicity>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/ejb/CustomerEJB.java
+        line_start: 61
+        line_end: 65
+        excerpt: |
+          public abstract AccountLocal getAccount();
+          public abstract void setAccount(AccountLocal account);
+
+          public abstract ProfileLocal getProfile();
+          public abstract void setProfile(ProfileLocal profile);
+    stack_metadata:
+      framework: EJB 2.0 CMR
+
+  - record_key: CUST-BR-0009
+    kind: business-rule
+    capability_key: customer-account
+    requirement: >
+      WHEN creation of a customer's account or profile fails THEN the system SHALL
+      fail the creation of the customer as a whole, so that no customer exists
+      without an account and a profile.
+    plain_text: >
+      Signing up a customer either creates the customer with their account and
+      preferences together, or creates nothing.
+    technical_note: >
+      Every bean method in the module is declared trans-attribute Required (80
+      container-transaction entries), so CustomerLocalHome.create and the nested
+      Account/Profile/ContactInfo/CreditCard creates share one transaction. A
+      NamingException during sub-record lookup is rethrown as CreateException.
+    confidence: medium
+    confidence_basis: >
+      The transaction attributes and the CreateException rethrow are read directly,
+      but the all-or-nothing outcome depends on container rollback semantics for
+      CreateException, which are not visible in the source (an application exception
+      does not by itself mark the transaction for rollback).
+    risk_class: operational
+    basis: >
+      Uniform Required transactions and exception propagation from ejbPostCreate.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 675
+        line_end: 683
+        excerpt: |
+          <container-transaction>
+            <method>
+              <ejb-name>CustomerEJB</ejb-name>
+              <method-intf>Local</method-intf>
+              <method-name>getAccount</method-name>
+              <method-params />
+            </method>
+            <trans-attribute>Required</trans-attribute>
+          </container-transaction>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/ejb/CustomerEJB.java
+        line_start: 86
+        line_end: 88
+        excerpt: |
+          } catch (NamingException ne) {
+              throw new CreateException ("could not lookup ejb. Exception is " + ne.getMessage());
+          }
+    stack_metadata:
+      ejb.transaction: Required
+
+  - record_key: CUST-REQ-0010
+    kind: requirement
+    capability_key: data-population
+    requirement: >
+      The system SHALL be able to list all customers.
+    plain_text: >
+      The system can produce the full list of customers.
+    technical_note: >
+      CustomerLocalHome.findAllCustomers backed by EJB-QL "Select OBJECT(a) From
+      Customer a". The only caller found is the sample-data CustomerPopulator, hence
+      filed under data-population.
+    confidence: medium
+    confidence_basis: >
+      Declared in the descriptor and the home interface; only one caller exists and it
+      is the populate tool, so whether any user-facing feature relies on it is not
+      established.
+    risk_class: operational
+    basis: >
+      Finder query declared in ejb-jar.xml and home interface.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 80
+        line_end: 88
+        excerpt: |
+          <query>
+            <description>EJBQL to find all Customers</description>
+            <query-method>
+              <method-name>findAllCustomers</method-name>
+          <!--method-intf>LocalHome</method-intf-->
+          <method-params />
+            </query-method>
+            <ejb-ql>Select OBJECT(a) From Customer a</ejb-ql>
+          </query>
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/ejb/CustomerLocalHome.java
+        line_start: 51
+        line_end: 51
+        excerpt: |
+          public Collection findAllCustomers() throws FinderException;
+    stack_metadata:
+      ejb.bean: CustomerEJB
+
+  - record_key: CUST-BR-0011
+    kind: business-rule
+    capability_key: sign-on
+    requirement: >
+      The system SHALL NOT impose any role check on reading or changing customer,
+      account, profile, contact-information, address or credit-card data at the data
+      layer; access to these records SHALL be controlled only by the calling
+      application tier.
+    plain_text: >
+      Customer data, including payment cards, has no access restriction of its own;
+      only the screens and services in front of it decide who may see or change it.
+    technical_note: >
+      ejb-jar.xml assembly-descriptor marks every method of ProfileEJB, AddressEJB,
+      ContactInfoEJB, CreditCardEJB, CustomerEJB and AccountEJB as <unchecked/>, with
+      use-caller-identity. No security roles are declared in this module. Filed under
+      sign-on as the closest listed capability for access control.
+    confidence: high
+    confidence_basis: >
+      Declarative and exhaustive: seven unchecked method-permission blocks covering all
+      six beans and no role declarations anywhere in the descriptor.
+    risk_class: regulated
+    basis: >
+      All method permissions in the module are unchecked.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 372
+        line_end: 378
+        excerpt: |
+          <method-permission>
+            <unchecked />
+            <method>
+              <ejb-name>ProfileEJB</ejb-name>
+              <method-name>*</method-name>
+            </method>
+          </method-permission>
+    stack_metadata:
+      ejb.bean: all beans in CustomerJAR
+
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/ejb/CustomerLocalHome.java
+    description: >
+      The duplicate-customer refusal (CUST-ENTITY-0001) relies on the container's
+      primary-key handling; this module defines no user-facing message for it. What a
+      user sees when signing up with an existing user id must be settled from the
+      calling application and sign-on components, not from this module.
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+    description: >
+      This module's descriptor also declares ContactInfo, Address and CreditCard
+      entities (fields familyName, givenName, telephone, email; street lines, city,
+      state, zipCode, country; cardType, cardNumber, expiryDate), but their bean
+      classes live in other components. Their field rules were not extracted here to
+      avoid duplicating those components' shards; a human should confirm they are
+      covered there.
+
+suspected_defects:
+  - capability_key: customer-account
+    record_keys: [CUST-ENTITY-0005]
+    severity: medium
+    category: unreachable-branch
+    title: Account status "disabled" is defined but never set or checked
+    description: >
+      Accounts carry a status with defined values "active" and "disabled", but nothing
+      in the application assigns "disabled" or reads the status to restrict anything.
+      Every account is active and stays active; a disabled account, if one were ever
+      stored, would behave exactly like an active one.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/account/ejb/AccountLocalHome.java
+        line_start: 49
+        line_end: 49
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/com/sun/j2ee/blueprints/customer/account/ejb/AccountEJB.java
+        line_start: 57
+        line_end: 58
+  - capability_key: sign-on
+    record_keys: [CUST-BR-0011]
+    severity: medium
+    category: other
+    title: Credit-card and contact data have no data-layer access control
+    description: >
+      All methods on customer, account, contact, address and credit-card records are
+      unrestricted. Any code in the application that can reach these records can read
+      or replace a customer's card number and personal details without a role check.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/customer/src/ejb-jar.xml
+        line_start: 372
+        line_end: 378
