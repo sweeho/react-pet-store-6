@@ -83,3 +83,75 @@ WHEN a purchase order is created THEN the system SHALL, in one transaction, stor
 - **GIVEN** a purchase order whose credit-card record cannot be created
 - **WHEN** it is created
 - **THEN** the order creation fails and no part of the order is kept
+
+### Requirement: Checkout hands the submitted order to order processing asynchronously
+
+ID: SWHR2-R-0049
+Recovered from: CHECKOUT-WF-0001
+WHEN a signed-on customer checks out a cart THEN the system SHALL present the billing and shipping form already filled in for that customer, and WHEN the customer submits it THEN the system SHALL pass the order to order processing asynchronously, so that order approval MAY happen after the customer's request has completed.
+
+#### Scenario: Customer submits the checkout form
+
+- **GIVEN** a signed-on customer with one item in the cart who has proceeded to checkout
+- **WHEN** the customer submits the pre-filled billing and shipping form
+- **THEN** the customer's request completes and the order is handed to order processing to be approved afterwards
+
+### Requirement: Purchase order exchanged as a structured order document
+
+ID: SWHR2-R-0050
+Recovered from: CHK-INT-0001
+The system SHALL exchange a purchase order between the storefront and order processing as an XML document whose root element is "PurchaseOrder", and SHALL carry its payment card as a "CreditCard" element containing, in this order, "CardNumber", "CardType" and "ExpiryDate", each holding text. The system MUST reject a document whose root element is not "PurchaseOrder" with the error "PurchaseOrder element expected.", and MUST reject a card element that is not "CreditCard" with the error "CreditCard element expected.". The system SHALL be able to render a purchase order back to the same document form.
+
+#### Scenario: Valid order document round-trips
+
+- **GIVEN** a purchase order with card number, card type and expiry date
+- **WHEN** it is rendered to an order document and read back
+- **THEN** the document's root element is "PurchaseOrder", its card appears as "CreditCard" with "CardNumber", "CardType" and "ExpiryDate" in that order, and the order read back equals the original
+
+#### Scenario: Document is not a purchase order
+
+- **GIVEN** an XML document whose root element is "Invoice"
+- **WHEN** it is submitted as a purchase order
+- **THEN** it is rejected with the error "PurchaseOrder element expected." and no order is created
+
+#### Scenario: Card element is not a credit card
+
+- **GIVEN** an order document whose card position holds an element other than "CreditCard"
+- **WHEN** the card is read
+- **THEN** it is rejected with the error "CreditCard element expected."
+
+### Requirement: Identifier request fails when its sequence is unavailable
+
+ID: SWHR2-R-0051
+Recovered from: CHK-REQ-0007
+WHEN an identifier is requested and the sequence for its prefix cannot be created, or the sequence store cannot be located, THEN the system SHALL fail the request with an error and MUST NOT issue an identifier.
+
+#### Scenario: Sequence cannot be created for a new prefix
+
+- **GIVEN** a prefix for which no sequence exists and creating one fails
+- **WHEN** an identifier is requested for that prefix
+- **THEN** the request fails with an error and no identifier is issued
+
+#### Scenario: Sequence store cannot be located
+
+- **GIVEN** the sequence store is unavailable
+- **WHEN** an identifier is requested
+- **THEN** the request fails with an error and no identifier is issued
+
+### Requirement: Purchase order identified and retrieved by its order id
+
+ID: SWHR2-R-0052
+Recovered from: CHK-RULE-0001
+The system SHALL identify each purchase order uniquely by its order id, and SHALL retrieve a purchase order by that id.
+
+#### Scenario: Order looked up by its id
+
+- **GIVEN** a stored purchase order with order id "10011"
+- **WHEN** a purchase order is requested by id "10011"
+- **THEN** that purchase order is returned
+
+#### Scenario: Second order with an existing id
+
+- **GIVEN** a stored purchase order with order id "10011"
+- **WHEN** another purchase order with order id "10011" is created
+- **THEN** the creation is refused and the stored order is unchanged
