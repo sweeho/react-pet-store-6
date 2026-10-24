@@ -1,0 +1,127 @@
+# SX-0001 extract-a — legacy-source/petstore1.3.2/src/components/util
+# Module contents: one utility class (util/tracer Debug.java) and its Ant build file.
+# It carries no business rule; the discovery report classifies it "Debug tracer; no behaviour"
+# (legacy-analysis/discovery/report.md line 64). No legacy-analysis/sources/**/extracted.md
+# documents exist in this tree, so no document trace pointers are cited.
+records:
+  - record_key: CAT-REQ-0001
+    kind: requirement
+    capability_key: catalog-browsing
+    requirement: >
+      The system SHALL NOT emit diagnostic trace output (debug messages, caught-exception
+      messages or stack traces) routed through the shared diagnostic helper in the shipped
+      build; GIVEN a component reports a caught error through that helper WHEN the
+      application runs THEN nothing is written to any log or console and processing
+      continues on the component's own fallback path.
+    plain_text: >
+      In the shipped store, internal diagnostic messages and the details of errors that
+      the application recovers from are not recorded anywhere; the store simply carries on.
+    technical_note: >
+      com.sun.j2ee.blueprints.util.tracer.Debug guards every print/println method with the
+      compile-time constant `debuggingOn = false`, so all calls are no-ops (the javac
+      compiler eliminates the guarded bodies). Callers include the WAF controller
+      (MainServlet, RequestProcessor, ScreenFlowManager, StateMachine, URLMappingsXmlDAO,
+      DefaultWebController, DefaultComponentManager, I18nUtil), the petstore web
+      controller/component manager, catalog (CatalogEJB, GenericCatalogDAO) and cart
+      (ShoppingCartLocalEJB, ShoppingCartModel). When enabled, println writes ">>"+msg to
+      stderr while print(Throwable,..) writes to stdout — inconsistent streams.
+    confidence: medium
+    confidence_basis: >
+      The behaviour is unambiguous in one place (a final static boolean set to false and
+      checked in every method), but there is no configuration, test or document stating
+      that suppressing diagnostics is intended, so it is not graded high. Not graded low
+      because it is read directly, not inferred.
+    risk_class: operational
+    basis: >
+      Debug.java declares `public static final boolean debuggingOn = false;` and every
+      output method is wrapped in `if (debuggingOn)`. There is no other switch (system
+      property, deployment descriptor) that could turn it on at runtime.
+      Capability note: this cross-cutting operational behaviour fits no listed capability;
+      it is filed under catalog-browsing as the closest home because the most
+      user-visible caller whose recovered errors are hidden is catalog keyword-search
+      parsing (I18nUtil.parseKeywords). An SME may prefer to re-home or drop it as a
+      non-functional concern.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/util/tracer/src/com/sun/j2ee/blueprints/util/tracer/Debug.java
+        line_start: 44
+        line_end: 58
+        excerpt: |
+          public final class Debug {
+
+              public static final boolean debuggingOn = false;
+
+              public static void print(String msg) {
+                  if (debuggingOn) {
+                      System.err.print(msg);
+                  }
+              }
+
+              public static void println(String msg) {
+                  if (debuggingOn) {
+                      System.err.println(">>" + msg);
+                  }
+              }
+      - path: legacy-source/petstore1.3.2/src/components/util/tracer/src/com/sun/j2ee/blueprints/util/tracer/Debug.java
+        line_start: 68
+        line_end: 75
+        excerpt: |
+              public static void print(Throwable t, String msg) {
+                  if (debuggingOn) {
+                      System.out.println("Received throwable with Message: "+t.getMessage());
+                      if (msg != null)
+                          System.out.print(msg);
+                      t.printStackTrace();
+                  }
+              }
+    stack_metadata:
+      framework: plain Java utility (no J2EE API used)
+      java.class: com.sun.j2ee.blueprints.util.tracer.Debug
+      build.artifact: tracer.jar
+      compile_time_flag: debuggingOn=false
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/src/components/util/tracer/src/com/sun/j2ee/blueprints/util/tracer/Debug.java
+    description: >
+      Whether the permanently disabled diagnostics are a deliberate production choice or a
+      leftover default cannot be determined from source. A human should decide whether the
+      rebuild needs an operational logging requirement (e.g. recording recovered errors),
+      which the legacy system does not provide.
+suspected_defects:
+  - capability_key: catalog-browsing
+    record_keys: [CAT-REQ-0001]
+    severity: low
+    category: error-swallowed
+    title: Recovered errors are discarded without any record
+    description: >
+      Callers catch exceptions and hand them to the diagnostic helper as their only error
+      handling, but the helper is hard-wired off, so the error is lost. Example: catalog
+      keyword parsing catches any Throwable, reports it through the helper and returns no
+      keywords, so a failed search parse leaves no trace for operators. Another example:
+      a failed release of the shopping controller at session end is ignored silently.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/util/tracer/src/com/sun/j2ee/blueprints/util/tracer/Debug.java
+        line_start: 46
+        line_end: 46
+      - path: legacy-source/petstore1.3.2/src/waf/src/controller/com/sun/j2ee/blueprints/waf/util/I18nUtil.java
+        line_start: 151
+        line_end: 156
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/com/sun/j2ee/blueprints/petstore/controller/web/ShoppingWebController.java
+        line_start: 107
+        line_end: 112
+  - capability_key: catalog-browsing
+    record_keys: []
+    severity: low
+    category: other
+    title: Tracer build target uses a property that is never defined
+    description: >
+      The jar-packaging target deletes, creates, copies into, jars from and deletes a
+      directory named by `tracer.buildjardir`, which is not defined in this build file's
+      init target. Ant then uses the literal string "${tracer.buildjardir}" as a directory
+      name relative to the build directory. The jar is still produced, but the behaviour
+      depends on an unresolved property (it may be defined in an external
+      build.properties/petstore.properties not checked here). Build-only; no runtime
+      business impact.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/util/tracer/src/build.xml
+        line_start: 83
+        line_end: 91
