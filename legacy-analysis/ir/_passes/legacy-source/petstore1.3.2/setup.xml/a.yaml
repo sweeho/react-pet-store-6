@@ -1,0 +1,497 @@
+records:
+  - record_key: sign-on-REQ-0001
+    kind: requirement
+    capability_key: sign-on
+    requirement: >
+      The system SHALL be provisioned with a built-in administrator account
+      (user name "jps_admin") that holds the administrator role for the
+      administration application, so that the protected administration area is
+      reachable immediately after installation.
+    plain_text: >
+      A ready-made administrator login exists from installation onwards, and it
+      is the login that is allowed into the store administration screens.
+    technical_note: >
+      setup.xml target create_users runs the J2EE RI RealmTool with
+      "-add jps_admin admin default" (user jps_admin, password literal, group
+      default). The admin application's sun-j2ee-ri.xml maps principal jps_admin
+      to the "administrator" role, and the admin web.xml restricts
+      /AdminRequestProcessor (GET, POST) to that role behind FORM login against
+      realm "default".
+    confidence: high
+    confidence_basis: >
+      The account is created in the install script and the same principal name
+      is mapped to the administrator role in the admin application's deployment
+      descriptor, which in turn guards the admin request processor. Three places
+      agree. Whether the rebuild must keep this exact user name is a business
+      choice the source cannot settle.
+    risk_class: regulated
+    basis: >
+      Realm user creation in the install script plus the role mapping and the
+      security constraint in the admin application descriptors.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 174
+        line_end: 189
+        excerpt: |
+          <target name="create_users" depends="init">  
+            <echo message="Creating users ...."/>
+            <java classname="com.sun.enterprise.tools.admin.RealmTool" fork="yes">
+              <classpath path="${j2ee.classpath}"/>
+              <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+              <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+              <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+              <arg line="-addGroup default"/>
+            </java>
+            <java classname="com.sun.enterprise.tools.admin.RealmTool" fork="yes">
+              <classpath path="${j2ee.classpath}"/>
+              <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+              <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+              <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+              <arg line="-add jps_admin admin default"/>
+            </java>
+      - path: legacy-source/petstore1.3.2/src/apps/admin/src/sun-j2ee-ri.xml
+        line_start: 46
+        line_end: 51
+        excerpt: |
+          <role name="administrator">
+            <principals>
+              <principal>
+                <name>jps_admin</name>
+              </principal>
+            </principals>
+      - path: legacy-source/petstore1.3.2/src/apps/admin/src/docroot/WEB-INF/web.xml
+        line_start: 75
+        line_end: 84
+        excerpt: |
+          <security-constraint>
+            <web-resource-collection>
+              <web-resource-name>MySecureBit0</web-resource-name>
+              <url-pattern>/AdminRequestProcessor</url-pattern>
+              <http-method>GET</http-method>
+              <http-method>POST</http-method>
+            </web-resource-collection>
+            <auth-constraint>
+              <role-name>administrator</role-name>
+            </auth-constraint>
+    stack_metadata:
+      framework: J2EE 1.3 RI (Ant install script)
+      batch.trigger: ant target create_users
+      realm: default
+
+  - record_key: sign-on-REQ-0002
+    kind: requirement
+    capability_key: sign-on
+    requirement: >
+      The system SHALL be provisioned with a built-in supplier account (user
+      name "supplier") that holds the administrator role of the supplier
+      application, so that the supplier's protected order-receiving area is
+      reachable immediately after installation.
+    plain_text: >
+      A ready-made supplier login exists from installation onwards, and it is
+      the login that is allowed into the supplier's screens.
+    technical_note: >
+      setup.xml target create_users runs RealmTool "-add supplier supplier
+      default". The supplier application's sun-j2ee-ri.xml maps principal
+      "supplier" to that application's "administrator" role, and the supplier
+      web.xml restricts /RcvrRequestProcessor (GET, POST) to that role behind
+      FORM login against realm "default".
+    confidence: high
+    confidence_basis: >
+      Account creation in the install script and the principal-to-role mapping
+      plus security constraint in the supplier application agree. The role is
+      named "administrator" inside the supplier application, not "supplier";
+      the record follows what the descriptors say.
+    risk_class: regulated
+    basis: >
+      Realm user creation in the install script plus the role mapping and the
+      security constraint in the supplier application descriptors.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 190
+        line_end: 196
+        excerpt: |
+          <java classname="com.sun.enterprise.tools.admin.RealmTool" fork="yes">
+            <classpath path="${j2ee.classpath}"/>
+            <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+            <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+            <arg line="-add supplier supplier default"/>
+          </java>
+      - path: legacy-source/petstore1.3.2/src/apps/supplier/src/sun-j2ee-ri.xml
+        line_start: 46
+        line_end: 51
+        excerpt: |
+          <role name="administrator">
+            <principals>
+              <principal>
+                <name>supplier</name>
+              </principal>
+            </principals>
+      - path: legacy-source/petstore1.3.2/src/apps/supplier/src/docroot/WEB-INF/web.xml
+        line_start: 91
+        line_end: 100
+        excerpt: |
+          <security-constraint>
+            <web-resource-collection>
+              <web-resource-name>MySecureBit0</web-resource-name>
+              <url-pattern>/RcvrRequestProcessor</url-pattern>
+              <http-method>GET</http-method>
+              <http-method>POST</http-method>
+            </web-resource-collection>
+            <auth-constraint>
+              <role-name>administrator</role-name>
+            </auth-constraint>
+    stack_metadata:
+      framework: J2EE 1.3 RI (Ant install script)
+      batch.trigger: ant target create_users
+      realm: default
+
+  - record_key: order-fulfillment-INT-0001
+    kind: integration
+    capability_key: order-fulfillment
+    requirement: >
+      The system SHALL provide asynchronous, durable message channels for (a)
+      new orders handed from the storefront to order processing, (b) purchase
+      orders sent from order processing to the supplier, and (c) invoices
+      published back from the supplier, with invoices delivered as a
+      publish/subscribe broadcast rather than a point-to-point queue.
+    plain_text: >
+      Orders travel from the shop to order processing, and from order
+      processing to the supplier, as queued messages; the supplier's invoices
+      are broadcast so that more than one part of the business can react to
+      them.
+    technical_note: >
+      setup.xml target create_jms_queues creates JMS queues jms/opc/OrderQueue
+      and jms/supplier/PurchaseOrderQueue, the JMS topic jms/opc/InvoiceTopic,
+      and the queue/topic connection factories jms/opc/QueueConnectionFactory,
+      jms/supplier/QueueConnectionFactory, jms/opc/TopicConnectionFactory,
+      jms/supplier/TopicConnectionFactory and jms/petstore/QueueConnectionFactory
+      using the RI AdminTool. Producers/consumers are in the opc and supplier
+      applications, not in this file.
+    confidence: medium
+    confidence_basis: >
+      The destinations and their queue-vs-topic type are stated plainly in one
+      place. The roles I assign to each (new order, purchase order, invoice)
+      are read from the destination names only; I did not trace producers and
+      consumers in this pass.
+    risk_class: operational
+    basis: >
+      Explicit -addJmsDestination and -addJmsFactory commands in the install
+      script, with destination names and types.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 102
+        line_end: 122
+        excerpt: |
+          <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+            <classpath path="${j2ee.classpath}"/>
+            <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+            <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+            <arg line="-addJmsDestination jms/opc/OrderQueue queue"/>
+          </java>
+          <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+            <classpath path="${j2ee.classpath}"/>
+            <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+            <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+            <arg line="-addJmsDestination jms/opc/InvoiceTopic topic"/>
+          </java>
+          <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+            <classpath path="${j2ee.classpath}"/>
+            <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+            <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+            <arg line="-addJmsDestination jms/supplier/PurchaseOrderQueue queue"/>
+          </java>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 128
+        line_end: 128
+        excerpt: |
+          <arg line="-addJmsFactory jms/opc/QueueConnectionFactory queue"/>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 135
+        line_end: 135
+        excerpt: |
+          <arg line="-addJmsFactory jms/supplier/QueueConnectionFactory queue"/>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 142
+        line_end: 142
+        excerpt: |
+          <arg line="-addJmsFactory jms/opc/TopicConnectionFactory topic"/>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 149
+        line_end: 149
+        excerpt: |
+          <arg line="-addJmsFactory jms/supplier/TopicConnectionFactory topic"/>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 156
+        line_end: 156
+        excerpt: |
+          <arg line="-addJmsFactory jms/petstore/QueueConnectionFactory queue"/>
+    stack_metadata:
+      framework: J2EE 1.3 RI JMS
+      batch.trigger: ant target create_jms_queues
+      jms.queue: jms/opc/OrderQueue, jms/supplier/PurchaseOrderQueue
+      jms.topic: jms/opc/InvoiceTopic
+
+  - record_key: order-approval-INT-0001
+    kind: integration
+    capability_key: order-approval
+    requirement: >
+      The system SHALL provide an asynchronous, durable channel that carries
+      order approval decisions into order processing.
+    plain_text: >
+      When an order is approved or denied, that decision is passed on to order
+      processing as a queued message rather than as a direct call.
+    technical_note: >
+      setup.xml creates the JMS queue jms/opc/OrderApprovalQueue. The admin
+      application's sun-j2ee-ri.xml binds its jms/AsyncSenderQueue resource-env
+      reference to jms/opc/OrderApprovalQueue via jms/admin/QueueConnectionFactory
+      (also created here), so administrator approve/deny decisions are sent on it.
+    confidence: medium
+    confidence_basis: >
+      Queue creation is explicit here and the admin application's binding to it
+      is visible in its RI descriptor; the consumer side in order processing was
+      not traced in this pass.
+    risk_class: operational
+    basis: >
+      Queue creation in the install script and the admin application's
+      resource binding to that queue.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 95
+        line_end: 101
+        excerpt: |
+          <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+            <classpath path="${j2ee.classpath}"/>
+            <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+            <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+            <arg line="-addJmsDestination jms/opc/OrderApprovalQueue queue"/>
+          </java>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 158
+        line_end: 164
+        excerpt: |
+          <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+            <classpath path="${j2ee.classpath}"/>
+            <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+            <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+            <arg line="-addJmsFactory jms/admin/QueueConnectionFactory queue"/>
+          </java>
+      - path: legacy-source/petstore1.3.2/src/apps/admin/src/sun-j2ee-ri.xml
+        line_start: 95
+        line_end: 97
+        excerpt: |
+          <resource-env-ref>
+            <resource-env-ref-name>jms/AsyncSenderQueue</resource-env-ref-name>
+            <jndi-name>jms/opc/OrderApprovalQueue</jndi-name>
+    stack_metadata:
+      framework: J2EE 1.3 RI JMS
+      batch.trigger: ant target create_jms_queues
+      jms.queue: jms/opc/OrderApprovalQueue
+
+  - record_key: customer-notifications-INT-0001
+    kind: integration
+    capability_key: customer-notifications
+    requirement: >
+      The system SHALL provide separate asynchronous, durable channels for
+      order-approval e-mails, completed-order e-mails, and outbound mail
+      delivery.
+    plain_text: >
+      Customer e-mails about an approval decision and about a completed order
+      are queued separately, and actual sending of mail is queued too, so a
+      slow mail server does not hold up order processing.
+    technical_note: >
+      setup.xml creates JMS queues jms/opc/MailOrderApprovalQueue,
+      jms/opc/MailCompletedOrderQueue and jms/opc/MailQueue. The message
+      producers/consumers live in the opc application and were not traced here.
+    confidence: medium
+    confidence_basis: >
+      Three queue creations are explicit in one place. The purpose of each
+      (approval mail, completed-order mail, mail delivery) is read from the
+      destination names only.
+    risk_class: operational
+    basis: >
+      Explicit -addJmsDestination commands for three mail-related queues.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 72
+        line_end: 94
+        excerpt: |
+          <target name="create_jms_queues" depends="init">
+            <echo message="Creating JMS Queues ...."/>
+            <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+              <classpath path="${j2ee.classpath}"/>
+              <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+              <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+              <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+              <arg line="-addJmsDestination jms/opc/MailOrderApprovalQueue queue"/>
+            </java>
+            <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+              <classpath path="${j2ee.classpath}"/>
+              <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+              <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+              <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+              <arg line="-addJmsDestination jms/opc/MailCompletedOrderQueue queue"/>
+            </java>
+            <java classname="com.sun.enterprise.tools.admin.AdminTool" fork="yes">
+              <classpath path="${j2ee.classpath}"/>
+              <sysproperty key="com.sun.enterprise.home" value="${j2ee.home}"/>
+              <sysproperty key="javax.net.ssl.trustStore" value="${j2ee.home}/lib/security/cacerts.jks"/>
+              <sysproperty key="java.security.auth.policy" value="${j2ee.home}/lib/security/jaas.policy"/>            
+              <arg line="-addJmsDestination jms/opc/MailQueue queue"/>
+            </java>
+    stack_metadata:
+      framework: J2EE 1.3 RI JMS
+      batch.trigger: ant target create_jms_queues
+      jms.queue: jms/opc/MailOrderApprovalQueue, jms/opc/MailCompletedOrderQueue, jms/opc/MailQueue
+
+  - record_key: data-population-REQ-0001
+    kind: requirement
+    capability_key: data-population
+    requirement: >
+      The system SHALL keep three separate data stores, one each for the
+      storefront, the supplier, and order processing, each created empty at
+      installation if it does not already exist.
+    plain_text: >
+      Shop data, supplier data and order-processing data are kept in three
+      separate databases, which installation creates if they are missing.
+    technical_note: >
+      setup.xml targets create_petstore_db, create_supplier_db and create_opc_db
+      register XA datasources jdbc/petstore/PetStoreDB, jdbc/supplier/SupplierDB
+      and jdbc/opc/OPCDB (Cloudscape RemoteXaDataSource, createDatabase=create).
+      XA datasources allow distributed transactions spanning them. Filed under
+      data-population as the closest listed capability; no capability covers
+      data-store topology.
+    confidence: medium
+    confidence_basis: >
+      Three datasource registrations are explicit in one file. That the
+      separation is a business requirement rather than a deployment convenience
+      is inferred; nothing here states why.
+    risk_class: operational
+    basis: >
+      Three -addJdbcXADatasource commands with distinct database names and
+      createDatabase=create.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 205
+        line_end: 205
+        excerpt: |
+          <arg line="-addJdbcXADatasource jdbc/petstore/PetStoreDB COM.cloudscape.core.RemoteXaDataSource -props createDatabase=create databaseName=PetStoreDB remoteDataSourceProtocol=rmi"/>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 215
+        line_end: 215
+        excerpt: |
+          <arg line="-addJdbcXADatasource jdbc/supplier/SupplierDB COM.cloudscape.core.RemoteXaDataSource -props createDatabase=create databaseName=SupplierDB remoteDataSourceProtocol=rmi"/>
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 225
+        line_end: 225
+        excerpt: |
+          <arg line="-addJdbcXADatasource jdbc/opc/OPCDB COM.cloudscape.core.RemoteXaDataSource -props createDatabase=create databaseName=OPCDB remoteDataSourceProtocol=rmi"/>
+    stack_metadata:
+      framework: J2EE 1.3 RI / Cloudscape
+      batch.trigger: ant targets create_petstore_db, create_supplier_db, create_opc_db
+      db.object: jdbc/petstore/PetStoreDB, jdbc/supplier/SupplierDB, jdbc/opc/OPCDB
+
+  - record_key: data-population-WF-0001
+    kind: workflow
+    capability_key: data-population
+    requirement: >
+      The system SHALL be installed as four applications (storefront, order
+      processing, supplier, and administration), and for each the database
+      tables SHALL be generated before the application is deployed; the
+      storefront SHALL be reachable at the "/petstore" path once installed.
+    plain_text: >
+      Installing the store sets up four parts (the shop, order processing, the
+      supplier and the administration area), creating each part's database
+      tables first. Shoppers then reach the shop at the "/petstore" address.
+    technical_note: >
+      setup.xml target deploy runs deploytool -generateSQL then -deploy for
+      petstore.ear, opc.ear, supplier.ear and petstoreadmin.ear in that order,
+      then echoes http://<server>:<port>/petstore. Table DDL is generated from
+      CMP mappings at deploy time; there is no checked-in DDL in this file.
+      Filed under data-population as the closest listed capability.
+    confidence: medium
+    confidence_basis: >
+      The deploy sequence is explicit in one place. Whether the storefront ->
+      order processing -> supplier -> admin order matters at runtime is not
+      stated; I record it as observed, not as a constraint.
+    risk_class: operational
+    basis: >
+      The deploy target's sequence of generateSQL/deploy commands and the final
+      echo of the storefront URL.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 229
+        line_end: 257
+        excerpt: |
+          <target name="deploy" depends="init">
+            <echo message="Deploying ears ...."/>
+            <exec executable="${deploytool}">
+                <arg line="-generateSQL petstore.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-deploy petstore.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-generateSQL opc.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-deploy opc.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-generateSQL supplier.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-deploy supplier.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-generateSQL petstoreadmin.ear ${j2ee.server.name}" />
+            </exec>
+            <exec executable="${deploytool}">
+                <arg line="-deploy petstoreadmin.ear ${j2ee.server.name}" />
+            </exec>
+            <echo message="The petstore application is now installed."/>
+            <echo message="Please restart your cloudscape database and the J2EE server, and then point your browser to http://${j2ee.server.name}:${j2ee.server.port}/petstore to access petstore."/>
+          </target>
+    stack_metadata:
+      framework: J2EE 1.3 RI deploytool
+      batch.trigger: ant target deploy
+
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/setup.xml
+    description: >
+      The core target creates queues, users and datasources but does not deploy;
+      deploy is a separate target, and the core target's echoed instructions
+      require a manual server restart in between. Whether installation must stay
+      a two-step, restart-in-between process in the rebuild is an operations
+      decision, not a requirement the source states. No record emitted.
+
+suspected_defects:
+  - capability_key: sign-on
+    record_keys: [sign-on-REQ-0001, sign-on-REQ-0002]
+    severity: high
+    category: other
+    title: Privileged accounts are created with fixed, guessable passwords
+    description: >
+      The install script creates the store administrator and the supplier
+      account with passwords written literally into the script; the supplier
+      account's password is the same as its user name. Every installation
+      therefore starts with the same privileged credentials, and nothing in the
+      install flow requires them to be changed. The administration and supplier
+      areas guarded by these accounts also declare no transport protection, so
+      those passwords are sent unencrypted at login.
+    traces:
+      - path: legacy-source/petstore1.3.2/setup.xml
+        line_start: 188
+        line_end: 195
+      - path: legacy-source/petstore1.3.2/src/apps/admin/src/docroot/WEB-INF/web.xml
+        line_start: 85
+        line_end: 87
+      - path: legacy-source/petstore1.3.2/src/apps/supplier/src/docroot/WEB-INF/web.xml
+        line_start: 101
+        line_end: 103
