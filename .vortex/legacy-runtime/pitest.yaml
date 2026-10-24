@@ -1,0 +1,24 @@
+# PIT mutation testing for the legacy Java Pet Store 1.3.2 (FR-IM-56).
+#
+# STATUS: NOT RUN. No mutation score exists. On 2026-10-24 the command below could
+# not be executed, for these reasons:
+#   - the legacy tree has no JUnit tests (targetTests matches nothing today);
+#   - the legacy build is Ant only (no Maven/Gradle), and src/lib/ant ships no jars;
+#   - the build image has no JDK and no J2EE SDK 1.3.1.
+# The values below are the intended configuration. Treat `reportPath` as unconfirmed
+# until a run writes it.
+tool: pit
+command: >-
+  java -cp "$PIT_CLASSPATH"
+  org.pitest.mutationtest.commandline.MutationCoverageReport
+  --reportDir target/pit-reports
+  --sourceDirs legacy-source/petstore1.3.2/src
+  --targetClasses "com.sun.j2ee.blueprints.*"
+  --targetTests "com.sun.j2ee.blueprints.*Test"
+  --outputFormats XML
+  --timestampedReports false
+targetClasses:
+  - com.sun.j2ee.blueprints.*
+targetTests:
+  - com.sun.j2ee.blueprints.*Test
+reportPath: target/pit-reports/mutations.xml
