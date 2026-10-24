@@ -95,3 +95,212 @@ The system SHALL, on a new-user submission carrying a user name and password, cr
 - **GIVEN** a sign-on account already exists for the user name "j2ee"
 - **WHEN** a new-user submission carrying user name "j2ee" and a password is processed
 - **THEN** no account is created and the user is redirected to the user-creation error page
+
+### Requirement: My List panel for the favourite category
+
+ID: SWHR2-R-0053
+Recovered from: ACCT-BR-0010
+WHILE a signed-on customer's MyList preference is on, the system SHALL show a "My List" panel listing up to the first 10 products of the customer's favourite category, each linking to its product page. The panel MUST NOT be shown when the preference is off.
+
+#### Scenario: MyList preference on
+
+- **GIVEN** a signed-on customer whose MyList preference is on and whose favourite category is "BIRDS"
+- **WHEN** a storefront screen carrying the My List panel is displayed
+- **THEN** the panel lists products of the "BIRDS" category, each linking to its product page
+
+#### Scenario: Favourite category holds more than ten products
+
+- **GIVEN** a signed-on customer whose MyList preference is on and whose favourite category holds 12 products
+- **WHEN** the My List panel is displayed
+- **THEN** only the first 10 products of the category are listed
+
+#### Scenario: MyList preference off
+
+- **GIVEN** a signed-on customer whose MyList preference is off
+- **WHEN** a storefront screen is displayed
+- **THEN** no My List panel is shown
+
+### Requirement: Pet-tips banner for the favourite category
+
+ID: SWHR2-R-0054
+Recovered from: ACCT-BR-0011
+WHILE a signed-on customer's banner preference is on, the system SHALL show, on the home and cart screens only, a pet-tips banner for the customer's favourite category (dogs, cats, reptiles, birds or fish), and SHALL use the dogs banner for any other category.
+
+#### Scenario: Banner on the home screen
+
+- **GIVEN** a signed-on customer whose banner preference is on and whose favourite category is "CATS"
+- **WHEN** the home screen is displayed
+- **THEN** the cats pet-tips banner is shown
+
+#### Scenario: Unrecognised favourite category
+
+- **GIVEN** a signed-on customer whose banner preference is on and whose favourite category is not one of dogs, cats, reptiles, birds or fish
+- **WHEN** the cart screen is displayed
+- **THEN** the dogs pet-tips banner is shown
+
+#### Scenario: Screen other than home or cart
+
+- **GIVEN** a signed-on customer whose banner preference is on
+- **WHEN** a product screen is displayed
+- **THEN** no pet-tips banner is shown
+
+#### Scenario: Banner preference off
+
+- **GIVEN** a signed-on customer whose banner preference is off
+- **WHEN** the home screen is displayed
+- **THEN** no pet-tips banner is shown
+
+### Requirement: Sign-up from the sign-in screen
+
+ID: SWHR2-R-0055
+Recovered from: ACCT-REQ-0001
+The system SHALL let a new visitor sign up from the sign-in screen by choosing a user name and entering a password twice. WHEN the chosen user name cannot be registered, the system SHALL show a User Creation Error screen telling the visitor the user name is in use and to choose another.
+
+#### Scenario: User name available
+
+- **GIVEN** no sign-on account exists for the user name "newuser"
+- **WHEN** the visitor submits the sign-up form on the sign-in screen with user name "newuser" and a password entered twice
+- **THEN** the user name is registered and the visitor continues to account creation
+
+#### Scenario: User name cannot be registered
+
+- **GIVEN** a sign-on account already exists for the user name "j2ee"
+- **WHEN** the visitor submits the sign-up form with user name "j2ee"
+- **THEN** the User Creation Error screen is shown, saying the user name is in use and asking the visitor to choose another
+
+### Requirement: One customer per user id
+
+ID: SWHR2-R-0056
+Recovered from: CUST-BR-0001
+WHEN a new customer is created with a user id that already has a customer, the system SHALL refuse the creation and MUST NOT create a second customer record for that user id.
+
+#### Scenario: Duplicate user id
+
+- **GIVEN** a customer already exists with user id "j2ee"
+- **WHEN** a new customer is created with user id "j2ee"
+- **THEN** the creation is refused and exactly one customer record for "j2ee" exists
+
+### Requirement: Customer creation is all-or-nothing
+
+ID: SWHR2-R-0057
+Recovered from: CUST-BR-0009
+WHEN creation of a customer's account or profile fails, the system SHALL fail the creation of the customer as a whole, so that no customer MAY exist without an account and a profile.
+
+#### Scenario: Profile creation fails
+
+- **GIVEN** no customer exists for the user id "newuser"
+- **WHEN** a customer is created for "newuser" and creation of its profile fails
+- **THEN** the customer creation fails and no customer, account or profile exists for "newuser"
+
+#### Scenario: Account creation fails
+
+- **GIVEN** no customer exists for the user id "newuser"
+- **WHEN** a customer is created for "newuser" and creation of its account fails
+- **THEN** the customer creation fails and no customer or profile exists for "newuser"
+
+### Requirement: Customer record keyed by user id
+
+ID: SWHR2-R-0128
+Recovered from: CUST-ENT-0001
+The system SHALL hold one customer record per user id, where the user id is the customer's unique identifier, and each customer SHALL own exactly one account and exactly one profile.
+
+#### Scenario: Customer looked up by user id
+
+- **GIVEN** a customer created for the user id "j2ee"
+- **WHEN** the customer for "j2ee" is retrieved
+- **THEN** exactly one customer is returned, owning one account and one profile
+
+### Requirement: Customer profile contents
+
+ID: SWHR2-R-0129
+Recovered from: CUST-ENT-0002
+The system SHALL hold, for each customer profile, a preferred language, an optional favourite category, a MyList on/off preference and a banner on/off preference. The MyList and banner preferences MUST always have a value.
+
+#### Scenario: Profile without a favourite category
+
+- **GIVEN** a customer profile with preferred language "en_US" and no favourite category
+- **WHEN** the profile is stored
+- **THEN** the profile is accepted with the favourite category empty
+
+#### Scenario: On/off preferences always set
+
+- **GIVEN** any stored customer profile
+- **WHEN** its MyList and banner preferences are read
+- **THEN** each reads either on or off and neither is empty
+
+### Requirement: Account contents
+
+ID: SWHR2-R-0058
+Recovered from: CUST-ENT-0003
+The system SHALL hold, for each account, a status, exactly one set of contact information and exactly one payment card record.
+
+#### Scenario: Account read after creation
+
+- **GIVEN** a customer and its account created for the user id "j2ee"
+- **WHEN** the account is read
+- **THEN** it carries a status, one contact-information record and one payment card record
+
+### Requirement: Contact information snapshot
+
+ID: SWHR2-R-0059
+Recovered from: CUST-REQ-0002
+The system SHALL provide a read-only snapshot of a contact-information record containing its given name, family name, telephone, e-mail and a snapshot of its postal address.
+
+#### Scenario: Snapshot taken
+
+- **GIVEN** a stored contact-information record for "Jane Doe" with a telephone, an e-mail and a postal address
+- **WHEN** a snapshot of the record is requested
+- **THEN** the snapshot carries the given name, family name, telephone, e-mail and a copy of the postal address
+
+#### Scenario: Snapshot does not change the record
+
+- **GIVEN** a snapshot taken of a stored contact-information record
+- **WHEN** the telephone value in the snapshot is changed
+- **THEN** the stored contact-information record keeps its original telephone
+
+### Requirement: Address operations are transactional
+
+ID: SWHR2-R-0060
+Recovered from: CUST-RULE-0006
+The system SHALL perform every read and update of an individual address field, every read of the whole address, and every removal of an address within a transaction, and SHALL join the caller's transaction when one exists.
+
+#### Scenario: Update inside a failing change
+
+- **GIVEN** a stored address and a change that updates the address city and then fails
+- **WHEN** the change is rolled back
+- **THEN** the address keeps its original city
+
+#### Scenario: Update with no caller transaction
+
+- **GIVEN** a stored address and no transaction in progress
+- **WHEN** the address city is updated
+- **THEN** the update runs in its own transaction and is saved
+
+### Requirement: Account creation before purchase
+
+ID: SWHR2-R-0061
+Recovered from: CUSTOMER-ACCOUNT-WF-0001
+The system SHALL let a first-time visitor create an account from the sign-in page by choosing to sign up, entering account information and submitting it, before making a purchase.
+
+#### Scenario: First-time visitor signs up
+
+- **GIVEN** a first-time visitor on the sign-in page
+- **WHEN** the visitor chooses to sign up, enters a user name and password, then enters and submits their account information
+- **THEN** an account is created for the visitor and they can go on to make a purchase
+
+### Requirement: Account screen display
+
+Recovered from: ACCT-SCR-0009
+The account screen SHALL show a signed-on customer their contact details, payment card type, card number and expiry month/year, and their profile preferences. The screen is read-only and MUST offer a control that opens the account edit form.
+
+#### Scenario: Signed-on customer opens the account screen
+
+- **GIVEN** a signed-on customer with stored contact details, a payment card and profile preferences
+- **WHEN** the account screen is displayed
+- **THEN** it shows the given and family name, street lines, city, state, zip code, country, telephone and e-mail, the card type, the card number in full, the expiry month/year, the preferred language, the favourite category and the MyList and banner preferences as Yes or No
+
+#### Scenario: Customer chooses to edit
+
+- **GIVEN** the account screen displayed for a signed-on customer
+- **WHEN** the customer activates the edit-account control
+- **THEN** the account edit form is shown

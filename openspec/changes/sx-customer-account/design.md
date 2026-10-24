@@ -82,17 +82,29 @@ These notes record how Java Pet Store 1.3.2 implements the capability. They are 
 
 ## Record-to-requirement map
 
-| Requirement (ID)                                         | Source record (pass module)                  |
-| -------------------------------------------------------- | -------------------------------------------- |
-| Password entered twice at sign-up (SWHR2-R-0009)         | ACCT-BR-0003 (petstore a)                    |
-| Payment card type and expiry year options (SWHR2-R-0010) | ACCT-RULE-0009 (petstore b)                  |
-| Customer profile defaults at creation (SWHR2-R-0011)     | CUST-BR-0003 (customer a; customer b agrees) |
-| Account status values (SWHR2-R-0012)                     | CUST-BR-0005 (customer a)                    |
-| Stand-alone user registration (SWHR2-R-0013)             | CUST-WF-0001 (signon a)                      |
+| Requirement (ID)                                          | Source record (pass module)                                      |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
+| Password entered twice at sign-up (SWHR2-R-0009)          | ACCT-BR-0003 (petstore a)                                        |
+| Payment card type and expiry year options (SWHR2-R-0010)  | ACCT-RULE-0009 (petstore b)                                      |
+| Customer profile defaults at creation (SWHR2-R-0011)      | CUST-BR-0003 (customer a; customer b agrees)                     |
+| Account status values (SWHR2-R-0012)                      | CUST-BR-0005 (customer a)                                        |
+| Stand-alone user registration (SWHR2-R-0013)              | CUST-WF-0001 (signon a)                                          |
+| My List panel for the favourite category (SWHR2-R-0053)   | ACCT-BR-0010 (petstore a)                                        |
+| Pet-tips banner for the favourite category (SWHR2-R-0054) | ACCT-BR-0011 (petstore a)                                        |
+| Sign-up from the sign-in screen (SWHR2-R-0055)            | ACCT-REQ-0001 (petstore b)                                       |
+| One customer per user id (SWHR2-R-0056)                   | CUST-BR-0001 (customer a)                                        |
+| Customer creation is all-or-nothing (SWHR2-R-0057)        | CUST-BR-0009 (customer b)                                        |
+| Customer record keyed by user id (SWHR2-R-0128)           | CUST-ENT-0001 (customer a)                                       |
+| Customer profile contents (SWHR2-R-0129)                  | CUST-ENT-0002 (customer a)                                       |
+| Account contents (SWHR2-R-0058)                           | CUST-ENT-0003 (customer a)                                       |
+| Contact information snapshot (SWHR2-R-0059)               | CUST-REQ-0002 (contactinfo b)                                    |
+| Address operations are transactional (SWHR2-R-0060)       | CUST-RULE-0006 (address b)                                       |
+| Account creation before purchase (SWHR2-R-0061)           | CUSTOMER-ACCOUNT-WF-0001 (docs a; b, c agree)                    |
+| Account screen display (no key yet)                       | ACCT-SCR-0009 (petstore a; pass b ACCT-SCR-0004 / ACCT-SCR-0007) |
 
-Every other record of the capability is pending SME review and is Not specified in `spec.md`; that includes the account-screen record, so `spec.md` carries no screen requirement until it is approved. The legacy notes above still cover those records as evidence for the reviewers.
+Every other record of the capability is pending SME review and is Not specified in `spec.md`, with one exception: the extraction counts one screen record for this capability (ACCT-SCR-0009), and `spec.md` carries it as the "Account screen display" requirement with a `Recovered from:` line and no `ID:` line, because no approval has minted its key yet. The legacy notes above still cover the pending records as evidence for the reviewers.
 
-Record keys are reused across modules: `CUST-BR-0003`, for example, names a different rule in the address, contactinfo, creditcard, customer and signon passes. The approved key `SWHR2-R-0011` is read as the customer-module record (profile defaults), the only one of them that both customer passes state identically. If the SME approved a different module's `CUST-BR-0003`, that requirement must be rewritten from that record.
+Record keys are reused across modules: `CUST-BR-0003`, for example, names a different rule in the address, contactinfo, creditcard, customer and signon passes. The approved key `SWHR2-R-0011` is read as the customer-module record (profile defaults), the only one of them that both customer passes state identically. If the SME approved a different module's `CUST-BR-0003`, that requirement must be rewritten from that record. The same reading was applied to the other reused keys: `CUST-BR-0001`, `CUST-ENT-0001`, `CUST-ENT-0002` and `CUST-ENT-0003` are read as the customer-module records; `ACCT-REQ-0001` as the petstore pass-b record (sign-up), not the creditcard pass-a record (empty card at account creation); `CUST-REQ-0002` as the contactinfo record (contact snapshot), not the address record (system-generated address key).
 
 Legacy notes behind the approved requirements:
 
@@ -101,3 +113,13 @@ Legacy notes behind the approved requirements:
 - SWHR2-R-0011: `ProfileLocalHome.java:44-47` constants passed by `CustomerEJB.ejbPostCreate`; the sign-up flow may overwrite them with form values.
 - SWHR2-R-0012: `AccountLocalHome.java:48-49`; only "active" is ever used, and nothing reads the status (see Q5). No behaviour is attached to "disabled".
 - SWHR2-R-0013: `CreateUserServlet.java:70-74`, excluded by `apps/petstore/src/build.xml:204-205` and mapped by no `web.xml` (see Q6). The SME approved it as stated, so it is specified despite the reachability dispute.
+- SWHR2-R-0053: `mylist.jsp:59-71,90-93`; the catalog query is start 0, count 10, so larger categories are cut off (the JSP comment admits it).
+- SWHR2-R-0054: `advice_banner.jsp:59-68` and `BannerHelper.java:55-73` (lower-cases the category, defaults to `banner_dogs.gif`); only the `main` and `cart` screen definitions include the banner (`screendefinitions_en_US.xml:45-62`).
+- SWHR2-R-0055: `signon.jsp:131-183` posts to `createuser.do`; `CreateUserEJBAction.java:93-101` turns every failure into `DuplicateAccountException`, routed by `mappings.xml:111` to `duplicate_account.jsp:44-48`.
+- SWHR2-R-0056: uniqueness comes only from the `CustomerEJBTable` primary key on `userId` (`sun-j2ee-ri.xml:308`); there is no explicit check in the component.
+- SWHR2-R-0057: every customer-module method is `Required` (`customer/src/ejb-jar.xml:675-683`), so the nested account, profile, contact and card creates share one transaction (`CustomerEJB.java:86-88`).
+- SWHR2-R-0128 / SWHR2-R-0129 / SWHR2-R-0058: `CustomerEJB`, `ProfileEJB`, `AccountEJB` CMP fields and one-to-one CMRs in `customer/src/ejb-jar.xml`; `ProfileEJBTable` declares the two preference columns `BOOLEAN NOT NULL` (`sun-j2ee-ri.xml:354`); the account status column is nullable (`sun-j2ee-ri.xml:267`).
+- SWHR2-R-0059: `ContactInfoEJB.getData()` (129-137) builds a value object, mapping telephone to `phone` and copying the address through `getAddress().getData()`.
+- SWHR2-R-0060: `address/src/ejb-jar.xml:250-258,379-387` declares `Required` on the getters, setters, `getData` and `remove`; the create and find methods have no entry and take the container default.
+- SWHR2-R-0061: `docs/using.html:148-166` ("Creating a New User"); the code flow is ACCT-WF-0001 / ACCT-WF-0006, still pending.
+- Account screen (ACCT-SCR-0009): `customer.jsp:124-141,151-157,213-214`; the card number is printed unmasked (SD1).
