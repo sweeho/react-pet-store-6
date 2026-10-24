@@ -41,7 +41,15 @@ jobs:
         run: bun run lint
 
       - name: Unit and integration tests
-        run: bun run test
+        run: bun run test --reporter=default --reporter=junit --outputFile.junit=.vortex-results/junit.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vortex-test-results
+          path: .vortex-results/junit.xml
+          if-no-files-found: warn
 
       - name: Build
         run: bun run build
