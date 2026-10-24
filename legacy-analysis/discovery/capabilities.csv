@@ -1,0 +1,13 @@
+capability_key,name,summary
+catalog-browsing,Catalog browsing and search,Category/product/item navigation; keyword search; paging; per-locale catalog content
+shopping-cart,Shopping cart,Adding/removing/updating items; quantities and totals; behaviour when ordering an empty cart
+sign-on,Sign-on and access control,Sign-on/sign-off; which pages require a signed-on user; admin and supplier role-protected areas
+customer-account,Customer account and profile,Account creation and duplicate-account rule; contact/address/card details; profile preferences (language; favourite category; MyList; banners)
+checkout,Checkout and order placement,Billing/shipping entry; credit card capture; order submission; order id generation; confirmation
+order-approval,Order approval,Automatic approval thresholds by locale; pending orders; administrator approve/deny
+order-fulfillment,Order fulfilment and invoicing,Order status lifecycle; supplier order processing; partial shipment; invoices closing out an order
+supplier-inventory,Supplier inventory,Supplier stock levels; stock decrement on shipment; supplier inventory screen
+customer-notifications,Customer notifications,E-mails for order approval/denial; invoice/shipment; completed order; locale-specific templates
+sales-reporting,Admin order and sales reporting,Admin views of orders by status; sales and revenue charts over date ranges
+localization,Localization,Supported locales (en_US; ja_JP; zh_CN); locale switching; character encoding
+data-population,Sample data population,Seeding and forced reset of catalog; customer and inventory data

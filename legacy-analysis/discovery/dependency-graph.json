@@ -1,0 +1,780 @@
+{
+  "source": "legacy-source/petstore1.3.2/",
+  "generated_by": "SX-0001 discovery",
+  "nodes": [
+    {
+      "id": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "kind": "application",
+      "loc": 19151,
+      "screens": 19,
+      "risk": "high",
+      "score": 10
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/apps/opc",
+      "kind": "application",
+      "loc": 5712,
+      "screens": 0,
+      "risk": "high",
+      "score": 9
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "kind": "application",
+      "loc": 4180,
+      "screens": 7,
+      "risk": "high",
+      "score": 8
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/processmanager",
+      "kind": "component",
+      "loc": 1322,
+      "screens": 0,
+      "risk": "high",
+      "score": 8
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "kind": "component",
+      "loc": 2435,
+      "screens": 0,
+      "risk": "high",
+      "score": 8
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/signon",
+      "kind": "component",
+      "loc": 1559,
+      "screens": 0,
+      "risk": "high",
+      "score": 8
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/cart",
+      "kind": "component",
+      "loc": 829,
+      "screens": 0,
+      "risk": "high",
+      "score": 7
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/catalog",
+      "kind": "component",
+      "loc": 2866,
+      "screens": 0,
+      "risk": "medium",
+      "score": 7
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/apps/admin",
+      "kind": "application",
+      "loc": 5689,
+      "screens": 8,
+      "risk": "medium",
+      "score": 7
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/customer",
+      "kind": "component",
+      "loc": 2385,
+      "screens": 0,
+      "risk": "medium",
+      "score": 6
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/creditcard",
+      "kind": "component",
+      "loc": 810,
+      "screens": 0,
+      "risk": "medium",
+      "score": 6
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/supplierpo",
+      "kind": "component",
+      "loc": 1975,
+      "screens": 0,
+      "risk": "medium",
+      "score": 6
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/waf",
+      "kind": "framework",
+      "loc": 8709,
+      "screens": 0,
+      "risk": "medium",
+      "score": 6
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/mailer",
+      "kind": "component",
+      "loc": 881,
+      "screens": 0,
+      "risk": "medium",
+      "score": 5
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "kind": "component",
+      "loc": 2768,
+      "screens": 0,
+      "risk": "medium",
+      "score": 5
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/uidgen",
+      "kind": "component",
+      "loc": 756,
+      "screens": 0,
+      "risk": "medium",
+      "score": 4
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/lineitem",
+      "kind": "component",
+      "loc": 871,
+      "screens": 0,
+      "risk": "low",
+      "score": 4
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "kind": "component",
+      "loc": 1314,
+      "screens": 0,
+      "risk": "low",
+      "score": 4
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/address",
+      "kind": "component",
+      "loc": 1035,
+      "screens": 0,
+      "risk": "low",
+      "score": 3
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/asyncsender",
+      "kind": "component",
+      "loc": 549,
+      "screens": 0,
+      "risk": "low",
+      "score": 3
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/setup.xml",
+      "kind": "config-docs",
+      "loc": 267,
+      "screens": 0,
+      "risk": "low",
+      "score": 2
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/docs",
+      "kind": "config-docs",
+      "loc": 3158,
+      "screens": 0,
+      "risk": "low",
+      "score": 2
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/encodingfilter",
+      "kind": "component",
+      "loc": 180,
+      "screens": 0,
+      "risk": "low",
+      "score": 2
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "kind": "component",
+      "loc": 758,
+      "screens": 0,
+      "risk": "low",
+      "score": 1
+    },
+    {
+      "id": "legacy-source/petstore1.3.2/src/components/util",
+      "kind": "component",
+      "loc": 181,
+      "screens": 0,
+      "risk": "low",
+      "score": 1
+    }
+  ],
+  "edges": [
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/catalog",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 4,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/catalog",
+      "to": "legacy-source/petstore1.3.2/src/components/util",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "to": "legacy-source/petstore1.3.2/src/components/address",
+      "type": "compile",
+      "weight": 13,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "to": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "type": "compile",
+      "weight": 12,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "to": "legacy-source/petstore1.3.2/src/components/creditcard",
+      "type": "compile",
+      "weight": 12,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "to": "legacy-source/petstore1.3.2/src/components/lineitem",
+      "type": "compile",
+      "weight": 15,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 1,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/mailer",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 3,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/creditcard",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/lineitem",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/customer",
+      "to": "legacy-source/petstore1.3.2/src/components/address",
+      "type": "compile",
+      "weight": 7,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/customer",
+      "to": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "type": "compile",
+      "weight": 13,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/customer",
+      "to": "legacy-source/petstore1.3.2/src/components/creditcard",
+      "type": "compile",
+      "weight": 13,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "to": "legacy-source/petstore1.3.2/src/components/address",
+      "type": "compile",
+      "weight": 15,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/cart",
+      "to": "legacy-source/petstore1.3.2/src/components/catalog",
+      "type": "compile",
+      "weight": 5,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/cart",
+      "to": "legacy-source/petstore1.3.2/src/components/util",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/supplierpo",
+      "to": "legacy-source/petstore1.3.2/src/components/address",
+      "type": "compile",
+      "weight": 12,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/supplierpo",
+      "to": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "type": "compile",
+      "weight": 11,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/supplierpo",
+      "to": "legacy-source/petstore1.3.2/src/components/lineitem",
+      "type": "compile",
+      "weight": 12,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/supplierpo",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/supplierpo",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 1,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/asyncsender",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/components/address",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/components/address",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/components/lineitem",
+      "type": "compile",
+      "weight": 5,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/components/processmanager",
+      "type": "compile",
+      "weight": 4,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 10,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/components/supplierpo",
+      "type": "compile",
+      "weight": 7,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 7,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/admin",
+      "to": "legacy-source/petstore1.3.2/src/apps/opc",
+      "type": "compile",
+      "weight": 8,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/admin",
+      "to": "legacy-source/petstore1.3.2/src/components/asyncsender",
+      "type": "compile",
+      "weight": 5,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/admin",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/admin",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 6,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/address",
+      "type": "compile",
+      "weight": 16,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "type": "compile",
+      "weight": 16,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/creditcard",
+      "type": "compile",
+      "weight": 14,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/lineitem",
+      "type": "compile",
+      "weight": 19,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/mailer",
+      "type": "compile",
+      "weight": 3,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/processmanager",
+      "type": "compile",
+      "weight": 32,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "type": "compile",
+      "weight": 31,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 26,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 18,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/address",
+      "type": "compile",
+      "weight": 8,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/asyncsender",
+      "type": "compile",
+      "weight": 4,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/cart",
+      "type": "compile",
+      "weight": 19,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/catalog",
+      "type": "compile",
+      "weight": 21,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/contactinfo",
+      "type": "compile",
+      "weight": 13,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/creditcard",
+      "type": "compile",
+      "weight": 11,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/customer",
+      "type": "compile",
+      "weight": 27,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/encodingfilter",
+      "type": "compile",
+      "weight": 1,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/lineitem",
+      "type": "compile",
+      "weight": 1,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/purchaseorder",
+      "type": "compile",
+      "weight": 1,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 10,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/signon",
+      "type": "compile",
+      "weight": 17,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/uidgen",
+      "type": "compile",
+      "weight": 4,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/util",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/components/xmldocuments",
+      "type": "compile",
+      "weight": 1,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/waf",
+      "type": "compile",
+      "weight": 92,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/waf",
+      "to": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "type": "config-reference",
+      "weight": 19,
+      "note": "WAF sample docroot (waf/src/docroot/WEB-INF/mappings.xml, xml/requestmappings.xml) names petstore classes; not a compile dependency"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/waf",
+      "to": "legacy-source/petstore1.3.2/src/components/servicelocator",
+      "type": "compile",
+      "weight": 2,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/waf",
+      "to": "legacy-source/petstore1.3.2/src/components/util",
+      "type": "compile",
+      "weight": 8,
+      "note": "count of com.sun.j2ee.blueprints.<pkg> references in .java/.jsp/.xml"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/apps/opc",
+      "type": "jms",
+      "channel": "jms/opc/OrderQueue",
+      "note": "Order submitted from storefront via AsyncSender (apps/petstore/src/sun-j2ee-ri.xml); consumed by PurchaseOrderMDB"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/admin",
+      "to": "legacy-source/petstore1.3.2/src/apps/opc",
+      "type": "ejb-remote",
+      "channel": "ejb/opc/opc/OPCAdminFacadeEJBRemote",
+      "note": "Admin rich client reads orders/revenue (apps/admin/src/sun-j2ee-ri.xml)"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/admin",
+      "to": "legacy-source/petstore1.3.2/src/apps/opc",
+      "type": "jms",
+      "channel": "jms/opc/OrderApprovalQueue",
+      "note": "Admin approve/deny decisions sent via AsyncSender; consumed by OrderApprovalMDB"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "type": "jms",
+      "channel": "jms/supplier/PurchaseOrderQueue",
+      "note": "Approved orders sent as TPA supplier orders; consumed by SupplierOrderMDB"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/apps/opc",
+      "type": "jms-topic",
+      "channel": "jms/opc/InvoiceTopic",
+      "note": "Supplier publishes invoices on shipment; consumed by InvoiceMDB and MailInvoiceMDB"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/opc",
+      "to": "legacy-source/petstore1.3.2/src/apps/opc",
+      "type": "jms",
+      "channel": "jms/opc/MailOrderApprovalQueue, jms/opc/MailCompletedOrderQueue, jms/opc/MailQueue",
+      "note": "Internal OPC fan-out to customer-relations mail MDBs and the Mailer MDB"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "to": "legacy-source/petstore1.3.2/src/apps/opc",
+      "type": "http",
+      "channel": "http://localhost:8000/opc/EntityCatalog.jsp",
+      "note": "XML entity catalog used to resolve TPA document schemas (also used by opc itself)"
+    },
+    {
+      "from": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "to": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "type": "http",
+      "channel": "http://localhost:8000/petstore/CatalogDAOSQL.xml",
+      "note": "Catalog DAO loads its SQL statements from the petstore docroot over HTTP"
+    }
+  ],
+  "deployment": {
+    "legacy-source/petstore1.3.2/src/apps/petstore": [
+      "catalog",
+      "cart",
+      "customer",
+      "creditcard",
+      "address",
+      "contactinfo",
+      "signon",
+      "asyncsender",
+      "uidgen",
+      "encodingfilter",
+      "servicelocator",
+      "util",
+      "waf"
+    ],
+    "legacy-source/petstore1.3.2/src/apps/opc": [
+      "processmanager",
+      "purchaseorder",
+      "lineitem",
+      "creditcard",
+      "address",
+      "contactinfo",
+      "mailer",
+      "xmldocuments",
+      "servicelocator"
+    ],
+    "legacy-source/petstore1.3.2/src/apps/supplier": [
+      "supplierpo",
+      "lineitem",
+      "address",
+      "contactinfo",
+      "processmanager (transitions only)",
+      "xmldocuments",
+      "servicelocator"
+    ],
+    "legacy-source/petstore1.3.2/src/apps/admin": ["asyncsender", "xmldocuments", "servicelocator"]
+  },
+  "datastores": [
+    {
+      "id": "jdbc/petstore/PetStoreDB",
+      "owner": "legacy-source/petstore1.3.2/src/apps/petstore",
+      "tables": "category, category_details, product, product_details, item, item_details (apps/petstore/src/docroot/populate/PopulateSQL.xml); CMP tables Account/Customer/Profile/User/CreditCard/Address/ContactInfo/Counter (apps/petstore/src/sun-j2ee-ri.xml)"
+    },
+    {
+      "id": "jdbc/opc",
+      "owner": "legacy-source/petstore1.3.2/src/apps/opc",
+      "tables": "PurchaseOrder, LineItem, CreditCard, Address, ContactInfo, Manager(orderId,status) (apps/opc/src/sun-j2ee-ri.xml)"
+    },
+    {
+      "id": "jdbc/supplier",
+      "owner": "legacy-source/petstore1.3.2/src/apps/supplier",
+      "tables": "SupplierOrder, LineItem, Address, ContactInfo, Inventory(itemId,quantity) (apps/supplier/src/sun-j2ee-ri.xml)"
+    }
+  ],
+  "excluded_modules": [
+    {
+      "id": "legacy-source/petstore1.3.2/src/lib",
+      "reason": "vendored third-party JSTL tag-library descriptors and licences; no application behaviour"
+    }
+  ]
+}
