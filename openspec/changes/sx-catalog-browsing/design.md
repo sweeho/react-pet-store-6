@@ -4,7 +4,7 @@ How Java Pet Store 1.3.2 implements the behaviour in `specs/catalog-browsing/spe
 
 ## Source of the records
 
-50 IR records under `capability_key: catalog-browsing` were read from the pass files for `src/components/catalog` (a, b), `src/apps/petstore` (a, b), `src/waf` (a, b), `src/components/util` (a) and `docs` (a, b, c). Several record keys are reused across modules with different content (for example `CAT-ENT-0001`, `CAT-REQ-0001`..`0005`, `CAT-BR-0001`, `CAT-BR-0006`), so recommendations are listed per pass file. The server reports 26 ingested records and 2 screens. In the pass files, `CAT-SCR-0001` and `CAT-SCR-0002` both describe the home screen (`CAT-SCR-0002` adds the side panel), and `CAT-SCR-0005` describes the item screen. That gives two distinct screens, written as two screen requirements.
+50 IR records under `capability_key: catalog-browsing` were read from the pass files for `src/components/catalog` (a, b), `src/apps/petstore` (a, b), `src/waf` (a, b), `src/components/util` (a) and `docs` (a, b, c). Several record keys are reused across modules with different content (for example `CAT-ENT-0001`, `CAT-REQ-0001`..`0005`, `CAT-BR-0001`, `CAT-BR-0006`), so recommendations are listed per pass file. The server reports 26 ingested records and 2 screens. In the pass files, `CAT-SCR-0001` and `CAT-SCR-0002` both describe the home screen (`CAT-SCR-0002` adds the side panel), and `CAT-SCR-0005` describes the item screen. That gives two distinct screens. Neither screen record is approved yet, so both are Not specified in `spec.md`; only CAT-BR-0002 (SWHR2-R-0001) and CAT-INT-0001 (SWHR2-R-0002) are approved and specified. The notes below cover all records so the pending ones can be specified once approved.
 
 ## Data model
 
