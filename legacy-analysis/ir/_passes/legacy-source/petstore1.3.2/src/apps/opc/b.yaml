@@ -1,0 +1,689 @@
+# SX-0001 extract-b: legacy-source/petstore1.3.2/src/apps/opc (independent pass B)
+# No legacy-analysis/sources/**/extracted.md exists in this branch, so no document traces.
+records:
+  - record_key: "APPR-BR-0001"
+    kind: "business-rule"
+    capability_key: "order-approval"
+    requirement: "The system SHALL automatically approve a newly received order WHEN the order locale is en_US and the order total is strictly less than 500, OR the order locale is ja_JP and the order total is strictly less than 50000; every other order (any other locale, including zh_CN, or a total at or above the threshold) SHALL remain PENDING for an administrator decision."
+    plain_text: "Small orders are approved automatically: US orders under 500 and Japanese orders under 50 000 (in the order's own currency). Larger orders, and every order from any other locale such as Chinese, wait for an administrator to approve or deny them."
+    technical_note: "PurchaseOrderMDB.canIApprove() compares PurchaseOrder.getTotalPrice() against bare literals 500 (Locale.US) and 50000 (Locale.JAPAN) with strict '<'. No branch exists for Locale.CHINA. When true, doWork() builds an OrderApproval XML carrying a ChangedOrder(orderId, APPROVED) and PurchaseOrderTD posts it to the OrderApproval queue, so auto-approval goes through the same OrderApprovalMDB path as an admin approval."
+    confidence: "medium"
+    confidence_basis: "One clear place in code (canIApprove). The thresholds are bare literals with no configuration, test or document; the javadoc calls the method 'just a stub for converting currency' for demonstration, so the business intent behind the values is unconfirmed. Not low because the values and comparison operators are read directly, not inferred."
+    risk_class: "financial"
+    basis: "canIApprove() locale/threshold branches and the doWork() call that turns a true result into an APPROVED order approval message."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java"
+        line_start: 178
+        line_end: 191
+        excerpt: "  /**\n   * Just a stub for converting currency. This method is used for\n   * demonstrating the petstore, so that smaller orders can flow through\n   * the system without having to fire up the admin Gui to approve orders\n   */\n  private boolean canIApprove(PurchaseOrder purchaseOrder) {\n    Locale locale = purchaseOrder.getLocale();\n    if (locale.equals(Locale.US)) {\n      if (purchaseOrder.getTotalPrice() < 500) return true;\n    } else if (locale.equals(Locale.JAPAN))  {\n      if (purchaseOrder.getTotalPrice() < 50000) return true;\n    }\n    return false;\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java"
+        line_start: 151
+        line_end: 165
+        excerpt: "  private String doWork(String xmlMessage) throws XMLDocumentException, CreateException {\n    String ret = null;\n    PurchaseOrder purchaseOrder = PurchaseOrder.fromXML(xmlMessage, entityCatalogURL, validateXmlPurchaseOrder);\n    poHome.create(purchaseOrder);\n    //update process manager to start workflow for this purchase order\n    processManager.createManager(purchaseOrder.getOrderId(), OrderStatusNames.PENDING);\n\n    if(canIApprove(purchaseOrder)) {\n      ChangedOrder co = new ChangedOrder(purchaseOrder.getOrderId(), OrderStatusNames.APPROVED);\n      OrderApproval oa = new OrderApproval();\n      oa.addOrder(co);\n      ret = oa.toXML();\n    }\n    return ret;\n  }\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "PurchaseOrderMDB"
+      jms.queue: "jms/opc/OrderQueue -> jms/opc/OrderApprovalQueue"
+      ejb.transaction: "Required"
+  - record_key: "APPR-WF-0001"
+    kind: "workflow"
+    capability_key: "order-approval"
+    requirement: "WHEN an order is received from the storefront, the system SHALL store it, start its order workflow in status PENDING, and, unless it is automatically approved, SHALL leave it PENDING until an administrator approves or denies it."
+    plain_text: "Every new order starts as 'pending'. Orders that are not approved automatically stay pending until an administrator decides."
+    technical_note: "PurchaseOrderMDB.doWork(): PurchaseOrder.fromXML(...), poHome.create(purchaseOrder), processManager.createManager(orderId, OrderStatusNames.PENDING). onMessage() only transitions when doWork() returns a non-null approval; otherwise comment 'else wait for admin to approve/deny orders'."
+    confidence: "high"
+    confidence_basis: "Code sets PENDING explicitly and the onMessage comment plus the class javadoc both state the wait-for-admin behaviour; the status table DDL (ManagerEJBTable) backs the persisted status."
+    risk_class: "financial"
+    basis: "Order creation and PENDING workflow start in doWork(); conditional transition in onMessage()."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java"
+        line_start: 104
+        line_end: 126
+        excerpt: "  /**\n   * Process a purchase order that was placed at the Java Pet Store\n   * It creates the PuchaseOrder EJB for the order, and then for small\n   * orders directly approves the order and sends the approval to the\n   * OrderApproval MDB queue, but for larger orders, it jst puts them\n   * in the PurchaseOrder EJB, and the workflow process just waits for\n   * the Administrator to appove or deny the orders.\n   *\n   * @param  a JMS message containing an PurchaseOrder\n   */\n  public void onMessage(Message recvMsg) {\n    TextMessage recdTM = null;\n    String recdText = null;\n    String approval = null;\n    try {\n      recdTM = (TextMessage)recvMsg;\n      recdText = recdTM.getText();\n      approval = doWork(recdText);\n\n      //if order approve/deny list !empty, send it to customer relations\n      if(approval != null) {\n        doTransition(approval);\n      } //else wait for admin to approve/deny orders\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java"
+        line_start: 151
+        line_end: 157
+        excerpt: "  private String doWork(String xmlMessage) throws XMLDocumentException, CreateException {\n    String ret = null;\n    PurchaseOrder purchaseOrder = PurchaseOrder.fromXML(xmlMessage, entityCatalogURL, validateXmlPurchaseOrder);\n    poHome.create(purchaseOrder);\n    //update process manager to start workflow for this purchase order\n    processManager.createManager(purchaseOrder.getOrderId(), OrderStatusNames.PENDING);\n\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 471
+        line_end: 471
+        excerpt: "          <sql>CREATE TABLE \"ManagerEJBTable\" (\"orderId\" VARCHAR(255) , \"status\" VARCHAR(255), CONSTRAINT \"pk_ManagerEJBTabl\" PRIMARY KEY (\"orderId\") )</sql>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "PurchaseOrderMDB"
+      db.object: "ManagerEJBTable"
+      ejb.transaction: "Required"
+  - record_key: "APPR-BR-0002"
+    kind: "business-rule"
+    capability_key: "order-approval"
+    requirement: "The system SHALL apply an approval or denial only to an order whose current status is PENDING. GIVEN an order already APPROVED, DENIED, SHIPPED_PART or COMPLETED WHEN an approval decision for it arrives THEN the system SHALL ignore it, SHALL NOT change its status, SHALL NOT send a supplier order, and SHALL NOT notify the customer."
+    plain_text: "An order can be approved or denied only once, while it is still pending. A repeated or late decision on an order that was already decided or shipped is ignored, and the customer hears nothing more about it."
+    technical_note: "OrderApprovalMDB.doWork(): for each ChangedOrder, processManager.getStatus(orderId); if not OrderStatusNames.PENDING the loop 'continue's before adding it to the mail list, updating the status or building a supplier PO."
+    confidence: "medium"
+    confidence_basis: "One clear place (the PENDING guard in OrderApprovalMDB), backed by an explanatory comment in the same method. No second enforcement (e.g. a DB constraint) was found."
+    risk_class: "financial"
+    basis: "PENDING guard and 'only PENDING orders can be updated' comment in doWork()."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/OrderApprovalMDB.java"
+        line_start: 199
+        line_end: 216
+        excerpt: "    while(it!= null && it.hasNext()) {\n      ChangedOrder co = (ChangedOrder) it.next();\n      // only PENDING orders can be updated\n      //if order alreay APPROVED or DENIED or COMPLETED, then order\n      //already processed so dont process again\n      String curStatus = processManager.getStatus(co.getOrderId());\n      if(!curStatus.equals(OrderStatusNames.PENDING)) {\n        continue;\n      }\n      //generate list of valid orders to return\n      //list contains orders to notify the customer of\n      //order status changes. List is sent to customer\n      //relations for emailing.\n      oaMailList.addOrder(co);\n\n      //update process manager\n      //for this purchase order workflow\n      processManager.updateStatus(co.getOrderId(), co.getOrderStatus());\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "OrderApprovalMDB"
+      jms.queue: "jms/opc/OrderApprovalQueue"
+      ejb.transaction: "Required"
+  - record_key: "APPR-WF-0002"
+    kind: "workflow"
+    capability_key: "order-approval"
+    requirement: "The system SHALL accept approval decisions as a batch covering one or more orders, each marked APPROVED or DENIED; for every valid decision it SHALL record the new status, and for every APPROVED order it SHALL send a purchase order to the supplier; it SHALL then forward the batch of valid decisions, in a single message, for customer notification."
+    plain_text: "An administrator (or the automatic approval) can decide several orders at once. Each approved order is passed on to the supplier to be filled, and the customers in the batch are then told whether their order was approved or denied."
+    technical_note: "OrderApprovalMDB.doWork() parses OrderApproval XML (list of ChangedOrder), updates ProcessManager status, collects one TPA supplier order XML per APPROVED order; OrderApprovalTD.doTransition() sends each supplier PO to jms/supplier/PurchaseOrderQueue then one OrderApproval XML to jms/opc/MailOrderApprovalQueue. The transition delegate class is chosen at deploy time from env-entry param/transitiondelegate/OrderApprovalTD (value redacted in this copy)."
+    confidence: "high"
+    confidence_basis: "Behaviour is visible in the MDB and in the transition delegate, and the queue wiring is declared in sun-j2ee-ri.xml (OrderApprovalMailQueue and supplier PurchaseOrderQueue), i.e. code plus deployment config."
+    risk_class: "financial"
+    basis: "doWork() loop, OrderApprovalTD.doTransition()/sendMail(), and resource-env-ref bindings for the two outbound queues."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/OrderApprovalMDB.java"
+        line_start: 185
+        line_end: 228
+        excerpt: "  private WorkResult doWork(String xmlMessage) throws XMLDocumentException, FinderException  {\n\n    ArrayList supplierPoList = new ArrayList();\n    PurchaseOrderLocal po = null;\n    OrderApproval approval = null;\n\n    approval = OrderApproval.fromXML(xmlMessage, entityCatalogURL, validateXmlOrderApproval);\n\n    //generate list of valid orders to return\n    OrderApproval oaMailList = new OrderApproval();\n    String xmlMailOrderApprovals = null;\n    Collection coll = approval.getOrdersList();\n    Iterator it = coll.iterator();\n\n    while(it!= null && it.hasNext()) {\n      ChangedOrder co = (ChangedOrder) it.next();\n      // only PENDING orders can be updated\n      //if order alreay APPROVED or DENIED or COMPLETED, then order\n      //already processed so dont process again\n      String curStatus = processManager.getStatus(co.getOrderId());\n      if(!curStatus.equals(OrderStatusNames.PENDING)) {\n        continue;\n      }\n      //generate list of valid orders to return\n      //list contains orders to notify the customer of\n      //order status changes. List is sent to customer\n      //relations for emailing.\n      oaMailList.addOrder(co);\n\n      //update process manager\n      //for this purchase order workflow\n      processManager.updateStatus(co.getOrderId(), co.getOrderStatus());\n\n      //for all approved orders, send a PO to supplier\n      if(co.getOrderStatus().equals(OrderStatusNames.APPROVED)) {\n        po = poHome.findByPrimaryKey(co.getOrderId());\n        String xmlPO = getXmlPO(po, supplierOrderXDE);\n        supplierPoList.add(xmlPO);\n      }\n    }//end while\n\n    xmlMailOrderApprovals = oaMailList.toXML();\n    return new WorkResult(xmlMailOrderApprovals, supplierPoList);\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/transitions/OrderApprovalTD.java"
+        line_start: 86
+        line_end: 118
+        excerpt: "  public void doTransition(TransitionInfo info) throws TransitionException {\n    String xmlPO = null;\n    Collection supplierPoList = info.getXMLMessageBatch();\n    String xmlMailOrderApprovals = info.getXMLMessage();\n\n    try {\n      Iterator it = supplierPoList.iterator();\n      while(it!= null && it.hasNext()) {\n        xmlPO = (String) it.next();\n        //send PO to supplier for this order\n        supplierQueueHelper.sendMessage(xmlPO);\n       }//end while\n\n       //send the list of valid order approval/deny to customer relations\n       sendMail(xmlMailOrderApprovals);\n     } catch(JMSException je) {\n        throw new TransitionException(je);\n    }\n\n  }\n\n  /**\n   * Sends the list of orders and order status to\n   * the customer relations which sends an email notice to each customer.\n   * This is done as a batch by sending one message to the customer\n   * relations, containing multiple customer order status notices\n   *\n   * @param xmlOrderApproval which is a list of order status for each order to\n   * the customer relations to send email notices to each customer.\n   */\n  private void sendMail(String xmlOrderApproval) throws JMSException {\n        mailQueueHelper.sendMessage(xmlOrderApproval);\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 223
+        line_end: 228
+        excerpt: "        <resource-env-ref-name>jms/OrderApprovalMailQueue</resource-env-ref-name>\n        <jndi-name>jms/opc/MailOrderApprovalQueue</jndi-name>\n      </resource-env-ref>\n      <resource-env-ref>\n        <resource-env-ref-name>jms/PurchaseOrderQueue</resource-env-ref-name>\n        <jndi-name>jms/supplier/PurchaseOrderQueue</jndi-name>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "OrderApprovalMDB"
+      jms.queue: "jms/opc/OrderApprovalQueue -> jms/supplier/PurchaseOrderQueue, jms/opc/MailOrderApprovalQueue"
+      ejb.transaction: "Required"
+  - record_key: "FULF-INT-0001"
+    kind: "integration"
+    capability_key: "order-fulfillment"
+    requirement: "WHEN an order is approved, the system SHALL send the supplier a purchase order containing the order id, the order date, the ship-to contact (given name, family name, street line 1, city, state, country, postal code, e-mail, telephone) and, for every order line, the category, product, item, line number, quantity and unit price."
+    plain_text: "For each approved order the supplier receives an order document with the order number and date, who and where to ship to, and every item ordered with its quantity and price."
+    technical_note: "OrderApprovalMDB.getXmlPO() fills TPASupplierOrderXDE from PurchaseOrderLocal: setOrderId(poId), setOrderDate(poDate), setShippingAddress(givenName, familyName, streetName1, city, state, country, zipCode, email, telephone), addLineItem(categoryId, productId, itemId, lineNumber, quantity, unitPrice) per LineItem. streetName2 exists in AddressEJBTable but is not passed."
+    confidence: "medium"
+    confidence_basis: "One clear place builds the document; the target schema (TPASupplierOrder DTD/XSD) lives outside this shard and was not read, so I cannot confirm which of these fields the supplier side requires."
+    risk_class: "operational"
+    basis: "getXmlPO() field mapping."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/OrderApprovalMDB.java"
+        line_start: 243
+        line_end: 268
+        excerpt: "  /**\n   * Given a PO, its gets all info and builds the Supplier PO\n   * @param the po\n   * @returns the Supplier PO in xml format\n   */\n  private String getXmlPO(PurchaseOrderLocal po, TPASupplierOrderXDE supplierOrderXDE) throws XMLDocumentException{\n    supplierOrderXDE.newDocument();\n    supplierOrderXDE.setOrderId(po.getPoId());\n    Date tmpDate = new Date(po.getPoDate());\n    supplierOrderXDE.setOrderDate(tmpDate);\n    ContactInfoLocal cinfo = po.getContactInfo();\n    AddressLocal addr = cinfo.getAddress();\n    supplierOrderXDE.setShippingAddress(cinfo.getGivenName(), cinfo.getFamilyName(),\n                                        addr.getStreetName1(), addr.getCity(),\n                                        addr.getState(), addr.getCountry(),\n                                        addr.getZipCode(), cinfo.getEmail(), cinfo.getTelephone());\n    //Collection liColl = po.getAllItems();\n    Collection liColl = po.getData().getLineItems();\n    Iterator liIt = liColl.iterator();\n    while((liIt != null) && (liIt.hasNext())) {\n      LineItem li = (LineItem) liIt.next();\n      supplierOrderXDE.addLineItem(li.getCategoryId(), li.getProductId(), li.getItemId(),\n                                   li.getLineNumber(), li.getQuantity(), li.getUnitPrice());\n    }\n    return supplierOrderXDE.getDocumentAsString();\n  }\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "OrderApprovalMDB"
+      jms.queue: "jms/supplier/PurchaseOrderQueue"
+  - record_key: "FULF-INT-0002"
+    kind: "integration"
+    capability_key: "order-fulfillment"
+    requirement: "The system SHALL accept a supplier invoice identifying one order and listing, per shipped item, the item id and the quantity shipped; an invoice whose root is not an Invoice document SHALL be rejected."
+    plain_text: "The supplier reports each shipment with an invoice naming the order and, for each item, how many were shipped. Anything that is not a valid invoice is refused."
+    technical_note: "TPAInvoiceXDE.extractData(): root must be Invoice in namespace http://blueprints.j2ee.sun.com/TPAInvoice, reads OrderId then LineItems/LineItem@itemId and @quantity into a Map itemId->Integer; otherwise throws XMLDocumentException('Invoice element expected.'). DTD/XSD validation is switchable (env-entries param/xml/validation/Invoice and param/xml/XSDValidation, values redacted). Both InvoiceMDB and MailInvoiceMDB subscribe to jms/opc/InvoiceTopic."
+    confidence: "medium"
+    confidence_basis: "One clear parser; the invoice schema itself is outside this shard. Topic subscription is confirmed in deployment config for both consumers."
+    risk_class: "operational"
+    basis: "extractData() parsing and rejection; topic bindings for InvoiceMDB and MailInvoiceMDB."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/TPAInvoiceXDE.java"
+        line_start: 123
+        line_end: 139
+        excerpt: "  private void extractData() throws XMLDocumentException {\n        Element element = invoiceDocument.getDocumentElement();\n        if (element.getLocalName().equals(XML_INVOICE) && element.getNamespaceURI().equals(INVOICE_NS)) {\n      Element child;\n      child = XMLDocumentUtils.getFirstChildNS(element, INVOICE_NS, XML_ORDERID, false);\n      orderId = XMLDocumentUtils.getContentAsString(child, false);\n      child = XMLDocumentUtils.getSiblingNS(child, INVOICE_NS, XML_LINEITEMS, false);\n      for (child = XMLDocumentUtils.getFirstChildNS(child, LINEITEM_NS, XML_LINEITEM, false);\n           child != null;\n           child = XMLDocumentUtils.getNextSiblingNS(child, LINEITEM_NS, XML_LINEITEM, true)) {\n                lineItemIds.put(XMLDocumentUtils.getAttribute(child, XML_ITEMID, false),\n                        new Integer(XMLDocumentUtils.getAttributeAsInt(child, XML_QUANTITY, false)));\n      }\n      return;\n        }\n        throw new XMLDocumentException(XML_INVOICE + \" element expected.\");\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 136
+        line_end: 137
+        excerpt: "      <ejb-name>InvoiceMDB</ejb-name>\n      <jndi-name>jms/opc/InvoiceTopic</jndi-name>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 237
+        line_end: 238
+        excerpt: "      <ejb-name>MailInvoiceMDB</ejb-name>\n      <jndi-name>jms/opc/InvoiceTopic</jndi-name>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "InvoiceMDB, MailInvoiceMDB"
+      jms.queue: "jms/opc/InvoiceTopic (topic)"
+  - record_key: "FULF-BR-0001"
+    kind: "business-rule"
+    capability_key: "order-fulfillment"
+    requirement: "WHEN a supplier invoice is received, the system SHALL add each invoiced quantity to the shipped quantity of the order line with the matching item id; GIVEN every order line's shipped quantity then equals its ordered quantity THEN the order status SHALL become COMPLETED and a completed-order notification SHALL be triggered; OTHERWISE the order status SHALL become SHIPPED_PART."
+    plain_text: "Orders can ship in several parts. Each shipment adds to what has been sent for each item. When every item has been shipped in full the order is marked completed and the customer is told; until then it is marked partly shipped."
+    technical_note: "InvoiceMDB.doWork(): poHome.findByPrimaryKey(invoice orderId); PurchaseOrderHelper.processInvoice(po, lineItemIds) (components/purchaseorder, outside this shard) increments LineItem.quantityShipped and returns true only if quantity == quantityShipped for all lines; then ProcessManager.updateStatus(COMPLETED) and InvoiceTD posts the orderId to jms/opc/MailCompletedOrderQueue, else updateStatus(SHIPPED_PART). No check of the current status is made before updating. LineItemEJBTable declares quantity and quantityShipped NOT NULL."
+    confidence: "high"
+    confidence_basis: "Status decision is in InvoiceMDB, the javadoc states the same rule, and the persisted shipped-quantity column is declared NOT NULL in the DDL. The equality comparison itself lives in a helper outside this shard (read for context only)."
+    risk_class: "financial"
+    basis: "InvoiceMDB.doWork()/onMessage() and javadoc; LineItemEJBTable DDL."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/InvoiceMDB.java"
+        line_start: 108
+        line_end: 129
+        excerpt: "  /**\n   * InvoiceMDB receives a JMS message containing an Invoice\n   * for a user order. If all the order items have been shipped\n   * for the order, it updates the purchase order status to\n   * COMPLETED to end the purchase order fulfillment process.\n   * If the order is not yet all shipped, it updates the order\n   * status based on the invoice.\n   *\n   * @param recvMsg is the JMS message contaning the xml content for the invoice\n   */\n  public void onMessage(Message recvMsg) {\n    TextMessage recdTM = null;\n    String recdText = null;\n    try {\n      recdTM = (TextMessage)recvMsg;\n      recdText = recdTM.getText();\n      String joinMessage = doWork(recdText);\n\n      //if order completed so join condition is met\n      if (joinMessage != null) {\n        doTransition(joinMessage);\n      }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/InvoiceMDB.java"
+        line_start: 157
+        line_end: 173
+        excerpt: "  private String doWork(String xmlInvoice) throws XMLDocumentException, FinderException {\n    String completedOrder = null;\n    PurchaseOrderHelper poHelper = new PurchaseOrderHelper();\n    invoiceXDE.setDocument(xmlInvoice);\n    PurchaseOrderLocal po = poHome.findByPrimaryKey(invoiceXDE.getOrderId());\n    boolean orderDone = poHelper.processInvoice(po, invoiceXDE.getLineItemIds());\n\n    //update process manager if this order is completely done, or partially done\n    //for this purchase order\n    if(orderDone) {\n      processManager.updateStatus(invoiceXDE.getOrderId(), OrderStatusNames.COMPLETED);\n      completedOrder = invoiceXDE.getOrderId();\n    } else {\n      processManager.updateStatus(invoiceXDE.getOrderId(), OrderStatusNames.SHIPPED_PART);\n    }\n    return completedOrder;\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/transitions/InvoiceTD.java"
+        line_start: 63
+        line_end: 86
+        excerpt: "  public void setup() throws TransitionException {\n    try {\n      ServiceLocator serviceLocator = new ServiceLocator();\n      qFactory = serviceLocator.getQueueConnectionFactory(JNDINames.QUEUE_CONNECTION_FACTORY);\n      q = serviceLocator.getQueue(JNDINames.CR_MAIL_COMPLETED_ORDER_MDB_QUEUE);\n      queueHelper = new QueueHelper(qFactory, q);\n    } catch(ServiceLocatorException se) {\n        throw new TransitionException(se);\n    }\n  }\n\n\n  /**\n   * Send an order approval to the OrderApproval Queue, since the work\n   * for this step in the order fullfillment process is done.\n   */\n  public void doTransition(TransitionInfo info) throws TransitionException {\n    String xmlCompletedOrder = info.getXMLMessage();\n    try {\n      queueHelper.sendMessage(xmlCompletedOrder);\n    } catch (JMSException je) {\n        throw new TransitionException(je);\n    }\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 702
+        line_end: 702
+        excerpt: "          <sql>CREATE TABLE \"LineItemEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"categoryId\" VARCHAR(255) , \"itemId\" VARCHAR(255) , \"lineNumber\" VARCHAR(255) , \"productId\" VARCHAR(255) , \"quantity\" INTEGER NOT NULL , \"quantityShipped\" INTEGER NOT NULL , \"unitPrice\" REAL NOT NULL, CONSTRAINT \"pk_LineItemEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "InvoiceMDB"
+      db.object: "LineItemEJBTable, ManagerEJBTable"
+      jms.queue: "jms/opc/InvoiceTopic -> jms/opc/MailCompletedOrderQueue"
+      ejb.transaction: "Required"
+  - record_key: "FULF-WF-0001"
+    kind: "workflow"
+    capability_key: "order-fulfillment"
+    requirement: "The system SHALL track each order through the statuses PENDING, APPROVED, DENIED, SHIPPED_PART and COMPLETED, holding exactly one current status per order id: PENDING on receipt; APPROVED or DENIED only from PENDING; SHIPPED_PART or COMPLETED on each supplier invoice."
+    plain_text: "Each order has one current status: pending, approved, denied, partly shipped or completed. It moves from pending to approved or denied, and then through partly shipped to completed as the supplier ships."
+    technical_note: "ProcessManager (components/processmanager) persists ManagerEJBTable(orderId PK, status). Transitions in this shard: PurchaseOrderMDB createManager(PENDING); OrderApprovalMDB updateStatus(ChangedOrder status) guarded by PENDING; InvoiceMDB updateStatus(COMPLETED|SHIPPED_PART) unguarded."
+    confidence: "high"
+    confidence_basis: "Status primary key in DDL plus transitions read in three MDBs."
+    risk_class: "financial"
+    basis: "ManagerEJBTable DDL and the updateStatus/createManager calls."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 471
+        line_end: 471
+        excerpt: "          <sql>CREATE TABLE \"ManagerEJBTable\" (\"orderId\" VARCHAR(255) , \"status\" VARCHAR(255), CONSTRAINT \"pk_ManagerEJBTabl\" PRIMARY KEY (\"orderId\") )</sql>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java"
+        line_start: 156
+        line_end: 156
+        excerpt: "    processManager.createManager(purchaseOrder.getOrderId(), OrderStatusNames.PENDING);\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/OrderApprovalMDB.java"
+        line_start: 204
+        line_end: 216
+        excerpt: "      String curStatus = processManager.getStatus(co.getOrderId());\n      if(!curStatus.equals(OrderStatusNames.PENDING)) {\n        continue;\n      }\n      //generate list of valid orders to return\n      //list contains orders to notify the customer of\n      //order status changes. List is sent to customer\n      //relations for emailing.\n      oaMailList.addOrder(co);\n\n      //update process manager\n      //for this purchase order workflow\n      processManager.updateStatus(co.getOrderId(), co.getOrderStatus());\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/InvoiceMDB.java"
+        line_start: 166
+        line_end: 171
+        excerpt: "    if(orderDone) {\n      processManager.updateStatus(invoiceXDE.getOrderId(), OrderStatusNames.COMPLETED);\n      completedOrder = invoiceXDE.getOrderId();\n    } else {\n      processManager.updateStatus(invoiceXDE.getOrderId(), OrderStatusNames.SHIPPED_PART);\n    }\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      db.object: "ManagerEJBTable"
+  - record_key: "FULF-ENT-0001"
+    kind: "entity"
+    capability_key: "order-fulfillment"
+    requirement: "The system SHALL store each order with a unique order id, a mandatory order date, a mandatory order value, the customer e-mail address, the order locale and the ordering user id; and each order line with category, product, item, line number, a mandatory ordered quantity, a mandatory shipped quantity and a mandatory unit price."
+    plain_text: "An order record keeps its number (unique), date, value, the customer's e-mail, language/region and user. Each line keeps the item, how many were ordered, how many have shipped and the unit price."
+    technical_note: "sun-j2ee-ri.xml CMP DDL: PurchaseOrderEJBTable(poId VARCHAR PK, poDate LONGINT NOT NULL, poValue REAL NOT NULL, poEmailId, poLocale, poUserId, FKs to contact info and credit card); LineItemEJBTable(categoryId, itemId, lineNumber VARCHAR, productId, quantity INTEGER NOT NULL, quantityShipped INTEGER NOT NULL, unitPrice REAL NOT NULL); join table PurchaseOrderEJB_lineItems_LineItemEJB_Table. Money is REAL (floating point)."
+    confidence: "high"
+    confidence_basis: "Declared DDL constraints (PK, NOT NULL) plus the same fields read by OrderApprovalMDB and OPCAdminFacadeEJB."
+    risk_class: "financial"
+    basis: "CREATE TABLE statements for orders, lines and their join table."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 653
+        line_end: 653
+        excerpt: "          <sql>CREATE TABLE \"PurchaseOrderEJBTable\" (\"_contactInfo___PMPrimaryKey\" LONGINT , \"_creditCard___PMPrimaryKey\" LONGINT , \"poDate\" LONGINT NOT NULL , \"poEmailId\" VARCHAR(255) , \"poId\" VARCHAR(255) , \"poLocale\" VARCHAR(255) , \"poUserId\" VARCHAR(255) , \"poValue\" REAL NOT NULL, CONSTRAINT \"pk_PurchaseOrderEJBTabl\" PRIMARY KEY (\"poId\") )</sql>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 702
+        line_end: 702
+        excerpt: "          <sql>CREATE TABLE \"LineItemEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"categoryId\" VARCHAR(255) , \"itemId\" VARCHAR(255) , \"lineNumber\" VARCHAR(255) , \"productId\" VARCHAR(255) , \"quantity\" INTEGER NOT NULL , \"quantityShipped\" INTEGER NOT NULL , \"unitPrice\" REAL NOT NULL, CONSTRAINT \"pk_LineItemEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 779
+        line_end: 779
+        excerpt: "          <sql>CREATE TABLE \"PurchaseOrderEJB_lineItems_LineItemEJB_Table\" (\"_LineItemEJB___PMPrimaryKey\" LONGINT , \"_PurchaseOrderEJB_poId\" VARCHAR(255), CONSTRAINT \"pk_PurchaseOrderEJB_lineItems_LineItemEJB_Tabl\" PRIMARY KEY (\"_LineItemEJB___PMPrimaryKey\") )</sql>\n"
+    stack_metadata:
+      framework: "EJB 2.0 CMP"
+      db.object: "PurchaseOrderEJBTable, LineItemEJBTable, PurchaseOrderEJB_lineItems_LineItemEJB_Table"
+  - record_key: "CHK-ENT-0001"
+    kind: "entity"
+    capability_key: "checkout"
+    requirement: "The system SHALL store with each order a ship-to contact (given name, family name, e-mail, telephone), an address (street line 1, street line 2, city, state, country, postal code) and a payment card (card number, card type, expiry date)."
+    plain_text: "Each order keeps who it is for, where to deliver it, and the payment card used (number, type and expiry)."
+    technical_note: "ContactInfoEJBTable, AddressEJBTable and CreditCardEJBTable in sun-j2ee-ri.xml, each with a surrogate __PMPrimaryKey and a reverse key to the owning PO/contact. cardNumber is a plain VARCHAR(255). Filed under checkout (billing/shipping entry, card capture); the order processing centre only stores and reads these."
+    confidence: "high"
+    confidence_basis: "Declared DDL for all three tables plus the contact/address fields read in OrderApprovalMDB.getXmlPO()."
+    risk_class: "regulated"
+    basis: "CREATE TABLE statements for contact info, address and credit card."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 567
+        line_end: 567
+        excerpt: "          <sql>CREATE TABLE \"ContactInfoEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"__reverse_contactInfo_poId\" VARCHAR(255) , \"_address___PMPrimaryKey\" LONGINT , \"email\" VARCHAR(255) , \"familyName\" VARCHAR(255) , \"givenName\" VARCHAR(255) , \"telephone\" VARCHAR(255), CONSTRAINT \"pk_ContactInfoEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 604
+        line_end: 604
+        excerpt: "          <sql>CREATE TABLE \"AddressEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"__reverse_address___PMPrimaryKey\" LONGINT , \"city\" VARCHAR(255) , \"country\" VARCHAR(255) , \"state\" VARCHAR(255) , \"streetName1\" VARCHAR(255) , \"streetName2\" VARCHAR(255) , \"zipCode\" VARCHAR(255), CONSTRAINT \"pk_AddressEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 739
+        line_end: 739
+        excerpt: "          <sql>CREATE TABLE \"CreditCardEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"__reverse_creditCard_poId\" VARCHAR(255) , \"cardNumber\" VARCHAR(255) , \"cardType\" VARCHAR(255) , \"expiryDate\" VARCHAR(255), CONSTRAINT \"pk_CreditCardEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+    stack_metadata:
+      framework: "EJB 2.0 CMP"
+      db.object: "ContactInfoEJBTable, AddressEJBTable, CreditCardEJBTable"
+  - record_key: "FULF-INT-0003"
+    kind: "integration"
+    capability_key: "order-fulfillment"
+    requirement: "WHEN an order arrives from the storefront the system SHALL parse it (with schema validation when enabled) and create the stored order before any approval decision; every processing step SHALL run as one transaction so that a failure at any step leaves no partial update and the incoming message is retried."
+    plain_text: "Each step of processing an order (receiving it, approving it, recording a shipment, sending an e-mail) either completes fully or not at all; if it fails, it is tried again rather than half-done."
+    technical_note: "All six MDB onMessage methods have container trans-attribute Required in ejb-jar.xml; every checked exception is rethrown as EJBException, which rolls back the container transaction and causes JMS redelivery. QueueHelper opens transacted sessions (createQueueSession(true, 0)) so outbound sends join the transaction. No retry limit or dead-letter handling is declared in this shard."
+    confidence: "high"
+    confidence_basis: "Declared in ejb-jar.xml container-transaction and consistently enforced by the catch blocks in every MDB."
+    risk_class: "operational"
+    basis: "container-transaction declarations; onMessage catch blocks; transacted QueueHelper session."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml"
+        line_start: 708
+        line_end: 739
+        excerpt: "    <container-transaction>\n      <method>\n        <ejb-name>PurchaseOrderMDB</ejb-name>\n        <method-name>onMessage</method-name>\n        <method-params>\n          <method-param>javax.jms.Message</method-param>\n        </method-params>\n      </method>\n      <trans-attribute>Required</trans-attribute>\n    </container-transaction>\n\n    <container-transaction>\n      <method>\n        <ejb-name>OrderApprovalMDB</ejb-name>\n        <method-name>onMessage</method-name>\n        <method-params>\n          <method-param>javax.jms.Message</method-param>\n        </method-params>\n      </method>\n      <trans-attribute>Required</trans-attribute>\n    </container-transaction>\n\n    <container-transaction>\n      <method>\n        <ejb-name>InvoiceMDB</ejb-name>\n        <method-name>onMessage</method-name>\n        <method-params>\n          <method-param>javax.jms.Message</method-param>\n        </method-params>\n      </method>\n      <trans-attribute>Required</trans-attribute>\n    </container-transaction>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java"
+        line_start: 114
+        line_end: 136
+        excerpt: "  public void onMessage(Message recvMsg) {\n    TextMessage recdTM = null;\n    String recdText = null;\n    String approval = null;\n    try {\n      recdTM = (TextMessage)recvMsg;\n      recdText = recdTM.getText();\n      approval = doWork(recdText);\n\n      //if order approve/deny list !empty, send it to customer relations\n      if(approval != null) {\n        doTransition(approval);\n      } //else wait for admin to approve/deny orders\n    } catch(XMLDocumentException de) {\n        throw new EJBException(de);\n    } catch(CreateException ce) {\n        throw new EJBException(ce);\n    } catch(TransitionException te) {\n        throw new EJBException(te);\n    } catch (JMSException je) {\n        throw new EJBException(je);\n    }\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/transitions/QueueHelper.java"
+        line_start: 64
+        line_end: 85
+        excerpt: "    public void sendMessage(String xmlMessage) throws JMSException {\n      QueueConnection qConnect = null;\n      QueueSession session = null;\n      QueueSender qSender = null;\n\n        try {\n            qConnect = qFactory.createQueueConnection();\n            session = qConnect.createQueueSession(true, 0);\n            qSender = session.createSender(q);\n          TextMessage jmsMsg = session.createTextMessage();\n            jmsMsg.setText(xmlMessage);\n            qSender.send(jmsMsg);\n        } finally {\n            try {\n                if(qConnect != null) {\n                    qConnect.close();\n                }\n            } catch(Exception e) {\n            System.err.println(\"OPC.QueueHelper GOT EXCEPTION closing connection\" + e);\n          }\n        }\n    }\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.transaction: "Required"
+      jms.queue: "jms/opc/OrderQueue"
+  - record_key: "NOTIF-REQ-0001"
+    kind: "requirement"
+    capability_key: "customer-notifications"
+    requirement: "WHEN an order is approved or denied, the system SHALL send the customer one e-mail per order to the e-mail address stored on the order, with subject 'Java Pet Store Order Status: <order id>', whose body states the order id and either that the order was approved and will now be fulfilled, or that it was denied and could not be placed."
+    plain_text: "When an order is approved or denied, the customer gets an e-mail saying which, with the order number in the subject."
+    technical_note: "MailOrderApprovalMDB.doWork() iterates the OrderApproval batch, reads po.getPoEmailId(), transforms ChangedOrder XML with OrderApproval[_<locale>].xsl and wraps it in a Mail XML; MailOrderApprovalTransitionDelegate sends each to jms/opc/MailQueue (MailerMDB). Gated by env-entry param/SendApprovalMail."
+    confidence: "high"
+    confidence_basis: "Subject/recipient in code and the approved/denied wording in all four locale stylesheets."
+    risk_class: "operational"
+    basis: "MAIL_SUBJECT constant, doWork() loop and the OrderApproval stylesheet templates."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailOrderApprovalMDB.java"
+        line_start: 79
+        line_end: 81
+        excerpt: "  private static final String MAIL_SUBJECT = \"Java Pet Store Order Status: \";\n  private static final String ORDER_APPROVAL_STYLE_SHEET =\n                \"/com/sun/j2ee/blueprints/opc/rsrc/xsl/OrderApproval.xsl\";\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailOrderApprovalMDB.java"
+        line_start: 156
+        line_end: 184
+        excerpt: "  private Collection doWork(String xmlMessage) throws JMSException,\n                                                XMLDocumentException,\n                                                MailContentXDE.FormatterException,\n                                                FinderException,\n                                                TransitionException {\n\n      ArrayList mailingList = new ArrayList();\n      PurchaseOrderLocal po = null;\n      OrderApproval approval = OrderApproval.fromXML(xmlMessage, entityCatalogURL, validateXmlOrderApproval);\n\n      Collection coll = approval.getOrdersList();\n      Iterator it = coll.iterator();\n      while(it!= null && it.hasNext()) {\n        ChangedOrder co = (ChangedOrder) it.next();\n        String subject = MAIL_SUBJECT +  co.getOrderId();\n        po = poHome.findByPrimaryKey(co.getOrderId());\n        String emailAddress = po.getPoEmailId();\n        mailContentXDE.setDocument(new DOMSource(co.toDOM()));\n        mailContentXDE.setLocale(LocaleUtil.getLocaleFromString(po.getPoLocale()));\n        String message = mailContentXDE.getDocumentAsString();\n\n        //build  mail message as xml\n        Mail mailMsg = new Mail(emailAddress, subject, message);\n        String xmlMail = mailMsg.toXML();\n        mailingList.add(xmlMail);\n\n      }//end while\n      return mailingList;\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/OrderApproval_en_US.xsl"
+        line_start: 22
+        line_end: 34
+        excerpt: "\t<xsl:template match=\"//Order\">\n\t\t<br /><b>Thank you</b> for placing an order with <b>Java Pet Store 1.3.2</b><br />\n\t\tYour order <font color=\"red\"><xsl:value-of select=\"OrderId\" /></font> has been <xsl:apply-templates select=\"//OrderStatus\" />\n\t\t<br />Thanks for shopping with us.<br />\n\t</xsl:template>\n\n\t<xsl:template match=\"OrderStatus[contains(., 'APPROVED')]\">\n\t \tapproved!<br />We will now fulfill your order.\n\t</xsl:template>\n\n\t<xsl:template match=\"OrderStatus[contains(., 'DENIED')]\">\n\t\tdenied unfortunately.<br />Sorry we could not place your order.\n\t</xsl:template>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "MailOrderApprovalMDB"
+      jms.queue: "jms/opc/MailOrderApprovalQueue -> jms/opc/MailQueue"
+  - record_key: "NOTIF-REQ-0002"
+    kind: "requirement"
+    capability_key: "customer-notifications"
+    requirement: "WHEN the supplier invoices a shipment for an order, the system SHALL e-mail the customer at the order's e-mail address with subject 'Java Pet Store Order Shipped: <order id>', listing for each shipped line its category, product, quantity and unit price; this e-mail SHALL be sent for every invoice, including the one that completes the order."
+    plain_text: "Every time part of an order ships, the customer gets a 'shipped' e-mail listing what was in that shipment, including the final shipment."
+    technical_note: "MailInvoiceMDB subscribes to the same jms/opc/InvoiceTopic as InvoiceMDB, so it fires independently of completion. doWork() parses the invoice, looks up po.getPoEmailId()/getPoLocale(), applies PartialInvoice[_<locale>].xsl to the invoice document. Gated by env-entry param/SendConfirmationMail."
+    confidence: "high"
+    confidence_basis: "Code plus deployment topic binding plus the stylesheet content; the 'also on the final shipment' consequence is derived from both consumers listening on one topic."
+    risk_class: "operational"
+    basis: "MAIL_SUBJECT, doWork(), PartialInvoice template, topic bindings."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailInvoiceMDB.java"
+        line_start: 79
+        line_end: 80
+        excerpt: "  private static final String MAIL_SUBJECT = \"Java Pet Store Order Shipped: \";\n  private static final String INVOICE_STYLE_SHEET = \"/com/sun/j2ee/blueprints/opc/rsrc/xsl/PartialInvoice.xsl\";\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailInvoiceMDB.java"
+        line_start: 154
+        line_end: 170
+        excerpt: "  private String doWork(String xmlMessage) throws JMSException,\n    XMLDocumentException,\n    MailContentXDE.FormatterException,\n    FinderException {\n\n      invoiceXDE.setDocument(xmlMessage);\n      PurchaseOrderLocal po = poHome.findByPrimaryKey(invoiceXDE.getOrderId());\n      //build message with html formatting\n      String emailAddress = po.getPoEmailId();\n      String subject = MAIL_SUBJECT + invoiceXDE.getOrderId();\n      mailContentXDE.setDocument(invoiceXDE.getDocument());\n      mailContentXDE.setLocale(LocaleUtil.getLocaleFromString(po.getPoLocale()));\n      String message = mailContentXDE.getDocumentAsString();\n      //build  mail message as xml\n      Mail mailMsg = new Mail(emailAddress, subject, message);\n      return mailMsg.toXML();\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/PartialInvoice_en_US.xsl"
+        line_start: 25
+        line_end: 42
+        excerpt: "\t<xsl:template match=\"/Invoice|/tpai:Invoice\">\n\t\t<b>Thank you</b> for placing an order with <b>Java Pet Store 1.3.2</b><br />\n\t\tThis part of your order <font color=\"red\"><xsl:value-of select=\"//OrderId|//tpai:OrderId\" /></font> has been shipped\n\t\t<p /> The contents of this shipment are:<br />\n\t\t<table border=\"1\">\n\t\t\t<tr><td>Category</td><td>Product #</td><td>Quantity</td><td>Unit Price</td></tr>\n\t\t\t<xsl:apply-templates select=\"LineItems/LineItem|tpai:LineItems/tpali:LineItem\"/>\n\t\t</table>\n\t</xsl:template>\n\n\t<xsl:template match=\"LineItem|tpali:LineItem\">\n\t\t<tr>\n\t\t\t<td><xsl:value-of select=\"@categoryId\" /></td>\n\t\t\t<td><xsl:value-of select=\"@productId\" /></td>\n\t\t\t<td align=\"right\"><xsl:value-of select=\"@quantity\" /></td>\n\t\t\t<td align=\"right\"><xsl:value-of select=\"format-number(@unitPrice, '&#x24;#,##0.00')\" /></td>\n\t\t</tr>\n\t</xsl:template>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 237
+        line_end: 238
+        excerpt: "      <ejb-name>MailInvoiceMDB</ejb-name>\n      <jndi-name>jms/opc/InvoiceTopic</jndi-name>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "MailInvoiceMDB"
+      jms.queue: "jms/opc/InvoiceTopic -> jms/opc/MailQueue"
+  - record_key: "NOTIF-REQ-0003"
+    kind: "requirement"
+    capability_key: "customer-notifications"
+    requirement: "WHEN an order becomes COMPLETED, the system SHALL e-mail the customer at the order's e-mail address with subject 'Java Pet Store Order COMPLETED: <order id>', stating that the entire order has shipped and listing every order line with category, product, quantity and unit price."
+    plain_text: "When the last part of an order ships, the customer gets an 'order completed' e-mail listing the whole order."
+    technical_note: "InvoiceTD posts the orderId to jms/opc/MailCompletedOrderQueue; MailCompletedOrderMDB.doWork() loads the PurchaseOrder, transforms poData.toDOM() with CompletedOrder[_<locale>].xsl using poData.getLocale(). Gated by env-entry param/SendCompletedOrderMail."
+    confidence: "high"
+    confidence_basis: "Trigger in InvoiceMDB/InvoiceTD, mail build in MailCompletedOrderMDB, wording in stylesheet."
+    risk_class: "operational"
+    basis: "MAIL_SUBJECT, doWork(), CompletedOrder template."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailCompletedOrderMDB.java"
+        line_start: 81
+        line_end: 83
+        excerpt: "  private static final String MAIL_SUBJECT = \"Java Pet Store Order COMPLETED: \";\n  private static final String COMPLETED_ORDER_STYLE_SHEET =\n  \"/com/sun/j2ee/blueprints/opc/rsrc/xsl/CompletedOrder.xsl\";\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailCompletedOrderMDB.java"
+        line_start: 156
+        line_end: 171
+        excerpt: "  private String doWork(String orderId) throws JMSException,\n    XMLDocumentException,\n    MailContentXDE.FormatterException,\n    FinderException,\n    TransitionException {\n      String subject = MAIL_SUBJECT +  orderId;\n      PurchaseOrder poData = poHome.findByPrimaryKey(orderId).getData();\n      String emailAddress = poData.getEmailId();\n      mailContentXDE.setDocument(new DOMSource(poData.toDOM()));\n      mailContentXDE.setLocale(poData.getLocale());\n      String message = mailContentXDE.getDocumentAsString();\n\n      //build  mail message as xml\n      Mail mailMsg = new Mail(emailAddress, subject, message);\n      return mailMsg.toXML();\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/CompletedOrder_en_US.xsl"
+        line_start: 22
+        line_end: 41
+        excerpt: "\t<xsl:template match=\"/PurchaseOrder\">\n\t     <b>Thank you</b> for placing an order with <b>Java Pet Store 1.3.2</b><br />\n              <p />Your entire order <font color=\"red\"><xsl:value-of select=\"//OrderId\" /></font>\n        has been shipped and now your order is completed.\n\n\t\t<p /> Your entire order was:<br />\n\t\t<table border=\"1\">\n\t\t\t<tr><td>Category</td><td>Product #</td><td>Quantity</td><td>Unit Price</td></tr>\n\t\t\t<xsl:apply-templates select=\"LineItem\" />\n\t\t</table>\n\t</xsl:template>\n\n\t<xsl:template match=\"LineItem\">\n\t\t<tr>\n\t\t\t<td><xsl:value-of select=\"CategoryId\" /></td>\n\t\t\t<td><xsl:value-of select=\"ProductId\" /></td>\n\t\t\t<td align=\"right\"><xsl:value-of select=\"Quantity\" /></td>\n\t\t\t<td align=\"right\"><xsl:value-of select=\"format-number(UnitPrice, '&#x24;#,##0.00')\" /></td>\n\t\t</tr>\n\t</xsl:template>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "MailCompletedOrderMDB"
+      jms.queue: "jms/opc/MailCompletedOrderQueue -> jms/opc/MailQueue"
+  - record_key: "NOTIF-BR-0001"
+    kind: "business-rule"
+    capability_key: "customer-notifications"
+    requirement: "The system SHALL allow each of the three customer e-mails (approval/denial, shipment, order completed) to be switched on or off independently by configuration; WHEN a type is switched off the triggering event SHALL be consumed without sending that e-mail."
+    plain_text: "Operators can turn each kind of customer e-mail on or off separately."
+    technical_note: "Boolean env-entries param/SendApprovalMail (MailOrderApprovalMDB), param/SendConfirmationMail (MailInvoiceMDB), param/SendCompletedOrderMail (MailCompletedOrderMDB), read in ejbCreate(); onMessage() does nothing when false. The deployed values are redacted in this copy."
+    confidence: "medium"
+    confidence_basis: "Declared in ejb-jar.xml and enforced in each MDB, but the shipped values are redacted, so whether any mail is on by default cannot be seen."
+    risk_class: "operational"
+    basis: "env-entry declarations and the 'if (sendConfirmationMail)' guards."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml"
+        line_start: 414
+        line_end: 418
+        excerpt: "      <env-entry>\n       <env-entry-name>param/SendConfirmationMail</env-entry-name>\n       <env-entry-type>java.lang.Boolean</env-entry-type>\n       <env-entry-value>«REDACTED:secret-finding-8»</env-entry-value>\n      </env-entry>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml"
+        line_start: 504
+        line_end: 508
+        excerpt: "      <env-entry>\n       <env-entry-name>param/SendApprovalMail</env-entry-name>\n       <env-entry-type>java.lang.Boolean</env-entry-type>\n       <env-entry-value>«REDACTED:secret-finding-11»</env-entry-value>\n      </env-entry>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml"
+        line_start: 590
+        line_end: 594
+        excerpt: "      <env-entry>\n       <env-entry-name>param/SendCompletedOrderMail</env-entry-name>\n       <env-entry-type>java.lang.Boolean</env-entry-type>\n       <env-entry-value>«REDACTED:secret-finding-13»</env-entry-value>\n      </env-entry>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailOrderApprovalMDB.java"
+        line_start: 124
+        line_end: 130
+        excerpt: "    try {\n      recdTM = (TextMessage)recvMsg;\n      recdText = recdTM.getText();\n      if (sendConfirmationMail) {\n        result = doWork(recdText);\n        doTransition(result);\n      }\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "MailOrderApprovalMDB, MailInvoiceMDB, MailCompletedOrderMDB"
+  - record_key: "NOTIF-BR-0002"
+    kind: "business-rule"
+    capability_key: "customer-notifications"
+    requirement: "The system SHALL render each customer e-mail in the template for the order's locale (en_US, ja_JP, zh_CN); GIVEN the stored locale has no '_' separator WHEN an approval or shipment e-mail is rendered THEN the default (English) template SHALL be used; GIVEN no template exists for the locale THEN the e-mail SHALL fail and the triggering message SHALL be retried."
+    plain_text: "Customer e-mails are written in the customer's language (English, Japanese or Chinese). An unrecognised locale value falls back to English; a recognised locale with no template makes the e-mail fail."
+    technical_note: "MailContentXDE.getStyleSheetPath() inserts '_' + locale.toString() before '.xsl' and falls back to the base path only when locale is null; getTransformer() throws FormatterException('No style sheet found for locale') if the resource is missing, which the MDB rethrows as EJBException. LocaleUtil.getLocaleFromString() returns null when no '_' is present. Templates present: OrderApproval/PartialInvoice/CompletedOrder for base, en_US, ja_JP, zh_CN."
+    confidence: "high"
+    confidence_basis: "Selection logic in MailContentXDE and LocaleUtil, and the twelve template files present on disk for exactly these locales."
+    risk_class: "presentational"
+    basis: "getStyleSheetPath()/getTransformer(); LocaleUtil null return; template inventory."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/MailContentXDE.java"
+        line_start: 136
+        line_end: 165
+        excerpt: "  private Transformer getTransformer(Locale locale) throws FormatterException {\n    Transformer transformer = (Transformer) transformers.get(locale);\n    if (transformer == null) {\n      InputStream stream = getClass().getResourceAsStream(getStyleSheetPath(styleSheetPath, locale));\n      if (stream != null) {\n        try {\n          transformer = transformerFactory.newTransformer(new StreamSource(stream));\n          transformers.put(locale, transformer);\n        } catch (Exception exception) {\n          throw new FormatterException(exception);\n        }\n      } else {\n        throw new FormatterException(\"No style sheet found for locale: \" + locale);\n      }\n    }\n    return transformer;\n  }\n\n  private String getStyleSheetPath(String styleSheetPath, Locale locale) {\n    if (locale != null) {\n      int i = styleSheetPath.lastIndexOf('.');\n      if (i >= 0) {\n        String suffix = styleSheetPath.substring(i);\n        String base = styleSheetPath.substring(0, i);\n        return base + \"_\" + locale.toString() + suffix;\n      }\n      return styleSheetPath + \"_\" + locale.toString();\n    }\n    return styleSheetPath;\n  }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/LocaleUtil.java"
+        line_start: 48
+        line_end: 52
+        excerpt: "  public static Locale getLocaleFromString(String localeString) {\n    if (localeString == null) return null;\n    if (localeString.toLowerCase().equals(\"default\")) return Locale.getDefault();\n    int languageIndex = localeString.indexOf('_');\n    if (languageIndex  == -1) return null;\n"
+    stack_metadata:
+      framework: "EJB 2.0 + XSLT"
+  - record_key: "LOC-BR-0001"
+    kind: "business-rule"
+    capability_key: "localization"
+    requirement: "The system SHALL format unit prices in customer e-mails as '$#,##0.00' for en_US and zh_CN and as '￥#,##0' (yen, no decimals) for ja_JP."
+    plain_text: "Prices in e-mails show dollars with cents for US and Chinese customers, and whole yen for Japanese customers."
+    technical_note: "format-number() patterns in PartialInvoice_*.xsl and CompletedOrder_*.xsl. The base (locale-less) templates also use the dollar pattern."
+    confidence: "high"
+    confidence_basis: "Same pattern repeated consistently across the shipment and completed templates for each locale."
+    risk_class: "presentational"
+    basis: "format-number patterns in the locale templates."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/PartialInvoice_en_US.xsl"
+        line_start: 40
+        line_end: 40
+        excerpt: "\t\t\t<td align=\"right\"><xsl:value-of select=\"format-number(@unitPrice, '&#x24;#,##0.00')\" /></td>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/PartialInvoice_ja_JP.xsl"
+        line_start: 39
+        line_end: 39
+        excerpt: "\t\t\t<td align=\"right\"><xsl:value-of select=\"format-number(@unitPrice, '￥#,##0')\" /></td>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/PartialInvoice_zh_CN.xsl"
+        line_start: 40
+        line_end: 40
+        excerpt: "\t\t\t<td align=\"right\"><xsl:value-of select=\"format-number(@unitPrice, '&#x24;#,##0.00')\" /></td>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/CompletedOrder_ja_JP.xsl"
+        line_start: 37
+        line_end: 37
+        excerpt: "\t\t\t<td align=\"right\"><xsl:value-of select=\"format-number(UnitPrice, '￥#,##0')\" /></td>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/CompletedOrder_zh_CN.xsl"
+        line_start: 39
+        line_end: 39
+        excerpt: "\t\t\t<td align=\"right\"><xsl:value-of select=\"format-number(UnitPrice, '&#x24;#,##0.00')\" /></td>\n"
+    stack_metadata:
+      framework: "XSLT"
+  - record_key: "RPT-REQ-0001"
+    kind: "requirement"
+    capability_key: "sales-reporting"
+    requirement: "The system SHALL let an administrator list all orders in a given status, showing for each the order id, the ordering user id, the order date formatted as M/D/YYYY (no zero padding), the order value and the status."
+    plain_text: "Administrators can see a list of orders in any status (for example all pending orders), with order number, customer, date, value and status."
+    technical_note: "OPCAdminFacadeEJB.getOrdersByStatus(status): ProcessManager.getOrdersByStatus (SELECT DISTINCT orderId FROM ManagerEJBTable WHERE status = ?), then PurchaseOrder lookup per id; date built from deprecated Date getMonth()+1 / getDate() / getYear()+1900. Returns OrdersTO of OrderDetails. Exposed remotely as ejb/opc/opc/OPCAdminFacadeEJBRemote."
+    confidence: "high"
+    confidence_basis: "Facade code plus the declared finder SQL in sun-j2ee-ri.xml."
+    risk_class: "operational"
+    basis: "getOrdersByStatus() and findOrdersByStatus SQL."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/admin/ejb/OPCAdminFacadeEJB.java"
+        line_start: 131
+        line_end: 157
+        excerpt: "    public OrdersTO getOrdersByStatus(String status)\n                                              throws OPCAdminFacadeException {\n        OrdersTO.MutableOrdersTO retVal = new OrdersTO.MutableOrdersTO();\n        PurchaseOrderLocal po;\n        ProcessManagerLocal mgr = getProcMgr();\n\n        try {\n            PurchaseOrderLocalHome pohome = getPO();\n            Collection orders = mgr.getOrdersByStatus(status);\n            Iterator it = orders.iterator();\n            while((it!= null) && (it.hasNext())) {\n                ManagerLocal mgrEjb = (ManagerLocal) it.next();\n                po = pohome.findByPrimaryKey(mgrEjb.getOrderId());\n                Date gotDate = new Date(po.getPoDate());\n                String podate = (gotDate.getMonth()+1) + \"/\" +\n                    gotDate.getDate() + \"/\" + (gotDate.getYear()+1900);\n                retVal.add(new OrderDetails(po.getPoId(), po.getPoUserId(),\n                                            podate, po.getPoValue(), status));\n            }\n        } catch(FinderException fe) {\n            System.err.println(\"finder Ex while getOrdByStat :\" + fe.getMessage());\n            throw new OPCAdminFacadeException(\"Unable to find PurchaseOrders\"+\n                                              \" of given status : \" +\n                                              fe.getMessage());\n        }\n        return(retVal);\n    }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 482
+        line_end: 482
+        excerpt: "          <sql>SELECT DISTINCT \"a\".\"orderId\" FROM \"ManagerEJBTable\" \"a\" WHERE (\"a\".\"status\"  = ? )</sql>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "OPCAdminFacadeEJB"
+      ejb.transaction: "Required"
+      db.object: "ManagerEJBTable"
+  - record_key: "RPT-BR-0001"
+    kind: "business-rule"
+    capability_key: "sales-reporting"
+    requirement: "The system SHALL produce chart data for orders whose date falls within a start and end date inclusive: for a REVENUE request, the sum of quantity x unit price; for any other request, the sum of quantities; grouped by category when no category is given, or by item restricted to the given category; orders of every status SHALL be included."
+    plain_text: "Administrators can chart revenue or units sold over a date range, either per category or per item within one category. Every order placed in the range counts, whatever its status."
+    technical_note: "OPCAdminFacadeEJB.getChartInfo(request, start, end, categ): PurchaseOrderLocalHome.findPOBetweenDates (poDate >= ? AND poDate <= ?), iterate po.getAllItems(); request.equals(\"REVENUE\") else quantity; categ==null -> key categoryId else filter categoryId==categ, key itemId. Revenue accumulated as java Float. No status filter."
+    confidence: "high"
+    confidence_basis: "Facade code plus declared finder SQL establishing inclusive bounds."
+    risk_class: "financial"
+    basis: "getChartInfo() branches and the findPOBetweenDates SQL."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/admin/ejb/OPCAdminFacadeEJB.java"
+        line_start: 159
+        line_end: 256
+        excerpt: "    /**\n     * Business method in remote interface. Given start, end dates, this\n     * returns a <code>HashMap</code> of revenue / orders in the given period\n     * @param request  Represents the type of request - ORDERS/REVENUE\n     * @param start    Represents the start date in mm/dd/yyyy format\n     * @param end      Represents the end date in mm/dd/yyyy format\n     * @param categ    Represents the sub-classification\n     * @return <code>HashMap</code> of the required details\n     * @throws <code>OPCAdminFacadeException</code> for all errors\n     */\n    public Map getChartInfo(String request,\n                            Date start,\n                            Date end,\n                            String categ)\n        throws OPCAdminFacadeException {\n        String id;\n        Float tmpValue;\n        Integer tmpQty;\n        PurchaseOrderLocal po;\n\n        Map chartDetails = new HashMap();\n\n        try {\n            PurchaseOrderLocalHome pohome = getPO();\n            Collection poColl =\n                pohome.findPOBetweenDates(start.getTime(), end.getTime());\n\n            Iterator it = poColl.iterator();\n            while((it!= null) && (it.hasNext())) {\n                po = (PurchaseOrderLocal) it.next();\n                Collection liColl = po.getAllItems();\n                Iterator lit = liColl.iterator();\n                while((lit!=null) && (lit.hasNext())) {\n                    LineItem loc = (LineItem) lit.next();\n                    if(request.equals(\"REVENUE\")) {\n                        if(categ == null) {\n                            id = loc.getCategoryId();\n                            if(chartDetails.containsKey(id)) {\n                                tmpValue = (Float) chartDetails.get(id);\n                                chartDetails.put(id,\n                                     new Float(tmpValue.floatValue() +\n                                     (loc.getQuantity()*loc.getUnitPrice())));\n                            } else {\n                                chartDetails.put(id, new Float((loc.getQuantity()*\n                                                        loc.getUnitPrice())));\n                            }\n                        } else {\n                            if(loc.getCategoryId().equals(categ)) {\n                                id = loc.getItemId();\n                                if(chartDetails.containsKey(id)) {\n                                    tmpValue = (Float) chartDetails.get(id);\n                                    chartDetails.put(id,\n                                      new Float(tmpValue.floatValue() +\n                                      (loc.getQuantity()*loc.getUnitPrice())));\n                                } else {\n                                    chartDetails.put(id,\n                                     new Float(loc.getQuantity()*loc.getUnitPrice()));\n                                }\n                            }\n                        }\n                    } else {\n                        if(categ == null) {\n                            id = loc.getCategoryId();\n                            if(chartDetails.containsKey(id)) {\n                                tmpQty = (Integer) chartDetails.get(id);\n                                chartDetails.put(id,\n                                     new Integer(tmpQty.intValue() +\n                                                 loc.getQuantity()));\n                            } else {\n                                chartDetails.put(id, new\n                                                 Integer(loc.getQuantity()));\n                            }\n                        } else {\n                            if(loc.getCategoryId().equals(categ)) {\n                                id = loc.getItemId();\n                                if(chartDetails.containsKey(id)) {\n                                    tmpQty = (Integer) chartDetails.get(id);\n                                    chartDetails.put(id,\n                                            new Integer(tmpQty.intValue() +\n                                            loc.getQuantity()));\n                                } else {\n                                    chartDetails.put(id,\n                                           new Integer(loc.getQuantity()));\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        } catch(FinderException fe) {\n            System.err.println(\"finder Ex while getChart :\" +\n                    fe.getMessage());\n            throw new OPCAdminFacadeException(\"Unable to find PurchaseOrders\"+\n                                              \" in given period : \" +\n                                              fe.getMessage());\n        }\n        return(chartDetails);\n    }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 665
+        line_end: 665
+        excerpt: "          <sql>SELECT \"a\".\"poId\" FROM \"PurchaseOrderEJBTable\" \"a\" WHERE ((\"a\".\"poDate\"  &gt;= ? ) AND (\"a\".\"poDate\"  &lt;= ? ))</sql>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "OPCAdminFacadeEJB"
+      ejb.transaction: "Required"
+      db.object: "PurchaseOrderEJBTable"
+  - record_key: "SIGN-REQ-0001"
+    kind: "requirement"
+    capability_key: "sign-on"
+    requirement: "The system SHALL expose the administrator order-listing and sales-chart services without any caller role check at the order processing service itself; access control for these services is left to the calling application."
+    plain_text: "The back-office service that lists orders and sales figures does not itself check who is asking; it relies on the admin application in front of it to restrict access."
+    technical_note: "ejb-jar.xml method-permission <unchecked/> on OPCAdminFacadeEJB method '*' (and on every MDB). No security-role is declared; opc web.xml has no security-constraint. Remote JNDI name ejb/opc/opc/OPCAdminFacadeEJBRemote."
+    confidence: "high"
+    confidence_basis: "Declared in ejb-jar.xml and corroborated by the absence of any constraint in the module's web.xml."
+    risk_class: "regulated"
+    basis: "<unchecked/> method-permission; empty web.xml."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml"
+        line_start: 657
+        line_end: 664
+        excerpt: "  <assembly-descriptor>\n    <method-permission>\n      <unchecked />\n      <method>\n          <ejb-name>OPCAdminFacadeEJB</ejb-name>\n        <method-name>*</method-name>\n      </method>\n    </method-permission>\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/docroot/WEB-INF/web.xml"
+        line_start: 43
+        line_end: 46
+        excerpt: "<web-app>\n  <display-name>OrderProcessingCenterWAR</display-name>\n  <description>Web Tier DD for the OPC application</description>\n</web-app>\n"
+    stack_metadata:
+      framework: "EJB 2.0"
+      ejb.bean: "OPCAdminFacadeEJB"
+  - record_key: "FULF-INT-0004"
+    kind: "integration"
+    capability_key: "order-fulfillment"
+    requirement: "The system SHALL publish a catalog mapping each exchanged document type identifier (supplier order, invoice, line item) to the location of its schema, resolved against the server's own address, so that inbound and outbound documents can be validated."
+    plain_text: "The order centre publishes where the definitions of its order, invoice and line-item documents can be found, so partners' documents can be checked against them."
+    technical_note: "docroot/EntityCatalog.jsp loads schemas/EntityCatalog.properties once into the servlet context, rewrites relative values to absolute URLs of this server, and prints the properties. Consumers read it via resource url/EntityCatalogURL (bound to http://localhost:8000/opc/EntityCatalog.jsp in sun-j2ee-ri.xml)."
+    confidence: "medium"
+    confidence_basis: "One JSP plus its properties file; how strictly validation is applied depends on redacted env-entry values."
+    risk_class: "operational"
+    basis: "EntityCatalog.jsp rewriting logic and the property entries."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/docroot/EntityCatalog.jsp"
+        line_start: 15
+        line_end: 27
+        excerpt: "        if (value.startsWith(\"//\")) {\n          value = new URL(new URL(HttpUtils.getRequestURL(request).toString()), value.substring(1)).toString();\n        } else {\n          value = new URL(new URL(HttpUtils.getRequestURL(request).toString()), request.getContextPath() + value).toString();\n        }\n        entityCatalog.setProperty(name, value);\n      }\n    }\n    getServletContext().setAttribute(\"EntityCatalog\", entityCatalog);\n  }\n  ByteArrayOutputStream stream = new ByteArrayOutputStream();\n  entityCatalog.store(stream, \"Entity Catalog\");\n  out.print(stream.toString());\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/docroot/schemas/EntityCatalog.properties"
+        line_start: 1
+        line_end: 6
+        excerpt: "-//Sun\\ Microsystems,\\ Inc.\\ -\\ J2EE\\ Blueprints\\ Group//DTD\\ TPA-LineItem\\ 1.0//EN: /schemas/com/sun/j2ee/blueprints/xmldocuments/rsrc/schemas/TPALineItem.dtd\n-//Sun\\ Microsystems,\\ Inc.\\ -\\ J2EE\\ Blueprints\\ Group//DTD\\ TPA-SupplierOrder\\ 1.0//EN: /schemas/com/sun/j2ee/blueprints/xmldocuments/rsrc/schemas/TPASupplierOrder.dtd\n-//Sun\\ Microsystems,\\ Inc.\\ -\\ J2EE\\ Blueprints\\ Group//DTD\\ TPA-Invoice\\ 1.0//EN: /schemas/com/sun/j2ee/blueprints/xmldocuments/rsrc/schemas/TPAInvoice.dtd\nhttp\\://blueprints.j2ee.sun.com/TPALineItem: /schemas/com/sun/j2ee/blueprints/xmldocuments/rsrc/schemas/TPALineItem.xsd\nhttp\\://blueprints.j2ee.sun.com/TPAInvoice: /schemas/com/sun/j2ee/blueprints/xmldocuments/rsrc/schemas/TPAInvoice.xsd\nhttp\\://blueprints.j2ee.sun.com/TPASupplierOrder: /schemas/com/sun/j2ee/blueprints/xmldocuments/rsrc/schemas/TPASupplierOrder.xsd\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 121
+        line_end: 122
+        excerpt: "      <res-ref-name>url/EntityCatalogURL</res-ref-name>\n      <jndi-name>http://localhost:8000/opc/EntityCatalog.jsp</jndi-name>\n"
+    stack_metadata:
+      framework: "JSP"
+      jsp.page: "EntityCatalog.jsp"
+findings:
+  - kind: "ambiguity"
+    path: "legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml"
+    description: "All env-entry values in ejb-jar.xml (XML validation switches, the three e-mail on/off switches, the OrderApproval transition delegate class) are redacted in this copy («REDACTED:...»). Their shipped defaults, and therefore whether any customer e-mail is on by default and which transition delegate runs for approvals, cannot be read. A human needs the original descriptor values. Affects NOTIF-BR-0001 and APPR-WF-0002."
+  - kind: "ambiguity"
+    path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/rsrc/xsl/PartialInvoice_zh_CN.xsl"
+    description: "zh_CN e-mail templates format prices in dollars ('$#,##0.00') while ja_JP uses yen, and the auto-approval rule has no zh_CN threshold. Whether Chinese-locale orders are priced in USD or the templates are wrong cannot be settled from this module; the catalog pricing in another module would settle it."
+  - kind: "ambiguity"
+    path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+    description: "The entity catalog URL used to resolve document schemas is hard-wired to http://localhost:8000/opc/EntityCatalog.jsp in the deployment descriptor, so validation only works when the order centre runs on that host and port. Deployment-only, so no requirement was written for it."
+suspected_defects:
+  - capability_key: "order-approval"
+    record_keys:
+      - "APPR-BR-0001"
+    severity: "medium"
+    category: "other"
+    title: "Chinese-locale orders are never approved automatically"
+    description: "The automatic-approval check has branches only for US and Japanese locales. Every zh_CN order, of any value, falls through to 'not approved' and waits for an administrator, although zh_CN is a supported locale. The method is documented in its own comment as a currency-conversion stub, so the thresholds may never have been meant as business rules."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java"
+        line_start: 178
+        line_end: 191
+        excerpt: "  /**\n   * Just a stub for converting currency. This method is used for\n   * demonstrating the petstore, so that smaller orders can flow through\n   * the system without having to fire up the admin Gui to approve orders\n   */\n  private boolean canIApprove(PurchaseOrder purchaseOrder) {\n    Locale locale = purchaseOrder.getLocale();\n    if (locale.equals(Locale.US)) {\n      if (purchaseOrder.getTotalPrice() < 500) return true;\n    } else if (locale.equals(Locale.JAPAN))  {\n      if (purchaseOrder.getTotalPrice() < 50000) return true;\n    }\n    return false;\n  }\n"
+  - capability_key: "sales-reporting"
+    record_keys:
+      - "RPT-BR-0001"
+    severity: "medium"
+    category: "other"
+    title: "Revenue and quantity charts count denied and pending orders"
+    description: "The chart query selects every order in the date range and sums its lines without looking at order status, so denied orders (never fulfilled) and still-pending orders are reported as revenue and units sold."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/admin/ejb/OPCAdminFacadeEJB.java"
+        line_start: 181
+        line_end: 193
+        excerpt: "        try {\n            PurchaseOrderLocalHome pohome = getPO();\n            Collection poColl =\n                pohome.findPOBetweenDates(start.getTime(), end.getTime());\n\n            Iterator it = poColl.iterator();\n            while((it!= null) && (it.hasNext())) {\n                po = (PurchaseOrderLocal) it.next();\n                Collection liColl = po.getAllItems();\n                Iterator lit = liColl.iterator();\n                while((lit!=null) && (lit.hasNext())) {\n                    LineItem loc = (LineItem) lit.next();\n                    if(request.equals(\"REVENUE\")) {\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 665
+        line_end: 665
+        excerpt: "          <sql>SELECT \"a\".\"poId\" FROM \"PurchaseOrderEJBTable\" \"a\" WHERE ((\"a\".\"poDate\"  &gt;= ? ) AND (\"a\".\"poDate\"  &lt;= ? ))</sql>\n"
+  - capability_key: "sales-reporting"
+    record_keys:
+      - "RPT-BR-0001"
+      - "FULF-ENT-0001"
+    severity: "low"
+    category: "inconsistent-rounding"
+    title: "Money is stored and summed in single-precision floating point"
+    description: "Order value and unit price are REAL columns and chart revenue is accumulated in java Float, so totals over many lines can drift from the exact sum of the line amounts."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/admin/ejb/OPCAdminFacadeEJB.java"
+        line_start: 196
+        line_end: 204
+        excerpt: "                            if(chartDetails.containsKey(id)) {\n                                tmpValue = (Float) chartDetails.get(id);\n                                chartDetails.put(id,\n                                     new Float(tmpValue.floatValue() +\n                                     (loc.getQuantity()*loc.getUnitPrice())));\n                            } else {\n                                chartDetails.put(id, new Float((loc.getQuantity()*\n                                                        loc.getUnitPrice())));\n                            }\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 702
+        line_end: 702
+        excerpt: "          <sql>CREATE TABLE \"LineItemEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"categoryId\" VARCHAR(255) , \"itemId\" VARCHAR(255) , \"lineNumber\" VARCHAR(255) , \"productId\" VARCHAR(255) , \"quantity\" INTEGER NOT NULL , \"quantityShipped\" INTEGER NOT NULL , \"unitPrice\" REAL NOT NULL, CONSTRAINT \"pk_LineItemEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+  - capability_key: "order-fulfillment"
+    record_keys:
+      - "FULF-INT-0001"
+    severity: "medium"
+    category: "other"
+    title: "Second address line is left out of the supplier purchase order"
+    description: "The address store has street line 1 and street line 2, but only street line 1 is copied into the shipping address sent to the supplier, so a shipment to an address that needs the second line goes out with an incomplete address."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/OrderApprovalMDB.java"
+        line_start: 253
+        line_end: 258
+        excerpt: "    ContactInfoLocal cinfo = po.getContactInfo();\n    AddressLocal addr = cinfo.getAddress();\n    supplierOrderXDE.setShippingAddress(cinfo.getGivenName(), cinfo.getFamilyName(),\n                                        addr.getStreetName1(), addr.getCity(),\n                                        addr.getState(), addr.getCountry(),\n                                        addr.getZipCode(), cinfo.getEmail(), cinfo.getTelephone());\n"
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 604
+        line_end: 604
+        excerpt: "          <sql>CREATE TABLE \"AddressEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"__reverse_address___PMPrimaryKey\" LONGINT , \"city\" VARCHAR(255) , \"country\" VARCHAR(255) , \"state\" VARCHAR(255) , \"streetName1\" VARCHAR(255) , \"streetName2\" VARCHAR(255) , \"zipCode\" VARCHAR(255), CONSTRAINT \"pk_AddressEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+  - capability_key: "order-fulfillment"
+    record_keys:
+      - "FULF-BR-0001"
+      - "FULF-WF-0001"
+    severity: "medium"
+    category: "data-corruption"
+    title: "Invoice processing ignores current status and over-shipment"
+    description: "An invoice updates the order status without checking the current status. An invoice for a DENIED or still-PENDING order is accepted and moves it to SHIPPED_PART or COMPLETED. Completion requires shipped quantity to equal ordered quantity exactly, so a duplicate or over-quantity invoice leaves the order in SHIPPED_PART for good, and can move an already COMPLETED order back to SHIPPED_PART."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/InvoiceMDB.java"
+        line_start: 157
+        line_end: 173
+        excerpt: "  private String doWork(String xmlInvoice) throws XMLDocumentException, FinderException {\n    String completedOrder = null;\n    PurchaseOrderHelper poHelper = new PurchaseOrderHelper();\n    invoiceXDE.setDocument(xmlInvoice);\n    PurchaseOrderLocal po = poHome.findByPrimaryKey(invoiceXDE.getOrderId());\n    boolean orderDone = poHelper.processInvoice(po, invoiceXDE.getLineItemIds());\n\n    //update process manager if this order is completely done, or partially done\n    //for this purchase order\n    if(orderDone) {\n      processManager.updateStatus(invoiceXDE.getOrderId(), OrderStatusNames.COMPLETED);\n      completedOrder = invoiceXDE.getOrderId();\n    } else {\n      processManager.updateStatus(invoiceXDE.getOrderId(), OrderStatusNames.SHIPPED_PART);\n    }\n    return completedOrder;\n  }\n"
+  - capability_key: "checkout"
+    record_keys:
+      - "CHK-ENT-0001"
+    severity: "high"
+    category: "other"
+    title: "Full payment card number stored in clear text with each order"
+    description: "The credit card table keeps the card number as a plain text column next to expiry date and card type, with no masking or encryption in the schema."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml"
+        line_start: 739
+        line_end: 739
+        excerpt: "          <sql>CREATE TABLE \"CreditCardEJBTable\" (\"__PMPrimaryKey\" LONGINT , \"__reverse_creditCard_poId\" VARCHAR(255) , \"cardNumber\" VARCHAR(255) , \"cardType\" VARCHAR(255) , \"expiryDate\" VARCHAR(255), CONSTRAINT \"pk_CreditCardEJBTabl\" PRIMARY KEY (\"__PMPrimaryKey\") )</sql>\n"
+  - capability_key: "sign-on"
+    record_keys:
+      - "SIGN-REQ-0001"
+    severity: "medium"
+    category: "other"
+    title: "Admin order and sales service has no access check of its own"
+    description: "The remote service that returns every order's customer id and value, and sales figures, is declared callable by anyone. Any client that can reach the service directly bypasses the admin application's sign-on."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml"
+        line_start: 657
+        line_end: 664
+        excerpt: "  <assembly-descriptor>\n    <method-permission>\n      <unchecked />\n      <method>\n          <ejb-name>OPCAdminFacadeEJB</ejb-name>\n        <method-name>*</method-name>\n      </method>\n    </method-permission>\n"
+  - capability_key: "customer-notifications"
+    record_keys:
+      - "NOTIF-BR-0002"
+    severity: "low"
+    category: "other"
+    title: "Locale parsing mishandles three-part locale strings"
+    description: "The locale parser never sets the variant position and leaves the country empty when the value has a second underscore, so a value such as 'en_US_POSIX' produces an invalid locale and the approval or shipment e-mail for that order fails."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/customerrelations/ejb/LocaleUtil.java"
+        line_start: 53
+        line_end: 73
+        excerpt: "    int countryIndex = localeString.indexOf('_', languageIndex +1);\n    String country = null;\n    if (countryIndex  == -1) {\n      if (localeString.length() > languageIndex) {\n        country = localeString.substring(languageIndex +1, localeString.length());\n      } else {\n        return null;\n      }\n    }\n    int variantIndex = -1;\n    if (countryIndex != -1) countryIndex = localeString.indexOf('_', countryIndex +1);\n    String language = localeString.substring(0, languageIndex);\n    String variant = null;\n    if (variantIndex  != -1) {\n      variant = localeString.substring(variantIndex +1, localeString.length());\n    }\n    if (variant != null) {\n      return new Locale(language, country, variant);\n    } else {\n      return new Locale(language, country);\n    }\n"
+  - capability_key: "order-fulfillment"
+    record_keys:
+      - "FULF-INT-0003"
+    severity: "low"
+    category: "error-swallowed"
+    title: "Failure to close the messaging connection is only printed"
+    description: "If closing the queue connection fails after a send, the exception is written to standard error and discarded."
+    traces:
+      - path: "legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/transitions/QueueHelper.java"
+        line_start: 76
+        line_end: 84
+        excerpt: "        } finally {\n            try {\n                if(qConnect != null) {\n                    qConnect.close();\n                }\n            } catch(Exception e) {\n            System.err.println(\"OPC.QueueHelper GOT EXCEPTION closing connection\" + e);\n          }\n        }\n"
