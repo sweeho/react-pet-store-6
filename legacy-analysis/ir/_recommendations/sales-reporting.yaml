@@ -1,0 +1,176 @@
+recommendations:
+  - record_key: SALES-RULE-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The EJB-QL BETWEEN query in ejb-jar.xml and the home-interface finder agree, and
+      OPCAdminFacadeEJB.getChartInfo is a live caller. The same rule appears as SALES-REQ-0001
+      in purchaseorder/a; merge that variant into this key. Note that the admin path passes
+      midnight of the end date, so the inclusive bound does not cover the end day in practice;
+      that is a suspected defect for the Business Owner's defect register.
+  - record_key: SALES-REQ-0001
+    recommendation: edit
+    confidence: medium
+    reason: >
+      This key is used by three different records: processmanager/a (orders by exact status),
+      admin/a (the non-pending orders screen, kind screen) and purchaseorder/a (orders between
+      dates, a duplicate of SALES-RULE-0001). Keep one key per rule. Keep this key for the
+      processmanager/a orders-by-status rule, which the declared finder and the session-bean
+      javadoc both support; merge the admin/a screen into SALE-SCR-0001 and the
+      purchaseorder/a variant into SALES-RULE-0001.
+    edited_requirement: >
+      The system SHALL list, for the administrator, every order whose current status exactly
+      equals a given status, returning each order at most once, with no ordering or paging.
+  - record_key: SALE-SCR-0001
+    recommendation: accept
+    confidence: high
+    reason: >
+      The status filter and read-only rule in OrdersViewTableModel, the column resources and
+      the tab title agree, and the user guide describes the same panel. Use this as the single
+      non-pending orders screen record; merge SALES-REQ-0001 (admin/a), SALES-SCR-0002 (its
+      non-pending half) and SALES-REPORTING-SCREEN-0001 into it.
+  - record_key: SALES-SCR-0002
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Columns, sorter wiring and the -1 fallback are all in code, but the record spans both the
+      pending and non-pending lists. The pending list belongs to order-approval. Restrict this
+      record to the non-pending list (or merge into SALE-SCR-0001); the -1 display for a
+      non-numeric id is a single catch block and is presentational.
+    edited_requirement: >
+      The non-pending orders list SHALL show each order's ID, user ID, order date, amount and
+      status, SHALL be sortable by clicking a column header, and SHALL show a non-numeric
+      order ID as -1.
+  - record_key: SALES-REPORTING-SCREEN-0001
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Documentary only (using.html), but it matches the code-traced SALE-SCR-0001 exactly;
+      "committed (fulfilled)" in the guide is the COMPLETED status in code. Accept as
+      corroborating evidence and merge into SALE-SCR-0001. The docs/a and docs/b passes emitted
+      the same key with the same content.
+  - record_key: SALE-SCR-0008
+    recommendation: accept
+    confidence: high
+    reason: >
+      Frame construction, the two view actions and the label resources all agree. This is the
+      second screen record: the Orders/Sales window with the Pie Chart and Bar Chart tabs, each
+      with date fields and a Get Data button.
+  - record_key: SALES-INT-0003
+    recommendation: accept
+    confidence: high
+    reason: >
+      The client's four GETORDERS requests, the servlet's response builder and the facade's
+      getOrdersByStatus (now read: it formats the date as month/day/year and builds the five
+      fields) agree. Confidence can be raised from medium because the facade is no longer
+      outside the evidence.
+  - record_key: SALE-REQ-0002
+    recommendation: edit
+    confidence: high
+    reason: >
+      Server, client and chart code agree, and the facade shows revenue is the sum of
+      quantity x unit price per line item over all orders dated in the range, with no status
+      filter, so denied and pending orders are included. State the computation; whether
+      denied orders should count is a suspected defect for the Business Owner. Merge
+      SALES-REQ-0004 (same rule, adds the two-decimal hover) into this key.
+    edited_requirement: >
+      The system SHALL report revenue for a date range per product category, each category's
+      revenue being the sum of quantity times unit price over its line items in orders dated
+      within the range, with the total for the range, and SHALL display it as a pie chart whose
+      hover text shows the category and its percentage of total revenue to at most two decimals.
+  - record_key: SALES-REQ-0004
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicate of SALE-REQ-0002 from the other pass, adding the two-decimal tooltip format
+      traced to PieChartPanel. Merge into SALE-REQ-0002.
+  - record_key: SALE-REQ-0003
+    recommendation: edit
+    confidence: high
+    reason: >
+      The facade (OPCAdminFacadeEJB.getChartInfo, ORDERS branch) sums line-item quantities, so
+      the figure is units sold, not a number of orders, while the screen labels it "orders".
+      Code is what runs in production; state the computed figure. The label-versus-figure
+      conflict goes to Intent for the Business Owner. Merge SALES-REQ-0005 into this key.
+    edited_requirement: >
+      The system SHALL report a sales count for a date range per product category, each
+      category's count being the sum of line-item quantities of that category in orders dated
+      within the range, with the total for the range, and SHALL display it as a bar chart
+      scaled to the largest category.
+  - record_key: SALES-REQ-0005
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Same rule as SALE-REQ-0003, adding the 5-tick axis and "<n> orders" tooltip; the pass
+      correctly flagged that orders-versus-units was undecided, and the facade settles it as
+      units. Merge into SALE-REQ-0003.
+  - record_key: SALE-BR-0004
+    recommendation: accept
+    confidence: high
+    reason: >
+      The same check is implemented in both chart panels, has its own message resource, and the
+      server parses the same month/day/year order. Merge SALES-BR-0006 into this key. Lenient
+      parsing and the missing start-before-end check are suspected defects for the defect
+      register; the spec records current behaviour.
+  - record_key: SALES-BR-0006
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicate of SALE-BR-0004 that also states the immediate reload and the absent ordering
+      check explicitly; merge into SALE-BR-0004.
+  - record_key: SALE-BR-0005
+    recommendation: edit
+    confidence: low
+    reason: >
+      Bare demo literals whose own comments contradict them ("1/12/2001", "present day"). The
+      code value is what runs; whether the rebuild keeps a fixed range or defaults to today is a
+      Business Owner decision. Merge SALES-BR-0007 into this key.
+    edited_requirement: >
+      The sales charts SHALL open with a default date range, which in the legacy system is
+      1 January 2001 through 31 December 2002; the intended default is to be confirmed.
+  - record_key: SALES-BR-0007
+    recommendation: accept
+    confidence: low
+    reason: >
+      Duplicate of SALE-BR-0005; merge into it.
+  - record_key: SALE-BR-0006
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The servlet, proxy and facade all implement the per-item branch, but no client in the tree
+      sets a category (viewMode has no setter), so the dispute (unresolved-reachability) stands.
+      Accept as a documented server capability; whether drill-down is a wanted report is for the
+      Business Owner. Merge SALES-BR-0008 into this key.
+  - record_key: SALES-BR-0008
+    recommendation: accept
+    confidence: low
+    reason: >
+      Duplicate of SALE-BR-0006 with the same reachability dispute; merge into it.
+  - record_key: SALE-BR-0007
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The filter in both proxy methods and the client-side total in Chart.calculateTotals are
+      explicit. The facade only produces non-negative sums of quantities and prices, so the
+      negative-value filter guards against malformed replies rather than refunds. Merge
+      SALES-BR-0009 into this key.
+  - record_key: SALES-BR-0009
+    recommendation: edit
+    confidence: medium
+    reason: >
+      Same rule as SALE-BR-0007, but its text binds the requirement to single-precision floating
+      point, which is a legacy implementation detail and a rounding risk, not a business rule.
+      Drop the precision clause and merge into SALE-BR-0007; the float summation goes to the
+      defect register.
+    edited_requirement: >
+      The system SHALL compute total revenue as the sum of the per-category (or per-item)
+      revenue amounts and the total sales count as the integer sum of the counts, and the
+      administration tool SHALL leave out any entry with no name or a negative or unreadable
+      value.
+  - record_key: SALES-WF-0010
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Start-up refresh, the Refresh action and the tabbed views each have one clear code site.
+      The view-switching half duplicates SALE-SCR-0008; keep this record for the load-on-start
+      and refresh behaviour.
