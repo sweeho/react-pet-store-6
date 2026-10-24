@@ -109,48 +109,20 @@ capabilities:
         - catalog-browsing
     canvas:
       problem: Shoppers find pets by category, product and item, and by keyword search. In the legacy store these rules live in the catalog DDL, two interchangeable data-access classes, a SQL definition file and the storefront pages, and are written down nowhere else.
-      solution: Provide the per-locale catalog (category, product, item and their locale details with no locale fallback), listing and lookup, paged lists, keyword search, the home pet-selection screen, the category/product/item/search displays with the category side panel, anonymous access and failure reporting.
+      solution: "Provide keyword search over the per-locale catalog (whitespace-split distinct keywords, case-insensitive substring match on product name, category id or item description, empty result for blank text) and catalog reads that return the same data whether read directly or through the catalog service, with the data-access implementation and database dialect chosen by deployment configuration and a reported failure when the catalog store cannot be reached."
       userStories:
-        - As a visitor, I want to pick a pet category from the home page, so that I can see the products in it.
-        - As a visitor, I want to page through products and items in a category, so that I can compare what is on offer.
-        - As a visitor, I want to search the catalog by keyword, so that I can find an item without navigating categories.
-        - As a visitor, I want to see an item's description, attributes and price, so that I can decide whether to add it to my cart.
+        - "As a visitor, I want to search the catalog by keyword, so that I can find an item without navigating categories."
+        - "As a visitor, I want a clear failure when the catalog cannot be read, so that I am not shown an empty or partial list as if it were the whole catalog."
+        - "As an operator, I want the catalog data access and database dialect chosen by deployment configuration, so that the store runs against the database I deploy."
       acceptanceCriteria:
-        - "Catalog category data — Category localized in two locales: the name \"Fish\" and the en_US description are returned"
-        - "Catalog category data — Second localized record for the same locale: the store rejects it"
-        - "Catalog product data — Product referencing an unknown category: the store rejects it"
-        - "Catalog item data — Item without a unit price: the store rejects them"
-        - "Catalog item data — Item with only some attributes: attribute 1 is \"Large\" and attributes 2 to 5 are empty"
-        - "Locale-scoped catalog content — Category missing in the requested locale: no category is returned and the en_US details are not substituted"
-        - "Item visibility requires product localization — Item localized but its product is not: item \"EST-1\" is not returned by any of them"
-        - "Category listing — Categories listed in name order: the categories are returned in the order \"Birds\", \"Dogs\", \"Fish\""
-        - "Product listing for a category — Products of a category in name order: \"Angelfish\" is returned before \"Koi\" and no product of another category is returned"
-        - "Item listing for a product — Items of a product: both items are returned, each with its product name, description, attributes, list price and unit price"
-        - "Single catalog entry lookup — Unknown item id: an empty result is returned and no error is raised"
-        - "Catalog list paging — Middle page of a list: products 3 and 4 are returned, a next page exists starting at 4, and a previous page exists starting at 0"
-        - "Catalog list paging — Start beyond the last entry: an empty page is returned with no next page and no error is raised"
-        - "Catalog list paging — Negative start: an empty page is returned with no next page"
-        - "Default catalog page size — Category page without paging values: the first 2 products are shown"
-        - "Keyword parsing for catalog search — Duplicate keywords: it searches for the two keywords \"fish\" and \"koi\""
-        - "Keyword parsing for catalog search — Blank search text: an empty result is returned"
-        - "Catalog keyword matching — Any keyword matches: both items are returned"
-        - "Catalog keyword matching — Category id matches: the item is returned even if neither its product name nor its description contains \"fish\""
-        - "Catalog keyword matching — Mixed-case keyword: the item is returned"
-        - "Search results display — Matches found: it shows \"Items matching any of: fish\", the first 2 items each with name link, description, unit price and Add to Cart, and a Next control"
-        - "Search results display — No matches: it shows \"No results were found for your search.\" and no item rows"
-        - "Category navigation panel — Panel on a storefront page: the side panel lists the 5 category names in name order, each linking to that category's page"
-        - "Category page display — First page of a category: the first 2 products are shown with name links and descriptions, a Next control is shown, and no Previous control is shown"
-        - "Product page display — Items of a product shown: both items are shown, each with a link to its item page, its description, its list price and an Add to Cart control"
-        - "Product page display — Add to Cart from the product page: one \"EST-1\" is added to the shopper's cart"
-        - "Home screen pet selection — Home screen displayed: the pet selection picture and the category navigation panel are shown"
-        - "Home screen pet selection — Pet region selected: the category page for category \"DOGS\" is displayed"
-        - "Item detail screen — Item detail displayed: it shows the item's title, its image, \"List Price: $16.50\", \"Your Price: $10.00\" and an Add to Cart control"
-        - "Item detail screen — Add to Cart from the item screen: one \"EST-1\" is added to the shopper's cart"
-        - "Shared cache of catalog pages — Catalog change within the cache window: the page may omit the new product until 5 minutes after it was rendered"
-        - "Shared cache of catalog pages — Cache expired: it is rendered again from current catalog data"
-        - "Anonymous catalog access — Anonymous shopper searches: both are served without a sign-in prompt"
-        - "Catalog store failure — Database unavailable: an error is reported instead of an empty list"
-        - "Return to referring page — Language changed from a category page: they are returned to the second page of category \"FISH\" in the new language"
+        - "Catalog keyword search — Any keyword matches: both items are returned"
+        - "Catalog keyword search — Category id matches: the item is returned even if neither its product name nor its description contains \"fish\""
+        - "Catalog keyword search — Duplicate keywords: it searches for the two distinct keywords \"fish\" and \"koi\""
+        - "Catalog keyword search — Mixed-case keyword: the item is returned"
+        - "Catalog keyword search — Blank search text: an empty result is returned and no search is performed"
+        - "Catalog read paths and failure reporting — Both read paths agree: both reads return the same products with the same details"
+        - "Catalog read paths and failure reporting — Data access selected by configuration: the configured implementation and dialect are used"
+        - "Catalog read paths and failure reporting — Catalog store unreachable: a catalog failure is reported to the caller instead of an empty or partial list"
       outOfScope:
         - Adding items to the cart and cart totals (owned by shopping-cart)
         - Locale selection and the language switch (owned by localization)
@@ -352,55 +324,24 @@ capabilities:
         - customer-account
     canvas:
       problem: Customers sign up, keep contact, address and payment-card details, and set profile preferences that change what the storefront shows. In the legacy system these rules are spread over the storefront web tier and five data components, are documented almost nowhere, and include several suspected defects.
-      solution: Provide the customer record with its one-to-one account, profile, contact information, address and payment card; atomic creation with defaults and cascading removal; two-step sign-up with user-name uniqueness and user-name/password rules; required contact fields; the account screen and edit form; preferred language; and the My List panel and pet-tips banner driven by profile preferences.
+      solution: "Provide stand-alone registration with a user name and a password entered twice (both required on the form), the fixed card type and expiry year options on the account form, profile defaults at customer creation (language en_US, no favourite category, MyList and banner on), and the active/disabled account status values."
       userStories:
-        - As a new visitor, I want to create an account with a unique user name, so that I can sign in and place orders.
-        - As a customer, I want to store my contact, address and payment-card details, so that checkout is pre-filled.
-        - As a customer, I want to view and edit my account details, so that they stay correct.
-        - As a customer, I want to set my preferred language, favourite category, My List and banner preferences, so that the store is tailored to me.
+        - "As a new visitor, I want to register with a user name and password, so that I can sign in and place orders."
+        - "As a customer, I want to choose my card type and expiry year from fixed options, so that my payment details are valid."
+        - "As a new customer, I want sensible profile defaults, so that the store works before I set any preferences."
+        - "As an operator, I want each account to be active or disabled, so that an account can be switched off."
       acceptanceCriteria:
-        - "Customer identity and record structure — A customer is looked up by user id: exactly one customer is returned, with one account (one contact record with one address, and one payment card) and one profile"
-        - "Duplicate customer refused — Second customer with an existing user id: the creation is refused and only the original customer record exists"
-        - "Account attributes and status — Account contents are read: its status, its contact information and its payment card are returned"
-        - "Customer profile attributes — Profile with no favourite category: the favourite category is empty and the MyList and banner preferences each hold yes or no"
-        - "Contact information record — Contact details are read: those four values are returned together with the contact's one postal address"
-        - "Postal address record — Identical addresses stay separate: two distinct address records exist, each with its own generated key"
-        - "Payment card record — Card attributes are read: exactly those three values are returned and no other card attribute is held"
-        - "Customer creation defaults — New customer starts active with default preferences: the customer's account status is \"active\" and the profile holds language \"en_US\", no favourite category, MyList on and banners on"
-        - "Blank dependent records on account creation — Account created from status only: the account has a contact record with blank names, telephone and e-mail, a blank address, and a card record with no number, type or expiry"
-        - "Blank dependent records on account creation — Account created with supplied details: the account is linked to the supplied records and no blank records are created"
-        - "Blank dependent records on account creation — Contact created from a complete contact value: the contact receives a new address copied from the supplied address"
-        - "Atomic customer creation — Profile creation fails: no customer record for \"newbie\" remains"
-        - "Cascading removal of customer data — Customer removed: none of the account, profile, contact record, address or card remains"
-        - "No record-level access control on customer data — Internal caller reads a card: the record returns the value without performing a role check"
-        - "Field-level update and detached copies — Detached address copy is modified: the stored address still has city \"Palo Alto\""
-        - "Field-level update and detached copies — Single address field updated: the zip code is updated and the other five values are unchanged"
-        - "Address storage without content validation — Blank address stored: the address is stored and can be filled in later"
-        - "Exchanged address document reading — Address document without a city: it is rejected with an error naming the city part"
-        - "Exchanged address document reading — Address document with parts out of order: it is rejected"
-        - "Exchanged address document reading — Address document with one street line: the address is accepted and street line 2 is empty"
-        - "Exchanged address document writing — Address with blank second line and no country written: the document has one street line and a country part with empty content"
-        - "Payment card stored as supplied — Expired card saved: the card is stored with those values and no error is shown"
-        - "Card expiry month and year — Well-formed expiry: month \"05\" and year \"2004\" are returned"
-        - "Card expiry month and year — Missing expiry: month \"01\" and year \"2010\" are returned"
-        - "Two-step account sign-up — Visitor signs up while heading to checkout: a customer exists for that user name with the submitted details, the visitor is signed on, and they are returned to checkout"
-        - "Two-step account sign-up — Visitor signs up from the account link: they are signed on and taken to the home page"
-        - "Unique user names at sign-up — Taken user name: no account is created and the user-name-in-use message is shown"
-        - "Sign-up failures reported as a taken user name — Sign-on service unavailable: the user-name-in-use message is shown and no account is created"
-        - "Sign-on user name and password rules — User name too long: creation is refused and no account exists for that name"
-        - "Sign-on user name and password rules — User name with a wildcard character: creation is refused"
-        - "Password entered twice at sign-up — Mismatched repeated password: the account is created with password \"alpha\" and no mismatch error is shown"
-        - "Account information captured — Sign-up account information form submitted with boxes unticked: the customer is stored with language English, favourite category Birds, MyList off and banners off"
-        - "Required contact fields — Blank city on account update: the account details are not changed"
-        - "Browser-side empty-field check — Edit form submitted with an empty telephone: the form is not submitted and the customer is told the telephone field is empty"
-        - "Account screen — Signed-on customer opens the account screen: it shows their contact details and address, the card type, card number and expiry as month / year, language \"Japanese\", favourite category \"Fish\", MyList \"Yes\" and banners \"No\", with no editable fields"
-        - "Account screen — Customer chooses to edit: the account edit form opens pre-filled with every value shown on the account screen"
-        - "Account edit — Customer changes favourite category: the stored profile holds favourite category Reptiles and the account screen shows Reptiles"
-        - "Preferred language on account save — Language changed then order placed in the same visit: the profile holds Japanese and the order carries the English locale"
-        - "My List panel — Favourite category with more than ten products: the panel lists the first 10 Fish products, each linking to its product page"
-        - "My List panel — MyList off: no My List panel is shown"
-        - "Pet-tips banner — Banner for a known category: the cats pet-tips banner is shown"
-        - "Pet-tips banner — Banner fallback: the dogs pet-tips banner is shown"
+        - "Password entered twice at sign-up — Both password fields filled with the same value: the registration proceeds with that user name and the first password"
+        - "Password entered twice at sign-up — A password field left empty: the submission is refused before it reaches the server and the empty field is reported"
+        - "Password entered twice at sign-up — The two passwords differ: the registration proceeds using the first password and no mismatch is reported"
+        - "Payment card type and expiry year options — Card type choices on the account form: exactly the options Java(TM) Card, Duke Express and Meow Card are offered"
+        - "Payment card type and expiry year options — Expiry year choices on the account form: only years from the fixed list are offered and no free-text year can be entered"
+        - "Customer profile defaults at creation — New customer created without profile choices: the customer's profile has preferred language \"en_US\", no favourite category, the MyList preference on and the banner preference on"
+        - "Customer profile defaults at creation — Profile values supplied after creation: the profile holds \"ja_JP\" and \"BIRDS\" and the MyList and banner preferences remain on unless also changed"
+        - "Account status values — Status of a new account: the account status is \"active\""
+        - "Account status values — Account set to disabled: the account status reads \"disabled\""
+        - "Stand-alone user registration — Registration accepted: a sign-on account for \"newuser\" is created and the user is redirected onward"
+        - "Stand-alone user registration — Registration refused: no account is created and the user is redirected to the user-creation error page"
       outOfScope:
         - Credential checking, page protection and session handling (owned by sign-on)
         - Order entry and the copy of contact and card details onto an order (owned by checkout)
@@ -568,53 +509,21 @@ capabilities:
         - checkout
     canvas:
       problem: Checkout is how a signed-on customer turns a cart into an order. The rebuild must reproduce what the legacy storefront shows, accepts and hands to order processing, and the business needs a record of where that behaviour is questionable.
-      solution: Provide the order information entry screen with billing and shipping capture pre-filled from the account and its validation; refusal of an empty-cart order; order composition (header, lines, total, the fixed payment card the legacy system attaches to every order, order id from the 1001 sequence); asynchronous hand-off of the purchase order to order processing; the order complete screen; and the purchase order document formats and their persistence.
+      solution: "Provide the billing and shipping information form pre-filled from the signed-on customer's account, order ids issued from the shared \"1001\" counter (with a prefix required for every identifier request), atomic creation of a purchase order with its contact, card and line-item records, and a Server Error page for unexpected failures."
       userStories:
-        - As a signed-on customer, I want billing and shipping details pre-filled from my account, so that checking out is quick.
-        - As a customer, I want to be told when I try to order with an empty cart, so that I do not place an empty order.
-        - As a customer, I want an order id and confirmation after placing an order, so that I can refer to it later.
-        - As order processing, I want each placed order handed over as a complete purchase order document, so that it can be approved and fulfilled.
+        - "As a signed-on customer, I want billing and shipping details pre-filled from my account, so that checking out is quick."
+        - "As a customer, I want each order to receive a unique order id, so that I can refer to it later."
+        - "As order processing, I want an order stored completely or not at all, so that no partial order is ever processed."
+        - "As a customer, I want an error page when something unexpected fails, so that I know to contact the administrator."
       acceptanceCriteria:
-        - "Checkout flow for a signed-on customer — Customer checks out a cart: the order information entry screen is shown with billing and shipping details already filled in from the customer's account"
-        - "Checkout flow for a signed-on customer — Customer submits the order: the order is placed, handed to order processing without waiting for approval, and the order complete screen is shown"
-        - "Order information entry screen — Screen displayed for a customer with stored contact details: both the Billing Information and the Shipping Information sections show \"Ann\" as first name, \"Lee\" as last name, \"Palo Alto\" as city and \"ann@example.com\" as e-mail, and no card number, card type or expiry field is shown"
-        - "Order information entry screen — Country choices differ between billing and shipping: billing offers United States, Canada, Japan and China, and shipping offers United States, Canada and Japan only"
-        - "Order information entry screen — Empty required field caught before submission: the customer is alerted that the field is empty and the order is not submitted"
-        - "Billing and shipping contact validation — Optional values left empty: both contacts are accepted with an empty second address line"
-        - "Billing and shipping contact validation — Required value missing on the server: the shipping telephone is treated as missing and the shipping contact is rejected"
-        - "Empty cart order refusal — Order re-submitted after success: no order is created or sent, and the Order Error screen explains that the cart is empty and that the original order has already been placed"
-        - "Order total computation — Two cart lines: the order total is 47.00 with no tax, shipping or discount added"
-        - "Order lines from cart items — Three cart items: the order carries three lines numbered 0, 1 and 2 in cart order, each with its item's category, product, item, quantity and unit price"
-        - "Order header composition — Order header populated from the session and the form: the order carries user id \"j2ee\", e-mail \"ann@example.com\", locale en_US, the submission date and time, and a new order id"
-        - "Fixed payment card on every order — Customer with a stored card places an order: the order carries card number \"1234-2334\", type \"Duke Express\" and expiry \"10/2001\""
-        - "Order id issue — First orders after the sequence is created: they receive ids \"10011\", \"10012\" and \"10013\""
-        - "Order id issue — Order placement rolled back: the sequence's stored value stays 5"
-        - "Id sequence failure — Sequence store unavailable: the request fails with an error and no id is returned"
-        - "Id sequence storage and access — Two prefixes kept apart: only the \"2001\" sequence advances"
-        - "Asynchronous order hand-off — Order handed off: one purchase order document is queued for order processing, the cart is emptied, and the order id and e-mail are returned for the confirmation"
-        - "Asynchronous order hand-off — Queue send fails: the failure is reported to the caller as an error and the unit of work is rolled back"
-        - "Asynchronous order hand-off — Order document cannot be built in the legacy system: the legacy system only logs the failure, still empties the cart and still returns an order id for confirmation"
-        - "Order complete screen — Confirmation displayed: it states that the order is complete, shows order id \"10012\", and states that a confirmation e-mail will arrive at \"ann@example.com\""
-        - "Unexpected failure page — General failure during order placement: a Server Error page with the error message and a request to notify the administrator is shown"
-        - "Order processing intake — Malformed order document: no purchase order is recorded and the receipt is rolled back"
-        - "Purchase order document structure — Document without a locale: the order locale is en_US"
-        - "Purchase order document structure — Document with no line items: it is rejected"
-        - "Purchase order document structure — Wrong root element: it is rejected with \"PurchaseOrder element expected.\""
-        - "Order date in purchase order documents — Unparseable order date: the order date is set to the current date and time and the order is processed"
-        - "Payment card document element — Wrong element supplied as a card: it is rejected with \"CreditCard element expected.\""
-        - "Line item document element — Line item serialised: the LineItem element carries CategoryId, ProductId, ItemId, LineNum, Quantity 2 and UnitPrice 18.5, and no shipped quantity"
-        - "Contact document element — Empty e-mail accepted: the contact is accepted with an empty e-mail"
-        - "Contact document element — Empty phone rejected: it is rejected with \"Phone element: content expected.\""
-        - "Purchase order persistence — Order created with its dependents: the order, one contact record, one card record and two line items with shipped quantity 0 are stored together"
-        - "Purchase order persistence — Dependent record fails: no part of the order is stored"
-        - "Single stored contact per purchase order — Different billing and shipping contacts: both its billing and its shipping information show city \"Austin\""
-        - "Order total stored as supplied — Supplied total differs from the lines: the stored order total is 50.00"
-        - "Contact record creation — Contact created with its address: the given name is stored as \" Ann\" unchanged and a new address record is attached"
-        - "Payment card record — Unchecked card accepted: the three values are stored exactly as supplied"
-        - "Payment card record — Account card changed after ordering: it still shows the values recorded when the order was placed"
-        - "Payment card expiry month and year — Well-formed expiry: the month is \"10\" and the year is \"2001\""
-        - "Payment card expiry month and year — Malformed expiry: the month is \"01\" and the year is \"2010\""
-        - "Line item record — Line stored: the record holds its category, product and item ids, its line number, quantity 3, unit price 18.50 and quantity shipped 0"
+        - "Billing and shipping information screen pre-filled at checkout — Signed-on customer reaches the checkout form: the billing and shipping information form is displayed with those known details already filled in"
+        - "Billing and shipping information screen pre-filled at checkout — Customer confirms the pre-filled form: the order proceeds using the pre-filled billing and shipping details"
+        - "Order id from the 1001 sequence — First orders placed: they receive the order ids \"10011\", \"10012\" and \"10013\""
+        - "Identifier request requires a prefix — Identifier requested without a prefix: the request is refused and no identifier is issued"
+        - "Unique order id from a shared counter — Two orders placed: the second order receives a different order id issued from the same \"1001\" counter"
+        - "Server Error page on unexpected failure — Unexpected failure during order placement: a \"Server Error\" page is displayed carrying the error message and the technical error trace, and asks the user to notify the administrator"
+        - "Atomic purchase order creation — Order created with its dependents: the order header, one contact record built from the shipping information, one credit-card record and two line items each with shipped quantity 0 are stored together"
+        - "Atomic purchase order creation — Dependent record cannot be created: the order creation fails and no part of the order is kept"
       outOfScope:
         - Order approval decisions (owned by order-approval)
         - Fulfilment, shipping and invoicing (owned by order-fulfillment)
@@ -1022,29 +931,20 @@ capabilities:
         - customer-notifications
     canvas:
       problem: The legacy store e-mails customers about order progress through a queue-driven mail service in its order processing centre. Which e-mails exist, how each is switched on, what happens when a mail cannot be sent and what an e-mail request must contain were never written down outside a configuration guide and the code.
-      solution: Provide asynchronous queued e-mail delivery on dedicated channels with a three-field request (recipient, subject, body), HTML UTF-8 composition from a central sender, recipient-list parsing, defined send-failure and malformed-request handling, the three order notifications (approval/denial, shipment/invoice, completed order) with independent switches that fail startup when missing, and a configurable mail server and sender.
+      solution: "Provide three customer e-mail notifications (order approval, order confirmation as parts are fulfilled, order completion), each switched on independently at deployment and off unless enabled, delivered to every address in the recipient list as direct recipients, through a configurable mail server and sender address."
       userStories:
-        - As a customer, I want an e-mail when my order is approved or denied, so that I know whether it will ship.
-        - As a customer, I want an e-mail when my order ships and when it is complete, so that I can track it.
-        - As a store operator, I want to switch each order e-mail on or off independently, so that I control what customers receive.
+        - "As a customer, I want an e-mail when my order is approved, fulfilled in part, or completed, so that I can track it."
+        - "As a store operator, I want each order e-mail switched off unless I enable it, so that I control what customers receive."
+        - "As a store operator, I want to set the mail server and sender address, so that e-mail goes out through my infrastructure."
       acceptanceCriteria:
-        - "Asynchronous e-mail delivery — A queued request is delivered: the mail-delivery service consumes it and sends one e-mail to that recipient with that subject and content"
-        - "Asynchronous e-mail delivery — The requester does not wait for delivery: order processing continues without waiting for the e-mail to be sent"
-        - "Dedicated notification channels — Channels exist after installation: an order-approval mail channel, a completed-order mail channel and an outbound mail-delivery channel all exist and accept messages"
-        - "E-mail request format — Complete request accepted: the request is accepted for sending"
-        - "E-mail request format — Request missing the subject: the request is rejected and no e-mail is sent"
-        - "E-mail message composition — Message properties on send: the message is HTML, the body bytes are UTF-8 and render the characters unchanged, the From address is the configured sender, and the sent date is the time of sending"
-        - "E-mail message composition — Request cannot choose the sender: the e-mail's From address is customerservice@javapetstoredemo.com"
-        - "Content delivered as supplied — Content is not localised by the mailer: the body is exactly the supplied Japanese content"
-        - "Recipient address list — Two recipients in one request: both addresses receive the e-mail as To recipients and no Cc or Bcc recipient is set"
-        - "Send failure handling — Mail server unreachable: a diagnostic error is written to the server error output, the request is removed from the queue, and it is never retried"
-        - "Malformed request rejection — Request is not a valid mail document: no e-mail is sent, an error is raised, and the request is returned to the queue rather than consumed"
-        - "Order notification e-mails — Order shipped in two parts: the customer has received one approval e-mail, one e-mail per shipment (two), and one completion e-mail"
-        - "Independent notification switches — Only approval notifications enabled: the customer receives the approval e-mail only"
-        - "Independent notification switches — A disabled notification's event occurs: no completion e-mail is sent"
-        - "Missing notification setting fails startup — Completion switch not configured: it fails to start and does not assume the switch is on or off"
-        - "Missing notification setting fails startup — Switch has a non-boolean value: it fails to start"
-        - "Configurable mail server and sender — Operator changes the mail server: it is delivered through smtp.example.com with From address orders@example.com"
+        - "Independently switchable order notifications — Only the approval notification is enabled: the customer receives the approval e-mail only"
+        - "Independently switchable order notifications — A disabled notification's event occurs: no completion e-mail is sent"
+        - "Order notifications disabled unless enabled at deployment — No notification is enabled at deployment: the customer receives no approval, confirmation or completion e-mail"
+        - "Order notifications disabled unless enabled at deployment — One notification is enabled at deployment: the customer receives a confirmation e-mail, and the approval and completion notifications remain disabled"
+        - "Recipient address list — Two recipients in one request: both addresses receive the e-mail as direct (\"To\") recipients"
+        - "Recipient address list — Single recipient: a@example.com receives the e-mail as a direct (\"To\") recipient"
+        - "Configurable mail server and sender — Shipped sender address: its From address is customerservice@javapetstoredemo.com"
+        - "Configurable mail server and sender — Operator changes the mail server and sender: it is delivered through smtp.example.com with From address orders@example.com"
       outOfScope:
         - Deciding approval or fulfilment state (owned by order-approval and order-fulfillment)
         - Per-locale price formatting rules inside e-mails (owned by localization)
