@@ -1,0 +1,433 @@
+# Pass B — legacy-source/petstore1.3.2/src/components/uidgen
+# No legacy-analysis/sources/**/extracted.md documents exist in this tree, so no
+# document traces are cited. The only consumer found is the storefront order
+# placement action (apps/petstore), cited for the prefix value only.
+records:
+  - record_key: CHK-REQ-0001
+    kind: requirement
+    capability_key: checkout
+    requirement: >
+      The system SHALL generate a unique identifier for a requested prefix by
+      concatenating the prefix with the next value of that prefix's sequence,
+      written as an unpadded decimal number with no separator.
+    plain_text: >
+      A new identifier is the requested prefix immediately followed by the next
+      number in that prefix's own running count, e.g. prefix "1001" gives
+      "10011", "10012", ... "100110".
+    technical_note: >
+      UniqueIdGeneratorEJB.getUniqueId(prefix) looks up the Counter entity whose
+      primary key is the prefix and calls getNextValue(), which returns
+      getName() + String.valueOf(count). No zero-padding, no delimiter.
+    confidence: high
+    confidence_basis: >
+      The format is read directly in the counter code and the delegation in the
+      generator session bean, and the only caller passes a prefix and stores the
+      returned string as the order id; two cooperating places agree. No test or
+      document confirms the intended format.
+    risk_class: operational
+    basis: >
+      getNextValue builds the id from the counter name plus the incremented
+      integer; getUniqueId returns it unchanged.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/counter/ejb/CounterEJB.java
+        line_start: 67
+        line_end: 71
+        excerpt: |
+              public String getNextValue() {
+                  int count = getCounter() + 1;
+                  setCounter(count);
+                  return getName() + String.valueOf(count);
+              }
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/ejb/UniqueIdGeneratorEJB.java
+        line_start: 67
+        line_end: 69
+        excerpt: |
+              public String getUniqueId(String idPrefix) {
+                  return getCounter(idPrefix).getNextValue();
+              }
+    stack_metadata:
+      framework: EJB 2.0
+      ejb.bean: UniqueIdGeneratorEJB (stateless session), CounterEJB (CMP 2.x entity)
+      ejb.transaction: Required
+
+  - record_key: CHK-BR-0002
+    kind: business-rule
+    capability_key: checkout
+    requirement: >
+      GIVEN no sequence exists yet for a requested prefix
+      WHEN an identifier is requested for that prefix
+      THEN the system SHALL create the sequence starting at 0 and issue the
+      prefix followed by 1 as the first identifier.
+    plain_text: >
+      The first time a prefix is used, its count starts from zero, so the first
+      identifier ends in 1. No set-up of prefixes is needed in advance.
+    technical_note: >
+      UniqueIdGeneratorEJB.getCounter catches FinderException from
+      findByPrimaryKey and calls CounterLocalHome.create(name); CounterEJB.ejbCreate
+      sets counter to 0; getNextValue then increments to 1.
+    confidence: medium
+    confidence_basis: >
+      Find-or-create and the initial value are each read in one clear place; no
+      seed data, test or document corroborates the starting value.
+    risk_class: operational
+    basis: >
+      Lazy creation on FinderException and setCounter(0) on create.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/ejb/UniqueIdGeneratorEJB.java
+        line_start: 74
+        line_end: 82
+        excerpt: |
+              private CounterLocal getCounter(String name) {
+                  try {
+                      CounterLocal counter = null;
+                      try {
+                          counter = clh.findByPrimaryKey(name);
+                      } catch (FinderException fe) {
+                          counter = clh.create(name);
+                      }
+                      return counter;
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/counter/ejb/CounterEJB.java
+        line_start: 58
+        line_end: 62
+        excerpt: |
+              public String ejbCreate(String name) throws CreateException {
+                  setName(name);
+                  setCounter(0);
+                  return null;
+              }
+    stack_metadata:
+      ejb.bean: UniqueIdGeneratorEJB, CounterEJB
+
+  - record_key: CHK-BR-0003
+    kind: business-rule
+    capability_key: checkout
+    requirement: >
+      The system SHALL advance a prefix's sequence by exactly 1 for every
+      identifier issued, persist the new value, and perform the read, increment
+      and persist inside the requesting transaction so that the same value is
+      not issued twice.
+    plain_text: >
+      Every identifier issued moves that prefix's count up by one and the new
+      count is saved; numbers are never skipped deliberately and never handed
+      out twice.
+    technical_note: >
+      getNextValue does getCounter()+1 then setCounter; the CMP container
+      persists via UPDATE "CounterEJBTable" SET "counter" = ? WHERE "name" = ?.
+      ejb-jar.xml declares trans-attribute Required on CounterEJB.getNextValue,
+      CounterEJB create(String) and UniqueIdGeneratorEJB.getUniqueId, so the
+      increment joins the caller's transaction (and rolls back with it).
+      CounterEJB is declared non-reentrant.
+    confidence: high
+    confidence_basis: >
+      The increment is in code and the transactional boundary is declared in the
+      deployment descriptor, with the persisted UPDATE in the server mapping:
+      code plus declarative config. Actual isolation/locking behaviour depends on
+      the container and database and is not visible in source.
+    risk_class: operational
+    basis: >
+      Increment-by-one in getNextValue; Required transactions on getNextValue and
+      getUniqueId; CMP storeRow statement.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/counter/ejb/CounterEJB.java
+        line_start: 68
+        line_end: 69
+        excerpt: |
+                  int count = getCounter() + 1;
+                  setCounter(count);
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/ejb-jar.xml
+        line_start: 223
+        line_end: 242
+        excerpt: |
+              <container-transaction>
+                <method>
+                  <ejb-name>CounterEJB</ejb-name>
+                  <method-intf>Local</method-intf>
+                  <method-name>getNextValue</method-name>
+                  <method-params />
+                </method>
+                <trans-attribute>Required</trans-attribute>
+              </container-transaction>
+              <container-transaction>
+                <method>
+                  <ejb-name>UniqueIdGeneratorEJB</ejb-name>
+                  <method-intf>Local</method-intf>
+                  <method-name>getUniqueId</method-name>
+                  <method-params>
+                    <method-param>java.lang.String</method-param>
+                  </method-params>
+                </method>
+                <trans-attribute>Required</trans-attribute>
+              </container-transaction>
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/sun-j2ee-ri.xml
+        line_start: 603
+        line_end: 606
+        excerpt: |
+                  <sql-statement>
+                    <operation>storeRow</operation>
+                    <sql>UPDATE "CounterEJBTable" SET "counter" = ?  WHERE "name" = ? </sql>
+                  </sql-statement>
+    stack_metadata:
+      ejb.transaction: Required
+      db.object: CounterEJBTable
+
+  - record_key: CHK-ENT-0004
+    kind: entity
+    capability_key: checkout
+    requirement: >
+      The system SHALL store one sequence per prefix, identified uniquely by the
+      prefix text (up to 255 characters), holding a mandatory integer current
+      value.
+    plain_text: >
+      For each prefix there is exactly one stored running count; the prefix is
+      its key and the count is always present.
+    technical_note: >
+      CounterEJB CMP fields name (primkey-field, java.lang.String) and counter
+      (int). Deployed table: CREATE TABLE "CounterEJBTable" ("counter" INTEGER
+      NOT NULL, "name" VARCHAR(255), CONSTRAINT "pk_CounterEJBTabl" PRIMARY KEY
+      ("name")).
+    confidence: high
+    confidence_basis: >
+      The key and fields are declared in ejb-jar.xml and enforced by the
+      PRIMARY KEY / NOT NULL constraints in the generated DDL: two independent
+      places.
+    risk_class: operational
+    basis: >
+      primkey-field name; cmp-fields counter and name; DDL with PK and NOT NULL.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/ejb-jar.xml
+        line_start: 52
+        line_end: 65
+        excerpt: |
+                <persistence-type>Container</persistence-type>
+                <prim-key-class>java.lang.String</prim-key-class>
+                <reentrant>False</reentrant>
+                <cmp-version>2.x</cmp-version>
+                <abstract-schema-name>Counter</abstract-schema-name>
+                <cmp-field>
+                  <description>no description</description>
+                  <field-name>counter</field-name>
+                </cmp-field>
+                <cmp-field>
+                  <description>no description</description>
+                  <field-name>name</field-name>
+                </cmp-field>
+                <primkey-field>name</primkey-field>
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/sun-j2ee-ri.xml
+        line_start: 627
+        line_end: 630
+        excerpt: |
+                  <sql-statement>
+                    <operation>createTable</operation>
+                    <sql>CREATE TABLE "CounterEJBTable" ("counter" INTEGER NOT NULL , "name" VARCHAR(255), CONSTRAINT "pk_CounterEJBTabl" PRIMARY KEY ("name") )</sql>
+                  </sql-statement>
+    stack_metadata:
+      db.object: CounterEJBTable
+      ejb.bean: CounterEJB
+
+  - record_key: CHK-BR-0005
+    kind: business-rule
+    capability_key: checkout
+    requirement: >
+      The system SHALL generate storefront order identifiers from the prefix
+      "1001", so that order ids take the form "1001" followed by the order
+      sequence number.
+    plain_text: >
+      Customer order numbers all begin with 1001 followed by a running number:
+      the first order is 10011, the tenth is 100110.
+    technical_note: >
+      OrderEJBAction (apps/petstore controller) calls uidgen.getUniqueId("1001")
+      and sets the result as the purchase order id. The prefix is a bare
+      literal; the generator itself accepts any prefix.
+    confidence: low
+    confidence_basis: >
+      The prefix is a bare literal in a single caller outside this module, with
+      no constant, configuration, comment or document explaining it.
+    risk_class: operational
+    basis: >
+      Literal "1001" passed to getUniqueId; result assigned to setOrderId.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/com/sun/j2ee/blueprints/petstore/controller/ejb/actions/OrderEJBAction.java
+        line_start: 110
+        line_end: 115
+        excerpt: |
+              orderIdString = uidgen.getUniqueId("1001");
+              // get ther userId
+              ShoppingClientFacadeLocal scf = null;
+              scf = (ShoppingClientFacadeLocal)machine.getAttribute(PetstoreKeys.SHOPPING_CLIENT_FACADE);
+              String userId = scf.getUserId();
+              purchaseOrder.setOrderId(orderIdString);
+    stack_metadata:
+      ejb.bean: UniqueIdGeneratorEJB
+      jndi: java:comp/env/ejb/UniqueIdGenerator
+
+  - record_key: CHK-BR-0006
+    kind: business-rule
+    capability_key: checkout
+    requirement: >
+      The system SHALL require a non-null prefix when an identifier is requested.
+    plain_text: >
+      A prefix must always be supplied when asking for a new identifier.
+    technical_note: >
+      Stated only as a Javadoc comment on UniqueIdGeneratorLocal.getUniqueId;
+      no code checks for null before the counter lookup/create.
+    confidence: low
+    confidence_basis: >
+      Only a comment states the rule; no enforcement is visible, so live
+      behaviour for a null prefix is inferred, not read.
+    risk_class: operational
+    basis: >
+      Interface comment "It must not be null."
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/ejb/UniqueIdGeneratorLocal.java
+        line_start: 42
+        line_end: 43
+        excerpt: |
+              /** param idPrefix is the prefix needed for each of the counter values. It must not be null. */
+              public String getUniqueId(String idPrfix);
+
+  - record_key: CHK-REQ-0007
+    kind: requirement
+    capability_key: checkout
+    requirement: >
+      GIVEN a sequence cannot be created for a new prefix, or the sequence store
+      cannot be located
+      WHEN an identifier is requested
+      THEN the system SHALL fail the request with an error and issue no
+      identifier.
+    plain_text: >
+      If the running count for a prefix cannot be set up or reached, no
+      identifier is issued and the request fails.
+    technical_note: >
+      CreateException in getCounter is rethrown as EJBException("Could not
+      create counter ..."); a NamingException looking up java:comp/env/ejb/Counter
+      in ejbCreate is rethrown as EJBException. EJBException is a system
+      exception, so the container rolls back the Required transaction.
+    confidence: medium
+    confidence_basis: >
+      Both error paths are read directly in one class; rollback is implied by
+      EJB semantics, not shown in source.
+    risk_class: operational
+    basis: >
+      Explicit rethrow of CreateException and NamingException as EJBException.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/ejb/UniqueIdGeneratorEJB.java
+        line_start: 56
+        line_end: 63
+        excerpt: |
+              public void ejbCreate() {
+                try {
+                  ic = new InitialContext();
+                  clh = (CounterLocalHome) ic.lookup("java:comp/env/ejb/Counter");
+                } catch (NamingException ne) {
+                   throw new EJBException("UniqueIdGeneratorEJB Got naming exception! " + ne.getMessage());
+                }
+              }
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/ejb/UniqueIdGeneratorEJB.java
+        line_start: 83
+        line_end: 85
+        excerpt: |
+                  } catch (CreateException ce) {
+                      throw new EJBException("Could not create counter " + name + ". Error: " + ce.getMessage());
+                  }
+
+  - record_key: CHK-BR-0008
+    kind: business-rule
+    capability_key: checkout
+    requirement: >
+      The system SHALL allow any internal caller to request identifiers and
+      create or advance sequences without a role check.
+    plain_text: >
+      Issuing identifiers is an internal service with no permission check of its
+      own; whatever part of the system calls it is trusted.
+    technical_note: >
+      ejb-jar.xml method-permission is <unchecked/> for all CounterEJB and
+      UniqueIdGeneratorEJB methods; both beans use caller identity; only local
+      interfaces are exposed. Filed under checkout as the closest capability
+      (it is not a user-facing sign-on rule).
+    confidence: medium
+    confidence_basis: >
+      Declared once in the deployment descriptor; read directly.
+    risk_class: operational
+    basis: >
+      unchecked method-permission blocks covering getUniqueId, getNextValue,
+      create and findByPrimaryKey.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/ejb-jar.xml
+        line_start: 152
+        line_end: 195
+        excerpt: |
+              <method-permission>
+                <unchecked />
+                <method>
+                  <ejb-name>UniqueIdGeneratorEJB</ejb-name>
+                  ...
+                  <method-name>getUniqueId</method-name>
+    stack_metadata:
+      ejb.method_permission: unchecked
+      ejb.interfaces: local only
+
+suspected_defects:
+  - capability_key: checkout
+    record_keys: [CHK-ENT-0004, CHK-REQ-0001]
+    severity: medium
+    category: data-corruption
+    title: Sequence table is dropped on undeploy, so numbering restarts and ids can repeat
+    description: >
+      The deployment mapping drops the sequence table when the application is
+      undeployed and recreates it empty on deploy. After a redeploy every prefix
+      restarts at 1, so new order ids repeat ids already held by existing orders
+      if order data survives the redeploy.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/sun-j2ee-ri.xml
+        line_start: 631
+        line_end: 632
+  - capability_key: checkout
+    record_keys: [CHK-BR-0002]
+    severity: low
+    category: other
+    title: Concurrent first use of a new prefix can fail one request
+    description: >
+      Find-or-create is not guarded: two requests that both miss the lookup for
+      a new prefix both try to create it; the second violates the primary key,
+      the create error is rethrown as a system error and that request fails
+      instead of receiving an identifier.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/ejb/UniqueIdGeneratorEJB.java
+        line_start: 77
+        line_end: 85
+  - capability_key: checkout
+    record_keys: [CHK-BR-0003, CHK-REQ-0001]
+    severity: low
+    category: other
+    title: Sequence is a 32-bit integer with no overflow handling
+    description: >
+      The count is a Java int incremented without a bound check; after
+      2,147,483,647 identifiers it wraps negative and produces ids such as
+      "1001-2147483648".
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/counter/ejb/CounterEJB.java
+        line_start: 50
+        line_end: 51
+  - capability_key: checkout
+    record_keys: [CHK-BR-0006]
+    severity: low
+    category: other
+    title: Documented non-null prefix rule is not enforced
+    description: >
+      The interface comment says the prefix must not be null, but nothing checks
+      it; a null prefix goes straight to the sequence lookup/create, whose
+      behaviour then depends on the container and database.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/ejb/UniqueIdGeneratorEJB.java
+        line_start: 67
+        line_end: 80
+
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/src/components/uidgen/src/com/sun/j2ee/blueprints/uidgen/counter/ejb/CounterEJB.java
+    description: >
+      Ids are prefix + unpadded number with no separator, so different prefixes
+      can collide: prefix "1" at count 11 and prefix "11" at count 1 both yield
+      "111". Only one prefix ("1001") is used today, so no collision occurs in
+      the live system. A human should decide whether the rebuild must guarantee
+      uniqueness across prefixes.
