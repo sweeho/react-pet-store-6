@@ -1,0 +1,720 @@
+records:
+  - record_key: ORDER-APPROVAL-BR-0001
+    kind: business-rule
+    capability_key: order-approval
+    requirement: >
+      The system SHALL automatically approve a submitted order whose total is below the
+      locale's approval threshold (below 500 for US-English orders, below 50 000 for
+      Japanese orders), and SHALL leave every other order pending for administrator review.
+      GIVEN a US order with a total of exactly 500 WHEN it is received THEN it SHALL be
+      left pending. GIVEN an order in any locale other than US or Japan (for example
+      Chinese) WHEN it is received THEN it SHALL be left pending regardless of its total.
+    plain_text: >
+      Small orders are approved automatically: a US order under $500 or a Japanese order
+      under 50 000 yen goes straight through. Anything at or above those amounts, and every
+      order placed in any other language/region, waits for an administrator to approve it.
+    technical_note: >
+      The user guide states the $500 rule for the US storefront only. The live check is
+      PurchaseOrderMDB.canIApprove() in the Order Processing Center, a hard-coded
+      locale switch (Locale.US < 500, Locale.JAPAN < 50000, else false). Its own comment
+      calls it "just a stub for converting currency" for demo purposes.
+    confidence: high
+    confidence_basis: >
+      The US $500 rule is stated twice in the user guide and is enforced in code, so the
+      US branch is high. The Japanese threshold and the fall-through for other locales are
+      read from code only and are not documented; the exactly-500 boundary is ambiguous in
+      the documentation ("less than" / "greater than"), and the code resolves it as pending.
+    risk_class: financial
+    basis: >
+      using.html "Placing an Order" and "Opening the Admin Client" say orders under $500
+      are approved automatically; "Approving/Denying Orders" says an order is pending if
+      its total is greater than $500. canIApprove() implements the comparison.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Storefront > Placing an Order"
+        line_start: 201
+        line_end: 202
+        excerpt: |2
+          <p>When you complete the order, the Storefront sends the order info asyncronously
+           to the OPC. Because the order is less than $500, the OPC approves it automatically.</p>
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Admin Client > Opening the Admin Client"
+        line_start: 219
+        line_end: 222
+        excerpt: |2
+          <p>When the client appears, you will see two panes for displaying pending
+           and non-pending orders. The bulldog order from the previous section would
+           be non-pending, because it was less than $500, and all orders under $500
+          are automatically approved.<br>
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Admin Client > Approving/Denying Orders"
+        line_start: 239
+        line_end: 240
+        excerpt: |2
+            <p>You approve or deny pending orders using the Process Pending Orders
+          panel.  An order appears as pending if its total value is greater than $500.</p>
+      - path: legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java
+        line_start: 183
+        line_end: 191
+        excerpt: |2
+            private boolean canIApprove(PurchaseOrder purchaseOrder) {
+              Locale locale = purchaseOrder.getLocale();
+              if (locale.equals(Locale.US)) {
+                if (purchaseOrder.getTotalPrice() < 500) return true;
+              } else if (locale.equals(Locale.JAPAN))  {
+                if (purchaseOrder.getTotalPrice() < 50000) return true;
+              }
+              return false;
+            }
+    stack_metadata:
+      framework: j2ee-1.3
+      ejb.bean: PurchaseOrderMDB
+      source_kind: user-guide + code
+
+  - record_key: ORDER-APPROVAL-WF-0001
+    kind: workflow
+    capability_key: order-approval
+    requirement: >
+      The system SHALL let an administrator list pending orders, change the status of one
+      or more pending orders to approved or denied, and save all of those status changes
+      together in a single commit; the list SHALL show the saved changes only after it is
+      refreshed.
+    plain_text: >
+      An administrator sees the orders waiting for approval, marks each one approved or
+      denied, and then saves the whole batch of decisions at once. The list is reloaded on
+      request to show the result.
+    technical_note: >
+      Documented for the Swing rich client launched by Java Web Start from the admin web
+      application ("Process Pending Orders" tab, Status cell editor, Commit and Refresh
+      buttons). This pass read only the documentation for this behaviour.
+    confidence: medium
+    confidence_basis: >
+      One clear documentary source; the admin client code was not read in this shard, so
+      whether the commit is atomic across orders or per order is not established.
+    risk_class: financial
+    basis: >
+      using.html "Approving/Denying Orders" lists the steps: open the Process Pending Orders
+      tab, select the row, edit the Status cell, choose a new status, then Commit and Refresh.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Admin Client > Approving/Denying Orders"
+        line_start: 264
+        line_end: 265
+        excerpt: |2
+            <p>You can approve or deny as many orders as you wish. To save your changes,
+           click Commit. To see your changes, click the Refresh button.</p>
+    stack_metadata:
+      framework: jfc-swing (java web start)
+
+  - record_key: SALES-REPORTING-SCREEN-0001
+    kind: screen
+    capability_key: sales-reporting
+    requirement: >
+      The system SHALL provide administrators a view of non-pending orders, being orders
+      whose status is approved, denied or committed (fulfilled), loaded on demand by a
+      refresh action.
+    plain_text: >
+      Administrators can see all orders that are no longer waiting for a decision: those
+      approved, denied or already fulfilled.
+    technical_note: >
+      "View Non-Pending Orders" panel of the admin rich client, documented in the user guide.
+      Filed under sales-reporting because the capability list places admin views of orders
+      by status there.
+    confidence: medium
+    confidence_basis: >
+      One clear documentary source; the panel's implementation was not read in this shard.
+    risk_class: operational
+    basis: >
+      using.html "Viewing Non-Pending Orders" defines the panel and its three status values.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Admin Client > Viewing Non-Pending Orders"
+        line_start: 230
+        line_end: 232
+        excerpt: |2
+            <p>The View Non-Pending Orders panel shows non-pending orders. Each of these
+           orders has been approved, denied, or committed (fulfilled). To load the
+          orders,  click the Refresh button.</p>
+    stack_metadata:
+      framework: jfc-swing (java web start)
+
+  - record_key: SUPPLIER-INVENTORY-SCREEN-0001
+    kind: screen
+    capability_key: supplier-inventory
+    requirement: >
+      The system SHALL provide the supplier a screen listing the stock quantity of every
+      inventory item, on which the supplier enters a new quantity for selected items, marks
+      each item to be updated, and submits all marked changes to be saved together.
+    plain_text: >
+      The supplier sees how many of each item are in stock, types new quantities for the
+      items they want to change, ticks those items, and saves them in one go.
+    technical_note: >
+      Supplier web application, "Display Inventory" page with a New Quantity cell and an
+      Update checkbox per row and a Submit button. Only the documentation was read here.
+    confidence: medium
+    confidence_basis: >
+      One clear documentary source; the supplier JSP and its handler were not read in this
+      shard, so whether unticked rows with an edited quantity are ignored is not confirmed.
+    risk_class: operational
+    basis: >
+      using.html "Viewing and Editing Inventory" describes the table, the New Quantity cell,
+      the Update box and Submit.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Managing the Supplier > Viewing and Editing Inventory"
+        line_start: 283
+        line_end: 288
+        excerpt: |2
+            <p>To view and edit inventory, click Display Inventory at the home screen.</p>
+
+            <p>A table shows the quantity for each item in the inventory. To edit that
+           item's quantity, edit the New Quantity cell in the item's entry, and check
+           the Update box. After making all your changes, commit your edits to the database
+           by clicking Submit.</p>
+    stack_metadata:
+      framework: j2ee-1.3 web
+
+  - record_key: ORDER-FULFILLMENT-WF-0001
+    kind: workflow
+    capability_key: order-fulfillment
+    requirement: >
+      WHEN the supplier saves an inventory change THEN the system SHALL notify order
+      processing of the change, SHALL re-examine orders that could not previously be
+      fulfilled, and SHALL mark as completed every such order it can now fulfil.
+    plain_text: >
+      When the supplier restocks, any orders that were waiting for that stock are
+      re-checked, and those that can now be filled are completed.
+    technical_note: >
+      Documented as the Supplier application notifying the Order Processing Center after
+      each inventory database update (asynchronous messaging between supplier and OPC per
+      building.html). Mechanism not read in this shard.
+    confidence: medium
+    confidence_basis: >
+      One clear documentary statement; the supplier-to-OPC message flow was not traced in
+      code in this pass.
+    risk_class: operational
+    basis: >
+      using.html "Viewing and Editing Inventory" final paragraph; building.html confirms
+      the OPC and Supplier communicate over JMS.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Managing the Supplier > Viewing and Editing Inventory"
+        line_start: 290
+        line_end: 293
+        excerpt: |2
+            <p>Any time you update the database, the Supplier notifies the OPC about
+          the changes to the inventory. The OPC examines these changes to see if it
+          can fulfill any orders that it previously could not. If it can fullill an
+          order, it will mark the order as completed.</p>
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/building.html
+        anchor: "Building the Demo > 1.0 Building Pet Store Demo"
+        line_start: 64
+        line_end: 66
+    stack_metadata:
+      jms.queue: supplier/OPC inventory notification (name not read)
+
+  - record_key: ORDER-FULFILLMENT-WF-0002
+    kind: workflow
+    capability_key: order-fulfillment
+    requirement: >
+      The system SHALL process an order in stages: the storefront SHALL hand the order to
+      order processing asynchronously, order processing SHALL approve or hold it, the
+      supplier SHALL fulfil approved orders from inventory, possibly in more than one
+      part, and SHALL invoice order processing for what it ships, and the order SHALL be
+      complete only when fully fulfilled.
+    plain_text: >
+      After a customer places an order it is passed on for approval, then the supplier
+      ships it from stock (sometimes in several shipments) and bills for each one; the order
+      is finished once everything has shipped.
+    technical_note: >
+      Storefront, Order Processing Center (OPC), Supplier and Admin are separate
+      applications (petstore, opc, supplier, admin EARs); OPC and Supplier talk over JMS.
+    confidence: medium
+    confidence_basis: >
+      Stated consistently across using.html and configuring.html, but only in documentation;
+      no code was traced for the partial-shipment path in this pass.
+    risk_class: operational
+    basis: >
+      using.html "Demo at a Glance" describes the components; configuring.html says the
+      customer receives one or more e-mails as parts of the order are fulfilled and a final
+      one when completely fulfilled, which establishes partial fulfilment.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Demo at a Glance"
+        line_start: 116
+        line_end: 132
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications by Editing the Deployment Descriptors"
+        line_start: 197
+        line_end: 201
+        excerpt: |2
+          <p>To test the  e-mail notifications, visit the Storefront, create a new
+          user with  your e-mail address, and complete an order. If the order is approved,
+             you will receive an e-mail. You will receive one or more e-mails as  parts
+            of the order are fulfilled. When the order is completely  fulfilled, you
+           will receive one final e-mail. (For more information  on how orders work
+    stack_metadata:
+      framework: j2ee-1.3
+
+  - record_key: CUSTOMER-NOTIFICATIONS-REQ-0001
+    kind: requirement
+    capability_key: customer-notifications
+    requirement: >
+      The system SHALL send a customer e-mail notifications about their order: one when the
+      order is approved, one for each part of the order that is fulfilled (invoiced), and a
+      final one when the order is completely fulfilled.
+    plain_text: >
+      Customers get an e-mail when their order is approved, another each time part of it
+      ships, and a last one when the whole order has been delivered.
+    technical_note: >
+      Three message-driven beans in the OPC: MailOrderApprovalMDB, MailInvoiceMDB and
+      MailCompletedOrderMDB, each gated by its own boolean environment entry; sending goes
+      through MailerMDB using the mail/MailSession resource.
+    confidence: medium
+    confidence_basis: >
+      The three notification types are named consistently in two documented procedures and
+      the matching environment entries exist in the OPC descriptor, but the mail beans'
+      code was not read in this pass.
+    risk_class: operational
+    basis: >
+      configuring.html both e-mail sections name the three notifications (approval,
+      confirmation/invoice, completion) and describe when the customer receives each.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications Using the J2EE SDK Deployment Tool"
+        line_start: 69
+        line_end: 102
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications by Editing the Deployment Descriptors"
+        line_start: 197
+        line_end: 201
+      - path: legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml
+        line_start: 414
+        line_end: 418
+        excerpt: |2
+                <env-entry>
+                 <env-entry-name>param/SendConfirmationMail</env-entry-name>
+                 <env-entry-type>java.lang.Boolean</env-entry-type>
+    stack_metadata:
+      ejb.bean: MailOrderApprovalMDB, MailInvoiceMDB, MailCompletedOrderMDB, MailerMDB
+
+  - record_key: CUSTOMER-NOTIFICATIONS-BR-0001
+    kind: business-rule
+    capability_key: customer-notifications
+    requirement: >
+      The system SHALL allow each of the three order notifications (approval, shipment /
+      invoice confirmation, order completion) to be enabled or disabled independently by
+      configuration, and SHALL have them disabled unless enabled at deployment.
+    plain_text: >
+      Each kind of order e-mail can be switched on or off separately; out of the box they
+      are switched off.
+    technical_note: >
+      Boolean env-entries param/SendApprovalMail, param/SendConfirmationMail and
+      param/SendCompletedOrderMail in src/apps/opc/src/ejb-jar.xml. The shipped values are
+      redacted in this copy of the source, so the actual default cannot be read.
+    confidence: low
+    confidence_basis: >
+      The switches themselves are documented and present in the descriptor, but the default
+      is stated only in prose that conflicts with the document's own example, and the
+      descriptor values are redacted, so the default is unverified.
+    dispute:
+      reason: contradicts-docs
+      detail: >
+        configuring.html says notifications are disabled by default, yet its own
+        descriptor excerpt shows each entry with value true and tells the reader to "ensure"
+        it is true. The real values in ejb-jar.xml (lines 417, 507, 593) are redacted in this
+        tree. Reading the unredacted descriptor settles the default.
+    risk_class: operational
+    basis: >
+      configuring.html "Setting Up E-mail Notifications Using the J2EE SDK Deployment Tool"
+      first paragraph and the per-notification steps.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications Using the J2EE SDK Deployment Tool"
+        line_start: 49
+        line_end: 51
+        excerpt: |2
+                 You can configure the Java Pet Store Demo to send customers e-mail
+          notifications    regarding the status of their orders. By default, these notifications
+          are    disabled, but you can enable them at deployment time.
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications by Editing the Deployment Descriptors"
+        line_start: 145
+        line_end: 146
+      - path: legacy-source/petstore1.3.2/src/apps/opc/src/ejb-jar.xml
+        line_start: 505
+        line_end: 507
+        excerpt: |2
+                 <env-entry-name>param/SendApprovalMail</env-entry-name>
+                 <env-entry-type>java.lang.Boolean</env-entry-type>
+                 <env-entry-value>«REDACTED:secret-finding-11»</env-entry-value>
+    stack_metadata:
+      ejb.env_entries: param/SendApprovalMail, param/SendConfirmationMail, param/SendCompletedOrderMail
+
+  - record_key: CUSTOMER-NOTIFICATIONS-INT-0001
+    kind: integration
+    capability_key: customer-notifications
+    requirement: >
+      The system SHALL send customer notification e-mails through a configurable outgoing
+      mail server, using a configurable sender address and mail-server account.
+    plain_text: >
+      Order e-mails go out through the company's mail server, from an address the operator
+      chooses (by default customerservice@javapetstoredemo.com).
+    technical_note: >
+      mail/MailSession resource reference on MailerMDB; mail-from, mail-host and name in
+      src/apps/opc/src/sun-j2ee-ri.xml. Default mail-from is customerservice@javapetstoredemo.com.
+    confidence: high
+    confidence_basis: >
+      Documented in two procedures and the sender address is present in the vendor
+      descriptor at the documented place.
+    risk_class: operational
+    basis: >
+      configuring.html "Configure the mail service" steps in both e-mail sections;
+      sun-j2ee-ri.xml carries the mail-from value.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications by Editing the Deployment Descriptors (Configure the mail service)"
+        line_start: 169
+        line_end: 182
+      - path: legacy-source/petstore1.3.2/src/apps/opc/src/sun-j2ee-ri.xml
+        line_start: 404
+        line_end: 404
+        excerpt: |2
+                    <mail-from>customerservice@javapetstoredemo.com</mail-from>
+    stack_metadata:
+      ejb.bean: MailerMDB
+      resource_ref: mail/MailSession
+
+  - record_key: LOCALIZATION-REQ-0001
+    kind: requirement
+    capability_key: localization
+    requirement: >
+      The system SHALL offer the storefront in English (US) and Japanese, each with its own
+      localized pages and screen layout, and the current source additionally ships a
+      Simplified Chinese (China) storefront.
+    plain_text: >
+      Shoppers can use the store in English or Japanese; the code also contains a Chinese
+      version that the guide does not mention.
+    technical_note: >
+      Per locale: JSP pages under docroot/<locale>/ and a screendefinitions_<locale>.xml in
+      WEB-INF. The tree contains screendefinitions_en_US.xml, _ja_JP.xml and _zh_CN.xml and
+      docroot/ja and docroot/zh directories.
+    confidence: medium
+    confidence_basis: >
+      English and Japanese are confirmed by both document and file layout; Chinese is seen
+      only in the file layout (and in the existence of Chinese documentation), contradicting
+      the configuration guide.
+    dispute:
+      reason: contradicts-docs
+      detail: >
+        configuring.html says the storefront comes with English and Japanese only; the source
+        ships zh_CN screen definitions and a zh docroot. Whether Chinese is a supported locale
+        or an unfinished addition needs an SME decision.
+    risk_class: presentational
+    basis: >
+      configuring.html "Adding a New Localization" names the shipped localizations and how
+      each is structured.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Adding a New Localization"
+        line_start: 206
+        line_end: 207
+        excerpt: |2
+                 The Storefront of the Java Pet Store Demo is internationalized, and
+           comes   with the English (en) and Japanese (ja) localizations.
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/docroot/WEB-INF/screendefinitions_zh_CN.xml
+        line_start: 1
+        line_end: 1
+    stack_metadata:
+      framework: j2ee-1.3 web (screen definitions)
+
+  - record_key: CATALOG-BROWSING-BR-0001
+    kind: business-rule
+    capability_key: catalog-browsing
+    requirement: >
+      The system SHALL hold category, product and item descriptions per locale and SHALL
+      show a shopper only the descriptions for the shopper's current locale; the category
+      list SHALL be ordered by category name.
+    plain_text: >
+      Catalogue names and descriptions exist separately for each language, and shoppers see
+      the ones for their language; categories are listed alphabetically.
+    technical_note: >
+      Populate-UTF8.xml CategoryDetails/ProductDetails/ItemDetails carry xml:lang; the
+      catalog DAO SQL (CatalogDAOSQL.xml, GET_CATEGORY / GET_CATEGORIES) filters
+      category_details by locale and orders GET_CATEGORIES by name.
+    confidence: medium
+    confidence_basis: >
+      Stated in documentation in two places (data file attributes and quoted DAO
+      statements); the DAO file itself was not re-read in this pass.
+    risk_class: presentational
+    basis: >
+      configuring.html "Adding a New Localization" (xml:lang on detail elements) and
+      "Configuring the Database" (quoted GET_CATEGORIES statement).
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Adding a New Localization"
+        line_start: 237
+        line_end: 238
+        excerpt: |2
+            <p>To support localization, the <tt>CategoryDetails</tt>, <tt>ProductDetails</tt>
+           ,    and <tt>ItemDetails</tt> elements take a xml:lang locale attribute.
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Configuring the Database"
+        line_start: 288
+        line_end: 288
+    stack_metadata:
+      db.object: category, category_details
+      declarative_sql: CatalogDAOSQL.xml
+
+  - record_key: CATALOG-BROWSING-ENT-0001
+    kind: entity
+    capability_key: catalog-browsing
+    requirement: >
+      The system SHALL identify each catalog category by a mandatory, unique category code
+      of up to 10 characters.
+    plain_text: >
+      Every category has a short code (up to 10 characters) that must be present and unique.
+    technical_note: >
+      DDL quoted from PopulateSQL.xml (Cloudscape entry): create table category (catid
+      char(10) not null, constraint pk_category primary key (catid)).
+    confidence: medium
+    confidence_basis: >
+      A DDL constraint quoted in the documentation; the populate SQL file itself was not
+      read in this shard.
+    risk_class: operational
+    basis: >
+      configuring.html "Configuring the Database" quotes the category CreateStatement.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Database (PopulateSQL.xml fragment)"
+        line_start: 265
+        line_end: 265
+    stack_metadata:
+      db.object: category
+
+  - record_key: DATA-POPULATION-REQ-0001
+    kind: requirement
+    capability_key: data-population
+    requirement: >
+      The system SHALL populate its catalog and inventory from a single UTF-8 sample data
+      set that includes localized catalog entries, using database statements selected by a
+      configured database identifier.
+    plain_text: >
+      The store's starter catalogue and stock come from one sample data file, which holds the
+      catalogue text in each supported language.
+    technical_note: >
+      populate/Populate-UTF8.xml is the data; populate/PopulateSQL.xml holds per-database
+      DatabaseStatements (check/create/insert/drop per table) keyed by a database attribute,
+      selected via the web.xml Database init-param (cloudscape by default).
+    confidence: medium
+    confidence_basis: >
+      Documented, and the Database init-param value is visible in web.xml; the populate code
+      was not read in this pass.
+    risk_class: operational
+    basis: >
+      configuring.html "Configuring the Database" and "Adding a New Localization".
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Configuring the Database"
+        line_start: 332
+        line_end: 334
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/docroot/WEB-INF/web.xml
+        line_start: 134
+        line_end: 135
+        excerpt: |2
+                <param-name>Database</param-name>
+                <param-value>cloudscape</param-value>
+    stack_metadata:
+      db.object: Populate-UTF8.xml, PopulateSQL.xml
+
+  - record_key: CUSTOMER-ACCOUNT-WF-0001
+    kind: workflow
+    capability_key: customer-account
+    requirement: >
+      The system SHALL let a new visitor create an account from the sign-in page by choosing
+      to sign up, then entering their account information and submitting it, before making
+      a purchase.
+    plain_text: >
+      A first-time shopper signs up for an account from the sign-in page, fills in their
+      details, and can then buy.
+    technical_note: >
+      Documented storefront flow: Sign In, then the "I would like to sign up for an account"
+      form with a Create New Account button, then the account details form.
+    confidence: medium
+    confidence_basis: >
+      One clear documentary source; that a purchase is impossible without an account is
+      implied ("create a new user before making a purchase") rather than enforced in anything
+      read here.
+    risk_class: operational
+    basis: >
+      using.html "Creating a New User".
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Storefront > Creating a New User"
+        line_start: 150
+        line_end: 165
+        excerpt: |2
+          <p>If this is your first time visiting the store, create a new user before
+           making a purchase.</p>
+    stack_metadata:
+      jsp.page: signon.jsp, create_customer.jsp
+
+  - record_key: CHECKOUT-WF-0001
+    kind: workflow
+    capability_key: checkout
+    requirement: >
+      The system SHALL, at checkout, present a billing and shipping form already filled in
+      for the signed-in customer, and on submission SHALL pass the order to order processing
+      asynchronously.
+    plain_text: >
+      At checkout the billing and delivery details are pre-filled; when the customer submits,
+      the order is sent on for processing in the background.
+    technical_note: >
+      Storefront Check Out presents enter_order_information; the order is sent
+      asynchronously (JMS) to the OPC. Source of the pre-filled values (customer profile vs
+      demo defaults) is not established from documentation.
+    confidence: medium
+    confidence_basis: >
+      One clear documentary source; the origin of pre-filled values is not stated.
+    risk_class: operational
+    basis: >
+      using.html "Placing an Order" steps and the closing paragraph.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Storefront > Placing an Order"
+        line_start: 189
+        line_end: 202
+    stack_metadata:
+      jsp.page: enter_order_information.jsp
+
+  - record_key: SIGN-ON-BR-0001
+    kind: business-rule
+    capability_key: sign-on
+    requirement: >
+      The system SHALL provide separate administrator and supplier areas, and a user SHALL
+      sign out of the administrator client before using the supplier area.
+    plain_text: >
+      The administrator tools and the supplier tools are separate; someone using both must
+      log out of the administrator tool before opening the supplier one.
+    technical_note: >
+      Admin at /admin (rich client via Java Web Start), supplier at /supplier. The guide's
+      instruction suggests a shared container sign-on session interferes between the two;
+      not verified in code here.
+    confidence: low
+    confidence_basis: >
+      A single instruction in the user guide; the reason (shared authentication session,
+      role conflict) is inferred, not read.
+    risk_class: operational
+    basis: >
+      using.html "Opening the Supplier Client".
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Managing the Supplier > Opening the Supplier Client"
+        line_start: 271
+        line_end: 272
+        excerpt: |2
+            <p>The supplier and its inventory are managed using a simple Web interface.
+           Make sure to first logout of the admin client, before using the supplier.&nbsp;</p>
+    stack_metadata:
+      framework: j2ee-1.3 web security
+
+findings:
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/docs/ja
+    description: >
+      The Japanese and Chinese translations (docs/ja, docs/zh) are in a non-UTF-8 encoding
+      and were not compared line-by-line with the English pages in this pass; whether they
+      differ in substance (for example a yen approval threshold) is unchecked.
+  - kind: ambiguity
+    path: legacy-source/petstore1.3.2/docs/whatsnew.html
+    description: >
+      Release 1.3.2 removed the web-services-enabled petstore. Any web-service integration
+      found elsewhere in the tree should be treated as possibly unreachable in this release.
+  - kind: conflict
+    record_key: CUSTOMER-NOTIFICATIONS-BR-0001
+    path: legacy-source/petstore1.3.2/docs/configuring.html
+    description: >
+      Default for order e-mail switches: prose says disabled, the quoted descriptor shows
+      true, and the shipped values are redacted. A human must read the unredacted descriptor.
+
+suspected_defects:
+  - capability_key: order-approval
+    record_keys: [ORDER-APPROVAL-BR-0001]
+    severity: medium
+    category: contradicts-document
+    title: Auto-approval only covers US and Japanese orders; others always wait
+    description: >
+      The guide describes a single $500 auto-approval rule. The code applies it only to US
+      orders, uses an undocumented 50 000 threshold for Japanese orders, and never
+      auto-approves an order in any other locale (including the Chinese storefront the code
+      ships), so every Chinese order needs manual approval. The code comment calls the check
+      a demo stub for currency conversion. The guide also says both "less than $500" and
+      "greater than $500", leaving exactly $500 undefined; the code holds it as pending.
+    traces:
+      - path: legacy-source/petstore1.3.2/src/apps/opc/src/com/sun/j2ee/blueprints/opc/ejb/PurchaseOrderMDB.java
+        line_start: 178
+        line_end: 191
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/using.html
+        anchor: "Using the Demo > Using the Admin Client > Approving/Denying Orders"
+        line_start: 239
+        line_end: 240
+  - capability_key: localization
+    record_keys: [LOCALIZATION-REQ-0001]
+    severity: low
+    category: contradicts-document
+    title: Configuration guide omits the Chinese storefront
+    description: >
+      The guide states the storefront ships English and Japanese only; the source ships a
+      zh_CN screen definition set and a zh page directory.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Adding a New Localization"
+        line_start: 206
+        line_end: 207
+      - path: legacy-source/petstore1.3.2/src/apps/petstore/src/docroot/WEB-INF/screendefinitions_zh_CN.xml
+        line_start: 1
+        line_end: 1
+  - capability_key: customer-notifications
+    record_keys: [CUSTOMER-NOTIFICATIONS-BR-0001]
+    severity: low
+    category: contradicts-document
+    title: Guide contradicts itself on the default for order e-mails
+    description: >
+      The guide says order e-mails are disabled by default, but its own descriptor excerpt
+      shows the switches set to true.
+    traces:
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications Using the J2EE SDK Deployment Tool"
+        line_start: 49
+        line_end: 51
+      - kind: document
+        path: legacy-source/petstore1.3.2/docs/configuring.html
+        anchor: "Configuring the Demo > Setting Up E-mail Notifications by Editing the Deployment Descriptors"
+        line_start: 145
+        line_end: 146
