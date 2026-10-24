@@ -1,0 +1,498 @@
+# Recommendations for the sign-on capability (SX-0001 synthesize).
+# Record keys repeat across module passes (SIGN-REQ-0001 names twelve different records),
+# so each entry also carries pass_file to say which record it addresses.
+recommendations:
+  - record_key: SIGN-ENT-0001
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      ejb-jar.xml and the UserEJB accessors agree on a user-name-keyed credential; SIGN-ENT-0002
+      in pass B reads the same. Clear-text storage goes to the defect register (D2).
+  - record_key: SIGN-ENT-0002
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same evidence as SIGN-ENT-0001 and the createUser duplicate-key path confirms uniqueness.
+  - record_key: SIGN-BR-0001
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      SignOnEJB.authenticate and UserEJB.matchPassword read directly; pass B (SIGN-REQ-0001) agrees.
+      The absence of lockout is a defect-register item, not a reason to reject.
+  - record_key: SIGN-REQ-0001
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates SIGN-BR-0001 from pass A with the same call chain; both are written as one
+      "Credential check" requirement.
+  - record_key: SIGN-RULE-0003
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      An explicit check in ejbCreate with a named constant of 25 and its own message.
+  - record_key: SIGN-RULE-0004
+    pass_file: src/components/signon/b.yaml
+    recommendation: edit
+    confidence: low
+    reason: >
+      The check exists but MAX_PASSWD_LENGTH is redacted in this copy. Approve only once an SME
+      supplies the number from the unredacted source or the live system.
+    edited_requirement: >
+      The system SHALL refuse to create a credential whose password is longer than <N> characters,
+      where N is the value of MAX_PASSWD_LENGTH confirmed by the SME.
+  - record_key: SIGN-RULE-0005
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      An explicit indexOf check in ejbCreate with its own error message.
+  - record_key: SIGN-BR-0002
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      SignOnFilter.doFilter shows the exact-match loop and the remembered URL; web.xml maps the
+      filter to every URL. Agrees with SIGN-REQ-0006 and both storefront passes.
+  - record_key: SIGN-REQ-0006
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same filter logic as SIGN-BR-0002, cross-checked against the four patterns in signon-config.xml.
+  - record_key: SIGN-REQ-0001
+    pass_file: src/apps/petstore/a.yaml, src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      signon-config.xml lists exactly the four protected pages and the filter enforces them. The
+      unprotected order.do, update_customer.screen and createcustomer.do go to the defect register (D5).
+  - record_key: SIGN-BR-0003
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      SignOnFilter passes any signed-on session through and never reads the parsed roles. Whether the
+      ignored roles were meant to work is a Business Owner question (D11).
+  - record_key: SIGN-WF-0001
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      validateSignOn read end to end; pass B (SIGN-WF-0007) agrees. The missing null check on the
+      return page and the non-renewed session go to the defect register (D6, D7).
+  - record_key: SIGN-WF-0007
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Same code path as SIGN-WF-0001, and signon.jsp posts to the same URL with the same field names.
+  - record_key: SIGN-BR-0004
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The 2,678,400-second cookie and the clear-on-untick are explicit; pass B (SIGN-RULE-0008) agrees.
+      Setting the cookie before authentication is a defect-register item (D8).
+  - record_key: SIGN-RULE-0008
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates SIGN-BR-0004; the checkbox in signon.jsp confirms the parameter.
+  - record_key: SIGN-INT-0001
+    pass_file: src/components/signon/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      SignOnDAO parsing and duplicate-name handling read directly; pass B (SIGN-INT-0011) agrees.
+      Only one place shows the duplicate behaviour.
+  - record_key: SIGN-INT-0011
+    pass_file: src/components/signon/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicates SIGN-INT-0001.
+  - record_key: SIGN-REQ-0010
+    pass_file: src/components/signon/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      The petstore build excludes CreateUserServlet and no web.xml in the tree maps it, so it looks
+      unreachable. Reverse this only if an SME finds a deployment that maps it. Not in the spec.
+  - record_key: SIGN-SCR-0002
+    pass_file: src/apps/petstore/a.yaml, src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      signon.jsp confirms both passes. Pass B omits the new-customer form and neither pass notes that a
+      remembered user leaves the password empty and the checkbox ticked; the edit adds both. The
+      demo-account pre-fill is a defect-register item (D1).
+    edited_requirement: >
+      The storefront sign-in screen SHALL show a returning-customer form (User Name, Password,
+      Remember My User Name, Sign In) and a new-customer form (User Name, Password, Password (Repeat),
+      Create New Account). GIVEN a remembered user ID, the User Name SHALL be pre-filled with it, the
+      Password left empty and the checkbox ticked; otherwise both fields are pre-filled with "j2ee".
+  - record_key: SIGN-REQ-0003
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      signon-config.xml names the error page and signon_failed.jsp carries the text; pass B records the
+      same screen as SIGN-SCR-0003.
+  - record_key: SIGN-SCR-0003
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Configured error page, screen definition and JSP text agree. Written inside the storefront
+      sign-in screen requirement as its rejection display.
+  - record_key: SIGN-SCR-0007
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      banner.jsp shows the j_signon switch and is the banner of every screen definition.
+  - record_key: SIGN-WF-0004
+    pass_file: src/apps/petstore/a.yaml, src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      SignOnNotifier and SignOnEJBAction both set the locale from the preferred language; both passes agree.
+  - record_key: SIGN-REQ-0005
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      SignOffHTMLAction, mappings.xml and signoff.jsp agree; pass B (SIGN-WF-0005) is the same rule.
+  - record_key: SIGN-WF-0005
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates SIGN-REQ-0005 in pass A.
+  - record_key: SIGN-BR-0006
+    pass_file: src/apps/petstore/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The storefront web.xml declares 15 minutes; pass B (SIGN-RULE-0006) agrees. A bare literal, so the
+      Business Owner may change it (Q6).
+  - record_key: SIGN-RULE-0006
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicates SIGN-BR-0006.
+  - record_key: SIGN-RULE-0008
+    pass_file: src/apps/petstore/b.yaml
+    recommendation: edit
+    confidence: medium
+    reason: >
+      general_error.jsp does print the stack trace, but showing it to users is information exposure
+      (D9), and the mapping that should reach the page is broken. The edit keeps the page without the
+      trace; whether error handling belongs under sign-on is for planning.
+    edited_requirement: >
+      GIVEN an unexpected server error, the system SHALL show a Server Error page that displays the
+      error message and asks the user to notify the administrator, and SHOULD NOT show the stack trace.
+  - record_key: SIGN-WF-0003
+    pass_file: src/waf/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      MainServlet and ScreenFlowManager show the isAssignableFrom walk and the ServletException fall-through.
+      The sample mapping names a missing class, so the configured outcome is unconfirmed.
+  - record_key: SIGN-REQ-0011
+    pass_file: src/waf/a.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      requestmappings.xml is loaded by nothing and its flag is discarded; the live list is signon-config.xml.
+      Because it lists order placement as a sign-in step that the live config leaves open, the conflict
+      goes to Intent for the Business Owner (Q3, D5).
+  - record_key: SIGN-REQ-0002
+    pass_file: src/waf/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      Same orphaned file as SIGN-REQ-0011 in pass A; URLMappingsXmlDAO parses requiresSignin into a local
+      and drops it. Same Intent question.
+  - record_key: SIGN-BR-0012
+    pass_file: src/waf/a.yaml
+    recommendation: reject
+    confidence: high
+    reason: >
+      30 minutes applies only to the WAF sample WAR; the storefront declares 15 (SIGN-BR-0006).
+  - record_key: SIGN-REQ-0001
+    pass_file: src/waf/b.yaml
+    recommendation: reject
+    confidence: high
+    reason: >
+      Same sample-WAR timeout as SIGN-BR-0012; the storefront overrides it.
+  - record_key: SIGN-REQ-0001
+    pass_file: src/apps/admin/a.yaml, src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The web.xml constraint, application.xml role and sun-j2ee-ri.xml mapping agree. Pass B's FORM-login
+      and error-page detail is covered by the admin sign-in screen requirement.
+  - record_key: SIGN-REQ-0002
+    pass_file: src/apps/admin/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      login-config, login.jsp and error.jsp agree; pass B records the same screen as SIGN-REQ-0003.
+      Pre-filled jps_admin/admin is a defect-register item (D1).
+  - record_key: SIGN-REQ-0003
+    pass_file: src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates SIGN-REQ-0002 in pass A, with the exact error text, which login/error JSPs confirm.
+  - record_key: SIGN-REQ-0002
+    pass_file: src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      sun-j2ee-ri.xml maps jps_admin and administrator_group; deployment configuration, so whether the
+      rebuild keeps the exact names is a business choice (Q7).
+  - record_key: sign-on-REQ-0001
+    pass_file: setup.xml/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      setup.xml creates jps_admin and the admin descriptors map it to the role guarding the admin area.
+      The literal password in the install script is a defect-register item (D2).
+  - record_key: SIGN-REQ-0001
+    pass_file: setup.xml/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates sign-on-REQ-0001 from pass A.
+  - record_key: sign-on-REQ-0002
+    pass_file: setup.xml/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      setup.xml creates the supplier user and the supplier descriptors map it to the role guarding
+      /RcvrRequestProcessor.
+  - record_key: SIGN-REQ-0002
+    pass_file: setup.xml/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates sign-on-REQ-0002 from pass A.
+  - record_key: SIGN-BR-0003
+    pass_file: src/apps/admin/a.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      ApplRequestProcessor checks only for a session and the URL is outside the security constraint;
+      pass B (SIGN-BR-0006) agrees. Keep the session-expired reply but require the administrator role;
+      the missing check goes to the defect register (D3).
+    edited_requirement: >
+      The administration data service SHALL refuse a request without an existing session with
+      "Session Timed Out; Please exit and login as admin from the login page", and MUST require the
+      administrator role before processing any request.
+  - record_key: SIGN-BR-0006
+    pass_file: src/apps/admin/b.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      Same finding as SIGN-BR-0003 in pass A; same edit.
+    edited_requirement: >
+      The administration data service SHALL refuse a request without an existing session with
+      "Session Timed Out; Please exit and login as admin from the login page", and MUST require the
+      administrator role before processing any request.
+  - record_key: SIGN-REQ-0004
+    pass_file: src/apps/admin/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      The 54-minute value is read directly from web.xml; pass B (SIGN-BR-0005) agrees. A bare literal (Q6).
+  - record_key: SIGN-BR-0005
+    pass_file: src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicates SIGN-REQ-0004.
+  - record_key: SIGN-REQ-0005
+    pass_file: src/apps/admin/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      index.jsp, AdminRequestProcessor and logout.jsp agree; pass B (SIGN-WF-0004) is the same flow.
+  - record_key: SIGN-WF-0004
+    pass_file: src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates SIGN-REQ-0005 in pass A.
+  - record_key: SIGN-WF-0006
+    pass_file: src/apps/admin/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The JNLP arguments and the client URL agree; pass B (SIGN-WF-0007) adds the four-argument check.
+      The session id in the URL is a defect-register item (D6).
+  - record_key: SIGN-WF-0007
+    pass_file: src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates SIGN-WF-0006 in pass A.
+  - record_key: SIGN-SCR-0008
+    pass_file: src/apps/admin/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      AdminRequestProcessor.doGet and index.jsp text and forms agree.
+  - record_key: SIGN-REQ-0001
+    pass_file: src/apps/supplier/a.yaml, src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      The web.xml constraint, the isUserInRole re-check in displayinventory.jsp and the role mapping
+      agree. transport-guarantee NONE is recorded as legacy fact and goes to the defect register (D10).
+  - record_key: SIGN-SCR-0001
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      login.jsp and error.jsp read and both are wired in web.xml. Pre-filled supplier/supplier is D1.
+  - record_key: SIGN-BR-0001
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      One vendor descriptor maps "supplier" and administrator_group; consistent with setup.xml (Q7).
+  - record_key: SIGN-REQ-0002
+    pass_file: src/apps/supplier/a.yaml, src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      RcvrRequestProcessor forwards logout to logout.jsp, which invalidates and links back; both passes agree.
+  - record_key: SIGN-REQ-0003
+    pass_file: src/apps/supplier/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      54 minutes read from the supplier web.xml; pass B (SIGN-BR-0002) agrees. A bare literal (Q6).
+  - record_key: SIGN-BR-0002
+    pass_file: src/apps/supplier/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicates SIGN-REQ-0003 in pass A.
+  - record_key: SIGN-ON-REQ-0001
+    pass_file: docs/a.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      A single operator tip in using.html with no enforcing code; it most likely reflects two
+      applications sharing one realm and role name. Kept as an open question (Q5), not a requirement.
+  - record_key: SIGN-ON-BR-0001
+    pass_file: docs/b.yaml
+    recommendation: reject
+    confidence: medium
+    reason: >
+      Same document line as SIGN-ON-REQ-0001. The separate admin and supplier areas are already stated by
+      the area-access requirements.
+  - record_key: CATB-RULE-0013
+    pass_file: src/components/catalog/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      CatalogEJB is unchecked and signon-config.xml protects no catalog page, so code and configuration agree.
+  - record_key: SIGN-RULE-0001
+    pass_file: src/apps/opc/a.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      ejb-jar.xml marks every OPC bean unchecked; pass B (SIGN-REQ-0001) agrees. OPCAdminFacadeEJB is
+      remote, so "rely on the caller" is not a safe rule for it; the edit requires that it be reachable
+      only through the administration area (D4).
+    edited_requirement: >
+      The order processing administration services and message handlers SHALL apply no role check of
+      their own and MUST be reachable only through the administration area or other protected entry points.
+  - record_key: SIGN-REQ-0001
+    pass_file: src/apps/opc/b.yaml
+    recommendation: edit
+    confidence: high
+    reason: >
+      Same finding as SIGN-RULE-0001 in pass A; same edit.
+    edited_requirement: >
+      The order processing administration services and message handlers SHALL apply no role check of
+      their own and MUST be reachable only through the administration area or other protected entry points.
+  - record_key: SIGN-ON-BUSINESS-RULE-0001
+    pass_file: src/components/asyncsender/a.yaml, src/components/asyncsender/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Both passes read the same unchecked, use-caller-identity, local-only descriptor. Consolidated into
+      "Access control at the entry points".
+  - record_key: SIGN-BR-0001
+    pass_file: src/components/contactinfo/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Unchecked, local-only descriptor; consolidated into "Access control at the entry points".
+  - record_key: SIGN-REQ-0001
+    pass_file: src/components/creditcard/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Unchecked, local-only descriptor; consolidated. Card data makes the entry-point protection
+      requirement essential.
+  - record_key: CUST-BR-0007
+    pass_file: src/components/customer/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Seven unchecked blocks and no security-role; pass B (CUST-BR-0011) agrees. Consolidated.
+  - record_key: CUST-BR-0011
+    pass_file: src/components/customer/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Duplicates CUST-BR-0007.
+  - record_key: sign-on-BR-0001
+    pass_file: src/components/lineitem/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Unchecked, local-only descriptor; pass B (SIGN-REQ-0001) agrees. Consolidated.
+  - record_key: SIGN-REQ-0001
+    pass_file: src/components/lineitem/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicates sign-on-BR-0001 in pass A.
+  - record_key: SIGNON-BR-0001
+    pass_file: src/components/processmanager/a.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Every ManagerEJB and ProcessManagerEJB method is unchecked and local-only. Consolidated.
+  - record_key: SIGNON-BR-0001
+    pass_file: src/components/purchaseorder/a.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Unchecked, local-only descriptor; pass B (SIGN-RULE-0001) agrees. Consolidated.
+  - record_key: SIGN-RULE-0001
+    pass_file: src/components/purchaseorder/b.yaml
+    recommendation: accept
+    confidence: medium
+    reason: >
+      Duplicates SIGNON-BR-0001 in pass A.
+  - record_key: SO-BR-0001
+    pass_file: src/components/supplierpo/b.yaml
+    recommendation: accept
+    confidence: high
+    reason: >
+      Every supplier order bean is unchecked with caller identity and no isCallerInRole in code. Consolidated.
