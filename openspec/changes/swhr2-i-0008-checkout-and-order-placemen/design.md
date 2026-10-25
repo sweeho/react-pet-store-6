@@ -70,3 +70,59 @@ DTDs with public ids `-//Sun Microsystems, Inc. - J2EE Blueprints Group//DTD <Na
 ## Specification coverage
 
 `specs/checkout/spec.md` carries only the six SME-approved records (SWHR2-R-0003 to SWHR2-R-0008). Every other checkout record, including the three screen records (CHK-SCR-0001, CHK-SCR-0008, CHK-SCR-0009), is Not specified until approved; see `legacy-analysis/ir/_recommendations/checkout.yaml`. The approved CHECKOUT-REQ-0001 (pre-filled billing and shipping form) is written as the screen requirement. Record keys CHK-BR-0006 and CHK-WF-0001 occur in more than one pass file with different text; the spec uses the `src/apps/petstore/a.yaml` text for CHK-BR-0006 and the `src/components/purchaseorder/a.yaml` text for CHK-WF-0001.
+
+## Target design
+
+### Components
+
+- **Billing and shipping page** `src/pages/petstore/checkout.tsx`, guarded by sign-on (sign-on SWHR2-R-0028). It loads `GET /api/checkout`, which is pre-filled from the signed-on customer's contact information and address (customer-account), so the customer can submit without re-entering anything (SWHR2-R-0005).
+- **Order placement** `routes/api/orders/index.post.ts` (SWHR2-R-0049):
+  1. Require a signed-on customer.
+  2. Read the session cart. If it is empty, throw `EmptyCartOrder`, which shows the empty-cart order error page (shopping-cart SWHR2-R-0116).
+  3. Price the lines from the catalog in the session locale.
+  4. Take an order id from the `"1001"` sequence.
+  5. Build the `PurchaseOrder` document.
+  6. In one SQLite transaction, enqueue it on the `order.new` channel (order-fulfillment).
+  7. Clear the cart (shopping-cart SWHR2-R-0147).
+  8. Return `{ orderId }`.
+
+  The request completes without waiting for approval (SWHR2-R-0049). The screen shown after placement is PRD open question 6 (Order Placed screen).
+
+- **Id sequences** `services/ids.ts`. `nextId(prefix)` refuses a null or empty prefix (SWHR2-R-0007). Inside a transaction it creates the prefix's sequence row on first use, increments it and returns `prefix + counter`, so the "1001" sequence issues "10011", "10012", "10013", … (SWHR2-R-0006, SWHR2-R-0008). If the sequence row cannot be created or the store cannot be reached, it throws and issues no id (SWHR2-R-0051).
+- **Order document codec** `services/documents/purchase-order.ts` (SWHR2-R-0050). `toXml(po)` renders a document with root `PurchaseOrder`, whose card is `CreditCard` containing `CardNumber`, `CardType` and `ExpiryDate` in that order, each as text. `fromXml(text)` rejects a document whose root is not `PurchaseOrder` with "PurchaseOrder element expected." and a card element that is not `CreditCard` with "CreditCard element expected.". A round trip yields an equal order.
+- **Order receipt** `services/orders/receive.ts` is called by the order-processing worker for each `order.new` message. It decodes the document and calls `createPurchaseOrder(tx, po)`, which in one transaction stores:
+  - the header
+  - one contact record built from the shipping information, with its address
+  - one credit-card record
+  - one line item per order line with `quantity_shipped = 0`
+
+  Any failed insert fails the whole creation and keeps no part of it (SWHR2-R-0004). A duplicate order id is refused and leaves the stored order unchanged (SWHR2-R-0052). Receipt then starts the order workflow in PENDING and applies auto-approval (order-approval). `getPurchaseOrder(orderId)` retrieves an order by id (SWHR2-R-0052).
+
+- **Server Error page** `src/pages/petstore/error/server.tsx` (SWHR2-R-0003). Any unexpected failure is answered with `{ kind: "AppFailure", message, trace }`, and the page shows "Server Error", the message, the trace, and a request to notify the administrator. This is the fallback for unmapped failures in shopping-cart's failure routing.
+
+### Data
+
+These tables are in `db/schema/storefront.ts` (the id sequence) and `db/schema/order-processing.ts` (purchase orders). Building them produces one new drizzle-kit migration in `drizzle/`.
+
+- `id_sequences` (storefront group): `prefix` text primary key and `next_value` integer not null.
+- `op_purchase_orders`: `order_id` text primary key (SWHR2-R-0052).
+  - `user_id`, `email`, `locale`, `order_date` (integer timestamp, UTC) and `total`, an integer in hundredths of the order currency (PRD constraints: money in integer minor units).
+  - The billing contact and address fields.
+- `op_po_contacts`: `order_id` primary key, referencing `op_purchase_orders` with `ON DELETE CASCADE`. It holds the shipping given and family name, street, city, state, country, zip, e-mail and phone.
+- `op_po_cards`: `order_id` primary key, cascade, with `card_number`, `card_type` and `expiry_date`. Card details are captured and never charged (PRD non-goals).
+- `op_po_line_items`: `(order_id, line_number)` primary key, cascade, with `category_id`, `product_id`, `item_id`, `quantity`, `unit_price` and `quantity_shipped` (default 0).
+
+The order-processing tables keep no foreign key into the storefront group (data-population). The order document travels as XML text in the `messages` table (order-fulfillment).
+
+### Interfaces
+
+- `GET /api/checkout` (customer): returns the pre-fill `{ billing, shipping }`.
+- `POST /api/orders` (customer): body `{ billing, shipping }` → `{ orderId }`. Failure kinds are 401 `SignOnRequired`, 422 `EmptyCartOrder` and 500 `AppFailure`.
+- `order.new` channel payload: the `PurchaseOrder` XML text, consumed by order processing in-process (sign-on SWHR2-R-0121).
+
+### Stack choices
+
+- Nitro (H3) routes, and Drizzle ORM transactions over SQLite (`drizzle-orm/bun-sqlite`).
+- `fast-xml-parser` (pure JavaScript, runs under Bun) to build and parse the `PurchaseOrder` document with element order preserved. This dependency is assumed, because no XML library is in the pinned stack.
+- The asynchronous hand-off goes through the persisted outbox table instead of a message broker (PRD constraints).
+- Tests: unit tests for `nextId` and the codec (round trip, both rejection messages); route integration tests for empty cart, unsigned visitor, sequential ids and the cart cleared after placement; a test that a failing card insert leaves no order rows.

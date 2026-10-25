@@ -51,3 +51,52 @@ These notes record how Java Pet Store 1.3.2 implements the shopping cart. The vi
 - **Also:** `waf/a.yaml` (CART-WF-0008).
 - **Spec scope:** only the 11 approved records are in the spec. The other records, including the quantity update, item count, subtotal, line details, locale and re-add reset behaviour described above, are Not specified until an SME approves them.
 - **Key collisions:** record keys repeat across pass files with different content. The recommendations file therefore names the pass file for each entry.
+
+## Target design
+
+### Components
+
+- **Cart model** `services/cart/index.ts` works on the cart held in the storefront session (sign-on). The cart is a `Map<itemId, quantity>`, created empty on first use with one per session (SWHR2-R-0114). Functions:
+  - `addItem(cart, itemId)` sets the quantity to 1 (SWHR2-R-0144). Re-adding an item therefore sets its quantity back to one, which is the specified behaviour noted in the PRD constraints.
+  - `addItemWithQuantity(cart, itemId, qty)` replaces any existing quantity and does not validate it (SWHR2-R-0033).
+  - `removeItem(cart, itemId)` deletes the line whatever its quantity, and is a no-op when the item is absent (SWHR2-R-0146).
+  - `updateQuantities(cart, { itemId: qty })` sets the given quantities.
+  - `clear(cart)` empties the cart; checkout calls it once an order is placed (SWHR2-R-0147).
+  - `lines(cart, locale)` resolves each line through the catalog service in the cart locale (localization SWHR2-R-0081). It returns the item attribute, product name, quantity, unit price (unit cost) and line total, plus the cart total.
+
+  Line order is Map iteration order, and no order is promised (SWHR2-R-0034).
+
+- **Session-only cart.** The cart exists only in the in-memory session, is never written to SQLite, and goes when the session ends by sign-out or idle expiry (SWHR2-R-0118, SWHR2-R-0114.03).
+- **No role check.** The cart routes call no guard, so visitors use every cart operation without signing on (SWHR2-R-0117).
+- **Failure routing** `services/errors.ts` and `src/errors/routeFailure.ts` (SWHR2-R-0116):
+  - API routes throw typed failures (`EmptyCartOrder`, `SignOnRequired`, `CatalogError`, …), each with a parent kind (for example `EmptyCartOrder` belongs to `OrderFailure`, which belongs to `AppFailure`).
+  - Responses carry `{ kind, kinds: [kind, …parents], message, trace }`.
+  - The SPA keeps one table from failure kind to error page and walks `kinds` until it finds a configured page. With no configured page it shows the Server Error page (checkout SWHR2-R-0003). The empty-cart order error page is `src/pages/petstore/error/empty-cart.tsx`.
+- **Cart page** `src/pages/petstore/cart.tsx` (SWHR2-R-0115). When the cart is empty it renders the shared `EmptyFrame` with "Your Shopping Cart is Empty." and no rows, total, Update Cart or Check Out. Otherwise it renders one row per line:
+  - the item attribute and product name, linked to `item/[itemId]`
+  - Remove
+  - a quantity input pre-filled with the line quantity
+  - the unit price formatted as currency
+
+  Below the rows are Update Cart (submits the edited quantities), the total formatted as currency, and a Check Out link to `checkout`. After Remove the page re-renders from the response. The pet-tips banner (customer-account) is also shown here.
+
+### Data
+
+No persisted data (SWHR2-R-0118). The cart lives in the session record as `cart: Map<string, number>`. Prices are not stored in the cart; they are read from the catalog in the session locale every time lines are listed, so a locale change re-prices the cart (localization SWHR2-R-0076).
+
+### Interfaces
+
+Every route returns the full cart view `{ lines: [...], total, locale }` and needs no authorisation.
+
+- `GET /api/cart`
+- `POST /api/cart/items` with `{ itemId, quantity? }`: without `quantity` it sets 1, and with `quantity` it replaces the existing one.
+- `DELETE /api/cart/items/[itemId]`
+- `PUT /api/cart` with `{ quantities: { [itemId]: number } }` (Update Cart)
+
+The Add to Cart controls on the product item list, item detail and search results call `POST /api/cart/items`.
+
+### Stack choices
+
+- Nitro (H3) routes under `routes/api/cart/` over the in-memory session store (sign-on). There is no Drizzle table, because the spec forbids durable storage.
+- Currency formatting uses `shared/i18n/format.ts` (localization).
+- Tests: unit tests for the cart model (re-add sets 1, remove absent item, replace quantity); route integration tests proving two sessions do not share a cart and sign-out empties it; UI tests for the empty and filled cart screens.

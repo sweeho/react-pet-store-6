@@ -49,3 +49,35 @@ These are recorded as what the code does; whether each is right is the Business 
 - **Q2** Should an unknown or since-deleted item id abort the whole update, be skipped, or be reported?
 - **Q3** Should the "no items" message be shown for an empty inventory, with a distinct error for a read failure?
 - **Q4** Is the per-row update marker still wanted, or should any changed quantity be applied? The user guide and code both require it today.
+
+## Target design
+
+### Components
+
+- **Inventory service** `services/supplier/inventory.ts`:
+  - `listInventory()` returns every stock record.
+  - `updateInventory(changes: { itemId, quantity }[])` applies every change in one transaction (SWHR2-R-0126). In the same transaction it enqueues one `supplier.inventory-changed` message, which triggers re-fulfilment of waiting orders (order-fulfillment SWHR2-R-0099).
+- **Supplier home** `src/pages/supplier/index.tsx` (once signed in): Display Inventory, which links to `/supplier/inventory`, and Logout.
+- **Supplier inventory page** `src/pages/supplier/inventory.tsx`, guarded by supplier sign-in. It shows one row per stock record with the item, the existing quantity, an empty new-quantity input and an unchecked update marker (SWHR2-R-0125). One Submit sends only the rows whose marker is checked, so a quantity typed on an unmarked row is never sent and never saved (SWHR2-R-0125.02). The route ignores rows that are not marked.
+
+### Data
+
+This table is in `db/schema/supplier.ts`, and building it produces one new drizzle-kit migration in `drizzle/`.
+
+- `sup_inventory`: `item_id` text primary key, so a second record for the same item is refused (SWHR2-R-0149.01). `quantity` is an integer, not null and with no default, so a save without a quantity is refused (SWHR2-R-0149.02).
+
+The supplier group holds no foreign key into the storefront catalog tables (data-population). The seed data set is what keeps item ids aligned.
+
+### Interfaces
+
+- `GET /api/supplier/inventory` (supplier) → `[{ itemId, quantity }]`.
+- `POST /api/supplier/inventory` (supplier): body `{ rows: [{ itemId, quantity, marked }] }`. It applies the marked rows together in one transaction and returns the refreshed list. A marked row whose quantity is not a whole number returns 400 and saves nothing (SWHR2-R-0149).
+- `supplier.inventory-changed` channel payload: `{ itemIds: string[] }`, consumed in-process by the supplier fulfilment step.
+
+### Stack choices
+
+- Drizzle ORM over SQLite (`drizzle-orm/bun-sqlite`) with `db.transaction()` for the batch update.
+- Nitro (H3) routes under `routes/api/supplier/` behind `requireSupplier` (sign-on).
+- The persisted outbox carries the change notification (PRD constraints).
+- A Vite React SPA page with Tailwind and the shadcn/ui-style primitives.
+- Tests: route integration tests for the duplicate record, the missing quantity, the unmarked row not saved and the two marked rows saved together; a UI test for the row controls.

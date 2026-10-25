@@ -85,3 +85,38 @@ Three request types serve this capability:
 - Back-end failures surface as an unparseable reply and a client crash, not an error message.
 - Lenient date parsing rolls invalid dates (13/45/2001) into other real dates instead of rejecting them.
 - The facade loads every purchase order and line item in the range into memory per chart request; there is no paging or pre-aggregation.
+
+## Target design
+
+### Components
+
+- **Report service** `services/reports/index.ts`:
+  - `ordersByStatus(status)` returns every order whose workflow status exactly equals `status`, compared case-sensitively, so "approved" does not match APPROVED. Each order appears once, with no ordering and no paging (SWHR2-R-0143). Each row carries the order id, user id, order date as `M/D/YYYY`, amount and status (SWHR2-R-0113).
+  - `revenue(start, end, category?)` and `orderCounts(start, end, category?)` aggregate order lines for orders whose order date falls in the inclusive range. Without a category they return figures per category; with one, per item of that category (SWHR2-R-0025). Revenue is the sum of quantity × unit price. The order count is the number of distinct orders containing the category or item.
+
+    The aggregates filter on order date only, not status, so denied orders count, which is the specified behaviour noted in the PRD constraints. The administration tool sends no category, so the per-item breakdown is reachable only through the API (SWHR2-R-0025).
+
+- **Administration tool views** in `src/pages/admin/tool.tsx` (shared with order-approval). The tool opens on the Orders view, with Non-pending and Pending tabs, and the administrator can switch to the Sales view, with Pie chart and Bar chart tabs (SWHR2-R-0112).
+  - **Order lists** (`src/components/admin/OrderTable.tsx`): both lists show ID, User ID, Date, Amount and Status columns. Clicking a column header sorts by that column, client-side (SWHR2-R-0111). A non-numeric order id is displayed as -1.
+  - **Non-pending list**: APPROVED, DENIED and COMPLETED orders, never PENDING, loaded by Refresh (SWHR2-R-0110).
+  - **Charts** (`src/components/admin/SalesPieChart.tsx`, `SalesBarChart.tsx`) show revenue and order counts per category, each with start and end date inputs and a submit. The dates default to 01/01/2001 and 12/31/2002 until changed (SWHR2-R-0026).
+  - **Loading**: on start and on Refresh, the tool loads all order lists and both charts (SWHR2-R-0112), under the busy-state rule owned by order-approval.
+- **Unlisted status**: SHIPPED_PART orders are in neither list, because the lists cover PENDING, APPROVED, DENIED and COMPLETED only (order-approval SWHR2-R-0086).
+
+### Data
+
+No new table. The reports read `op_purchase_orders` (order id, user id, order date, total), `op_po_line_items` (category, item, quantity, unit price) and `op_order_workflow` (status), which are defined by checkout and order-fulfillment. Dates are compared and formatted in UTC. Amounts are converted from hundredths when the response is serialised.
+
+### Interfaces
+
+All routes need administrator authorisation (`requireAdmin`).
+
+- `GET /api/admin/orders?status=<text>` → `[{ id, userId, date: "M/D/YYYY", amount, status }]`.
+- `GET /api/admin/sales/revenue?start=YYYY-MM-DD&end=YYYY-MM-DD&category=<id?>` → `[{ key, label, value }]`, where `key` is a category id, or an item id when `category` is given.
+- `GET /api/admin/sales/order-counts?start&end&category` has the same shape, with `value` as the count.
+
+### Stack choices
+
+- Drizzle ORM aggregate queries (`sum`, `countDistinct`, `groupBy`) over SQLite, and Nitro (H3) routes under `routes/api/admin/`.
+- `recharts` for the pie and bar charts in the React SPA. This dependency is assumed, because the pinned stack names no chart library. `@headlessui/react` `Tab` provides the view tabs.
+- Tests: route integration tests for exact-case status match, M/D/YYYY dates, the category versus item breakdown and denied orders counted in revenue; UI tests for column sorting, the -1 id and the default dates.

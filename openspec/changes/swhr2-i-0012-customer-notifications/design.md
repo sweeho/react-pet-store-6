@@ -73,3 +73,38 @@ No screen records were extracted for this capability; its user interface is unsp
 - Only the completed-order e-mail's content is specified (CNOT-REQ-0003). The approval/denial and shipment e-mail content, locale template selection and price formatting were extracted (CNOT-REQ-0001, CNOT-REQ-0002, CNOT-RULE-0004, CNOT-RULE-0005) but are pending review.
 - Redelivery behaviour for malformed requests depends on server configuration absent from the source.
 - `NOTIFY-BUSINESS-RULE-0001` describes a locator used by other capabilities too (order approval, fulfilment XML-validation switches); only its notification use is specified here.
+
+## Target design
+
+### Components
+
+- **Notification switches** `services/notifications/config.ts` reads three deployment settings: `NOTIFY_APPROVAL_ENABLED`, `NOTIFY_SHIPMENT_ENABLED` and `NOTIFY_COMPLETED_ENABLED`. Each is independent, and each is off unless set to `true` at deployment (SWHR2-R-0014, SWHR2-R-0015). PRD open question 7 records that the legacy documentation conflicts on this default.
+- **Notification producers** are handlers on the outbox worker (order-fulfillment). Each has its own durable channel, kept apart from mail delivery (SWHR2-R-0067):
+  - `notify.approval` is enqueued by the decision step for APPROVED or DENIED orders. The e-mail subject is "Order Status: <orderId>".
+  - `notify.shipment` is a subscriber on the `supplier.invoice` publish/subscribe channel, with one confirmation e-mail per invoice, listing the shipped lines.
+  - `notify.completed` is enqueued when an order becomes COMPLETED. The subject is "Java Pet Store Order COMPLETED: <orderId>", and the body states that the entire order has shipped and lists every line with category, product, quantity and unit price (SWHR2-R-0132).
+
+  Each handler reads its switch. When the switch is off, the trigger message is marked delivered and no mail is sent, so it is consumed and not redelivered (SWHR2-R-0063). When it is on, the handler renders subject and content in the order's locale from `services/notifications/templates/<locale>.ts`, with money formatted through `shared/i18n/format.ts`, and enqueues one e-mail request on `mail.outbound` addressed to the order's e-mail address.
+
+  With all three switches on, a customer gets one approval e-mail, one e-mail per shipment and one completion e-mail (SWHR2-R-0064, SWHR2-R-0066). Order-processing steps only enqueue, so they never wait on mail (SWHR2-R-0062.02, SWHR2-R-0067.01).
+
+- **Mail sender**, the handler for `mail.outbound` (`services/notifications/send.ts`). It accepts a request only when recipient, subject and content are all present, and rejects anything else without sending (SWHR2-R-0130). It parses the recipient leniently as a list of one or more addresses and puts every one in To (SWHR2-R-0016). It sends one e-mail with the content exactly as supplied, with no template, formatting or localisation applied here (SWHR2-R-0131, SWHR2-R-0062). A transport failure throws, so the worker retries the request.
+- **Mail transport** is configured from `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD` and `MAIL_FROM`. `MAIL_FROM` defaults to `customerservice@javapetstoredemo.com` (SWHR2-R-0017, SWHR2-R-0065).
+
+### Data
+
+No new table. The four channels `notify.approval`, `notify.shipment` (the invoice subscriber), `notify.completed` and `mail.outbound` are rows in the `messages` table (order-fulfillment). An e-mail request payload is the ordered triple `[recipient, subject, content]` as JSON text (SWHR2-R-0130). Order e-mail address, locale and lines are read from `op_purchase_orders` and `op_po_line_items` (checkout).
+
+### Interfaces
+
+- No HTTP route and no screen, because the PRD non-goals exclude a notification UI.
+- Inputs: `notify.approval` `{ orderId, status }`, `notify.completed` `{ orderId }`, and the `supplier.invoice` XML.
+- Output: `mail.outbound` `[recipient, subject, content]`, delivered over SMTP.
+- Operator configuration: the three switches and the five mail settings above, read from the environment at start-up.
+
+### Stack choices
+
+- `nodemailer` as the SMTP client. It runs under Bun, and its address parser accepts comma-separated recipient lists. This dependency is assumed, because the pinned stack names no mail library.
+- The persisted outbox and Nitro worker plugin (order-fulfillment) in place of JMS queues (PRD constraints).
+- Locale templates are TypeScript modules rendering HTML strings, and `Intl.NumberFormat` handles money.
+- Tests: unit tests for request validation, recipient parsing and the content passed through unchanged (nodemailer stream transport); handler tests for each switch off consuming without mail, and for the completed-order subject and body in en_US and ja_JP.

@@ -58,3 +58,34 @@ Suspected legacy defects and conflicts. The Business Owner decides each one in t
 - R5. **Back-end failures become a client crash.** The servlet logs back-end exceptions and returns null (reply body "null"). `doHttpPost` swallows exceptions and returns null. The caller then fails and the tool closes with an uninformative "Fatal Error!", losing uncommitted markings.
 - R6. **Unreadable approval batch.** `ChangedOrder.toDOM` writes a null id or status as an empty element, which every reader then rejects.
 - R7. **Pass disagreement on the queue's purpose.** `APPR-INT-0001` reads the queue as carrying orders to the approval step. The admin binding and `PurchaseOrderMDB` show that it carries decisions.
+
+## Target design
+
+### Components
+
+- **Auto-approval rule** `services/orders/approval.ts`. `autoApproves(locale, total)` is true when the locale is en_US and the total is below 500.00 (stored total < 50000), or the locale is ja_JP and the total is below 50000 (stored total < 5000000). Every other order stays PENDING: zh_CN or any other locale, or a total at or above the threshold (SWHR2-R-0021, SWHR2-R-0022). The zh_CN and exact-500 boundaries are open Business Owner decisions (PRD open question 9), so the thresholds sit in this one function.
+- **Receipt step** (SWHR2-R-0085). When order processing receives an `order.new` message, it stores the order (checkout), then starts the workflow record in PENDING (order-fulfillment), and only then evaluates `autoApproves`. When the rule approves, the step applies the same decision as an administrator APPROVED, all inside the one message transaction (order-fulfillment SWHR2-R-0140).
+- **Decision step** `services/orders/decide.ts`, the consumer of the `order.approval` channel. The message is one approval document listing `(orderId, status)` entries, and the status is free text that the document format does not restrict (SWHR2-R-0082). For each entry whose workflow status is PENDING, APPROVED or DENIED becomes the new status. Any other current status, or any other value, leaves the order unchanged (order-fulfillment SWHR2-R-0096). An APPROVED result sends the supplier purchase order (order-fulfillment) and a `notify.approval` message (customer-notifications). A DENIED result sends only `notify.approval`. The whole batch is one transaction and is retried on failure (order-fulfillment SWHR2-R-0140).
+- **Administration tool** `src/pages/admin/tool.tsx`, guarded by admin sign-in. It opens on the Orders view with two tabs (SWHR2-R-0087):
+  - **Pending orders**: PENDING orders with an editable status per row, Approve and Deny controls for the selected rows, Commit and Refresh. Status text is yellow for PENDING, green for APPROVED and red for DENIED (SWHR2-R-0084).
+  - **Non-pending orders**: APPROVED, DENIED and COMPLETED orders, loaded by Refresh. sales-reporting owns the columns and sorting.
+- **Uncommitted marks** live only in page state. Approving or denying a row changes nothing on the server until Commit, which posts every marked row in one request (SWHR2-R-0088). When Refresh is asked for while any row is marked other than PENDING, the tool shows the confirm dialog "Data is not committed. Are you sure you want to refresh?". It reloads and discards the marks only on confirm, and with no marks it reloads without asking (SWHR2-R-0135).
+- **Load on start and refresh** (SWHR2-R-0086). On mount and on every confirmed Refresh, the tool loads orders in PENDING, APPROVED, DENIED and COMPLETED, plus the revenue and order-count chart data for the current date ranges (sales-reporting).
+- **Busy state** (SWHR2-R-0083). While a request is in flight, the approve, deny, commit, chart-submit, refresh, about and exit controls are disabled, and a status line shows "Retrieving data from the server..." for loads or "Updating data on the server..." for commits. They are re-enabled once the reply has been applied. Exit signs the administrator out, and About shows an about dialog.
+
+### Data
+
+No new table. The tool reads the workflow status from `op_order_workflow` and the order fields from `op_purchase_orders` (checkout, order-fulfillment). Uncommitted marks are client state only. A committed batch is one row on the durable `order.approval` channel in the `messages` table (order-fulfillment), and it stays there until order processing consumes it (SWHR2-R-0089).
+
+### Interfaces
+
+- `GET /api/admin/orders?status=PENDING|APPROVED|DENIED|COMPLETED` (admin): the order list, as owned by sales-reporting.
+- `POST /api/admin/orders/decisions` (admin): body `{ decisions: [{ orderId, status }] }`. It renders the approval document and enqueues it as one text message on `order.approval`, then returns 202 without waiting for order processing (SWHR2-R-0136).
+- `order.approval` payload: the approval document as XML text, with one `(OrderId, OrderStatus)` entry per decision and the status written as free text.
+
+### Stack choices
+
+- Vite React SPA page under `src/pages/admin/`, with Tailwind and the shadcn/ui-style primitives. The tabs use `@headlessui/react` `Tab`, already a dependency. Status colours are Tailwind tokens defined in CSS (CSS-first Tailwind).
+- `window.confirm` or a shadcn-style dialog for the refresh warning.
+- Nitro (H3) admin routes behind `requireAdmin`. The approval document is built with `fast-xml-parser` (checkout). Durable delivery uses the outbox table, not a broker (PRD constraints).
+- Tests: unit tests for `autoApproves` at 499.99, 500.00, 49999, 50000 and zh_CN; a decision-step test proving a non-PENDING order is not changed and that a failure rolls back the whole batch; UI tests for colours, the refresh warning and the busy state.

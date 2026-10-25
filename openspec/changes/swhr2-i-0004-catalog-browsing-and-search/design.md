@@ -79,3 +79,60 @@ None of these is specified as required behaviour. Whether each one is a defect i
 - D7. `CloudscapeCatalogDAO` closes its connection only on the success path, so every failed query leaks a connection. `GenericCatalogDAO` swallows close errors and ignores malformed SQL configuration (lines 425-428, 583-586).
 - D8. The product page shows list price while search results show unit price, so the same item appears at two prices depending on how the shopper found it (apps/petstore a suspected defect).
 - D9. Errors in the WAF keyword parser are discarded silently because `util/tracer/Debug.java` is compiled with `debuggingOn = false` (util/b). The parser itself appears unreachable (see Search).
+
+## Target design
+
+### Components
+
+- **Catalog service** `services/catalog/index.ts`. This module is the only reader of the catalog tables. It provides:
+  - `listCategories(locale, start, size)`, sorted by localized name (SWHR2-R-0038).
+  - `listProducts(categoryId, locale, start = 0, size = 2)`, sorted by product name (SWHR2-R-0035, SWHR2-R-0039).
+  - `listItems(productId, locale)`.
+  - `getItem(itemId, locale)`.
+  - `search(text, locale)`.
+
+  Every read joins the item's details and its product's details on the same locale, so an item is returned only where both are localized (SWHR2-R-0127). A failure to reach or query the store throws a `CatalogError`, which the API reports to the caller as a catalog failure (500) rather than an empty or partial list (SWHR2-R-0002.03).
+
+- **Read paths** (SWHR2-R-0002). The `/api/catalog/*` routes are the read path used by the SPA. Server components that need catalog data (cart lines, My List, checkout pricing) call the catalog service in-process. Both paths run the same service functions, so they return the same data. The target has one data-access implementation (Drizzle) and one dialect (SQLite), selected in `db/client.ts` and `drizzle.config.ts`. A configurable choice between several implementations and dialects is not built, because the PRD constraints pin a single datastore.
+- **Search** in `services/catalog/search.ts`:
+  - It splits the text on whitespace (space, tab, line break, form feed) and drops duplicate keywords. If no keyword remains, it returns `[]` without a query (SWHR2-R-0001.05, SWHR2-R-0048).
+  - It returns each item, in the locale, for which any keyword is a case-insensitive substring of the product name, the category id or the item description (SWHR2-R-0001). This uses Drizzle `like` with `%` and `_` escaped, OR-ed across keywords and fields, and each item is returned once.
+- **Page cache** `services/catalog/cache.ts` (SWHR2-R-0036): an in-process TTL map with a 5-minute TTL, shared by all shoppers. It holds the results of the category product list, the product item list and the category side panel, keyed by `(endpoint, locale, id, start, size)`. Item detail and search are never cached.
+- **SPA pages** under `src/pages/petstore/`:
+  - `index.tsx`, the Home screen: a pet selection image map with regions for Birds, Fish, Dogs, Reptiles and Cats, each linking to its category page (SWHR2-R-0041, SWHR2-R-0042). site-shell also renders this component at `/`.
+  - `category/[categoryId].tsx`: product names, two per page, with Previous shown only when an earlier page exists and Next only when a later one exists. The position is kept in the `start` query parameter (SWHR2-R-0039).
+  - `product/[productId].tsx`: the item rows, each with Add to Cart (SWHR2-R-0047).
+  - `item/[itemId].tsx`: image, "List Price", "Your Price" (the unit cost) and Add to Cart (SWHR2-R-0040).
+  - `search.tsx`: the search results, each addable to the cart.
+- **Category side panel** `src/components/storefront/CategoryPanel.tsx`: rendered by the storefront layout on every storefront screen. It lists categories in the current locale by name, each linking to its category page (SWHR2-R-0042).
+- Add to Cart controls call the shopping-cart API (shopping-cart SWHR2-R-0144).
+
+### Data
+
+These tables are in `db/schema/storefront.ts`, and building them produces one new drizzle-kit migration in `drizzle/`. The schema enforces SWHR2-R-0037.
+
+- `catalog_categories`: `category_id` text primary key, not null, with `CHECK(length(category_id) <= 10)` (SWHR2-R-0044, SWHR2-R-0045).
+- `catalog_category_details`: `(category_id, locale)` primary key, with `name`, `description` and `image`. `category_id` references `catalog_categories`.
+- `catalog_products`: `product_id` primary key and `category_id`, not null, referencing `catalog_categories`. A product with an unknown category is rejected (SWHR2-R-0037.01).
+- `catalog_product_details`: `(product_id, locale)` primary key, with `name`, `description` and `image`.
+- `catalog_items`: `item_id` primary key and `product_id`, not null, referencing `catalog_products`.
+- `catalog_item_details`: `(item_id, locale)` primary key, with `description`, `image`, the item attribute text fields, and `list_price` and `unit_cost` as not-null integers (SWHR2-R-0037.02). Money is held in hundredths of the displayed unit in every locale: 16.50 is stored as 1650, and ¥1951 as 195100.
+- Indexes on `catalog_products(category_id)` and `catalog_items(product_id)`.
+- SQLite foreign keys are enabled (`PRAGMA foreign_keys = ON`) in `db/client.ts`, so the references are enforced.
+
+### Interfaces
+
+All routes take an optional `locale` query parameter (localization) and need no authorisation, because catalog reads are open to visitors. Lists are returned as `{ items: [...], start, size, hasPrevious, hasNext }`.
+
+- `GET /api/catalog/categories?start&size` (cached)
+- `GET /api/catalog/categories/[categoryId]/products?start&size`, with defaults start 0 and size 2 (cached)
+- `GET /api/catalog/products/[productId]/items` (cached)
+- `GET /api/catalog/items/[itemId]`, which returns 404 when the item is not visible in the locale (not cached)
+- `GET /api/catalog/search?q=` (not cached)
+
+### Stack choices
+
+- Nitro (H3) file-based routes under `routes/api/catalog/`, and Drizzle ORM over SQLite through `drizzle-orm/bun-sqlite`, the driver this repository already uses (the PRD names better-sqlite3; the repository's `db/client.ts` uses `bun:sqlite`, which the Bun runtime requires). Schema check constraints use Drizzle's sqlite-core `check()`.
+- An in-process `Map` cache, valid because the server runs as a single process (`ecosystem.config.js`, `instances: 1`). No external cache is added.
+- Vite React SPA pages under `src/pages/petstore/`. The pet map is a `<map>`/`<area>` image map in the page component.
+- Tests: `routes/api/catalog/*.test.ts` integration tests against the in-memory database, UI tests for the four pages and the side panel, and a Playwright browse-to-item spec.

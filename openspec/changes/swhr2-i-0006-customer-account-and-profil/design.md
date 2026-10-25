@@ -122,3 +122,62 @@ Legacy notes behind the approved requirements:
 - SWHR2-R-0060: `address/src/ejb-jar.xml:250-258,379-387` declares `Required` on the getters, setters, `getData` and `remove`; the create and find methods have no entry and take the container default.
 - SWHR2-R-0061: `docs/using.html:148-166` ("Creating a New User"); the code flow is ACCT-WF-0001 / ACCT-WF-0006, still pending.
 - Account screen (ACCT-SCR-0009): `customer.jsp:124-141,151-157,213-214`; the card number is printed unmasked (SD1).
+
+## Target design
+
+### Components
+
+- **Customer service** `services/customers/index.ts`:
+  - `registerUser(userId, password)` creates the sign-on user. It fails with `UserExists` when the id is taken (SWHR2-R-0013, SWHR2-R-0055).
+  - `createCustomer(userId, account, profile?)` creates the customer, the account, the contact information, the address, the payment card and the profile in one transaction, so that if any insert fails none of them are kept (SWHR2-R-0057). It refuses a user id that already has a customer (SWHR2-R-0056). The account status is "active" (SWHR2-R-0012). A missing profile uses the defaults: preferred language en_US, no favourite category, MyList on and banner on (SWHR2-R-0011).
+  - `getCustomer(userId)` and `updateCustomer(userId, changes)`.
+  - `listCustomers()` (data-population SWHR2-R-0068).
+- **Address operations** `services/customers/address.ts`: field reads and updates, the whole-address read and address removal. Each takes an optional Drizzle transaction `tx`, runs inside it when given, and opens its own transaction otherwise (SWHR2-R-0060).
+- **Contact snapshot**: `contactSnapshot(contactId)` returns a frozen plain-object copy of the given name, family name, telephone, e-mail and a copy of the address. Changing the snapshot never writes back (SWHR2-R-0059).
+- **Sign-up flow** (SWHR2-R-0009, SWHR2-R-0055, SWHR2-R-0061):
+  1. On the sign-in screen, the new-customer form takes a user name and the password twice. Each password field is checked as not empty before submit. Whether the two match is not checked, which is the specified suspected legacy defect.
+  2. Submit calls `POST /api/account/register`. If the name is taken, the SPA shows `src/pages/petstore/user-creation-error.tsx` ("the user name is in use; choose another") with a route back to sign-in.
+  3. On success the user is signed on and continues to the account form.
+- **Account information page** `src/pages/petstore/account.tsx`, guarded by sign-on. It holds the contact details and address; the card type, offering only Java(TM) Card, Duke Express and Meow Card; the card expiry year, a select over a fixed year list with no free-text entry (SWHR2-R-0010); and the profile preferences (preferred language, favourite category, MyList, banner). Saving a new account calls `POST /api/account`, and saving an existing one calls `PUT /api/account`.
+- **My List panel** `src/components/storefront/MyListPanel.tsx`. While a signed-on customer's MyList preference is on, it lists up to the first 10 products of the favourite category, each linking to its product page. It reads them through the catalog service by name order, with start 0 and size 10. It is not rendered when the preference is off (SWHR2-R-0053).
+- **Pet-tips banner** `src/components/storefront/PetTipsBanner.tsx`. While the banner preference is on, the Home and Cart screens only render the banner for the favourite category (dogs, cats, reptiles, birds or fish), and the dogs banner for any other category (SWHR2-R-0054).
+
+### Data
+
+These tables are in `db/schema/storefront.ts`, and building them produces one new drizzle-kit migration in `drizzle/`.
+
+- `signon_users`: `user_id` text primary key and `password_hash` not null.
+- `customers`: `user_id` primary key, referencing `signon_users`. One customer per user id (SWHR2-R-0128).
+- `customer_accounts`: `user_id` primary key, referencing `customers`.
+  - `status` text not null, with `CHECK(status IN ('active','disabled'))` and default 'active'.
+  - `contact_id` not null, referencing `contact_info`.
+  - The payment card fields `card_number`, `card_type` and `card_expiry_month` / `card_expiry_year`, all not null.
+
+  An account therefore has exactly one contact and one card (SWHR2-R-0058).
+
+- `contact_info`: `id` primary key, `given_name`, `family_name`, `telephone`, `email`, and `address_id` not null, referencing `addresses`. A contact links an existing address rather than copying it (data-population SWHR2-R-0070).
+- `addresses`: `id`, `street1`, `street2`, `city`, `state`, `zip` and `country`.
+- `customer_profiles`: `user_id` primary key, referencing `customers`.
+  - `preferred_language` not null, default 'en_US'.
+  - `favourite_category` nullable.
+  - `my_list_on` and `banner_on`, integer booleans, not null, default 1 (SWHR2-R-0129).
+
+The fixed expiry-year list and the three card types are constants in `shared/account.ts`. They are used by the form and validated by the route.
+
+### Interfaces
+
+| Route                                   | Behaviour                                                                                                                       | Authorisation |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `POST /api/account/register`            | `{ userId, password, passwordRepeat }`. Rejects a blank field with 400. 409 `UserExists` routes the SPA to User Creation Error. | none          |
+| `GET /api/account`                      | Returns the signed-on customer's account and profile.                                                                           | customer      |
+| `POST /api/account`, `PUT /api/account` | Create or update; 400 on invalid card type or year.                                                                             | customer      |
+| `GET /api/account/my-list`              | Returns `[]` when the preference is off.                                                                                        | customer      |
+
+`GET /api/session` (sign-on) carries `preferences: { myList, banner, favouriteCategory }`, so the shell can decide whether to render the panel and the banner.
+
+### Stack choices
+
+- Drizzle ORM over SQLite (`drizzle-orm/bun-sqlite`), with `db.transaction()` for all-or-nothing creation and an optional `tx` parameter to join a caller's transaction.
+- `Bun.password` hashing (sign-on).
+- Nitro (H3) routes under `routes/api/account/`, and SPA pages and components with Tailwind and the shadcn/ui-style primitives.
+- Tests: route integration tests covering duplicate user, failed profile rolling back the account, and profile defaults; UI tests for the account form choices, My List limits and banner placement; a Playwright sign-up spec.

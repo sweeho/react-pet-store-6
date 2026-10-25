@@ -62,3 +62,55 @@ The redirect requirement deliberately specifies one destination per outcome and 
 - **Q2.** Is the three-datastore split a business requirement or only a deployment choice? Nothing in the source says why. The XA datasources suggest distributed transactions across the stores.
 - **Q3.** Must the sample sign-on ids and the "/petstore" path be kept as they are?
 - **Q4.** Is ending the visitor's session on a no-op entry intended? The stated reason is specific to the legacy container.
+
+## Target design
+
+### Components
+
+- **Seed data set** `db/seed/petstore.json`: one UTF-8 file that operators may edit (SWHR2-R-0069). It holds:
+  - **Sign-on users and customers**: `users` (four sign-on users, j2ee, j2ee-ja, shopper and j2ee-zh, each with a password that is hashed on load) and `customers` (a matching customer per user, with account, contact, address and profile).
+  - **Catalog**: `categories` (Fish, Dogs, Reptiles, Cats and Birds), `products` (16) and `items` (28), each item with en_US, ja_JP and zh_CN details and prices (SWHR2-R-0072).
+  - **Supplier inventory**: `inventory`, holding EST-1 to EST-29 at 10000 each (SWHR2-R-0071).
+- **Seed loader** `scripts/seed.ts`, run with `bun run db:seed` at installation. It imports `db/client.ts`, which runs any pending migrations and so creates every structure that is absent (SWHR2-R-0069). In one transaction it then:
+  - deletes and recreates every user and customer whose id matches a seed record, leaving any other id, such as a registered "alice", untouched (SWHR2-R-0073)
+  - upserts categories, products, items and their localized details by id, so a product an operator adds to the file is present after loading (SWHR2-R-0069.02)
+  - upserts inventory by item id, seeding an entry without a quantity at 0 (SWHR2-R-0071.02)
+
+  Contacts are created from the given name, family name, telephone, e-mail and the id of an address already inserted. They link that address rather than copying it (SWHR2-R-0070).
+
+- **Customer listing**: `listCustomers()` in `services/customers` (customer-account) returns every customer, or `[]` when there are none (SWHR2-R-0068). It is used by the loader's verification step and has no HTTP route.
+- **No population route.** Seeding is a CLI step with no HTTP route, so no unauthenticated web request can reset data (PRD constraints; non-goals exclude a population UI).
+- **Application areas** (SWHR2-R-0075). The four legacy areas become areas of the one application:
+  - storefront: SPA `/petstore/**` and `/api/**`, answering at `/petstore`
+  - administration: `/admin/**` and `/api/admin/**`
+  - supplier: `/supplier/**` and `/api/supplier/**`
+  - order processing: the in-process worker (order-fulfillment)
+
+  Migrations run when `db/client.ts` is first imported, before Nitro serves a request, so each area's structures exist before the area is available.
+
+### Data
+
+- **One SQLite file, three table groups** (SWHR2-R-0074). The PRD context says the legacy three databases are not reproduced and assumes one SQLite database (PRD open question 5). This design keeps the three areas apart inside that file:
+  - `db/schema/storefront.ts`: catalog, sign-on users, customers, id sequences
+  - `db/schema/supplier.ts`: `sup_*`
+  - `db/schema/order-processing.ts`: `op_*`
+  - `db/schema/messaging.ts`: the shared outbox
+
+  `db/schema/index.ts` re-exports them and replaces `db/schema.ts`, and `drizzle.config.ts` points at the directory. No foreign key crosses a group, so splitting the groups into separate files later needs no change to the schema. A fresh installation creates every group empty, and an existing database keeps its tables and gains only the missing ones, because drizzle migrations apply only what has not yet run (SWHR2-R-0074.02).
+
+- **Migrations**: each capability's tables produce their own drizzle-kit migration in `drizzle/`. Data population adds no table.
+- **Seed file schema**: a TypeScript type `db/seed/types.ts`, validated on load. A malformed file aborts the load with nothing written.
+
+### Interfaces
+
+- `bun run db:seed` is a new `package.json` script running `bun scripts/seed.ts`. It exits non-zero and leaves the database unchanged on any failure.
+- No HTTP route and no screen (PRD non-goals).
+- The storefront at `/petstore` is a `vite-plugin-pages` directory (`src/pages/petstore/`). The root `/` is the landing page (site-shell).
+
+### Stack choices
+
+- Drizzle ORM over SQLite (`drizzle-orm/bun-sqlite`) with drizzle-kit migrations in `drizzle/`, pinned by the PRD constraints and this repository's `db/client.ts`. Upserts use Drizzle `onConflictDoUpdate`.
+- `Bun.password` to hash the seed passwords on load (PRD constraints: passwords stored hashed).
+- A JSON seed file, which keeps the data set UTF-8 and editable without code changes.
+- The Bun runtime for the script, which `bun:sqlite` requires.
+- Tests: a loader test against the in-memory database asserting 4 users and 4 customers, 5 categories, 16 products, 28 items × 3 locales and 29 inventory rows at 10000; a test that re-seeding restores "j2ee" and keeps "alice"; tests for the missing-quantity entry and the added product.

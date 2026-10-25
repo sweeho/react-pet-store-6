@@ -128,3 +128,67 @@ Legacy rules not yet approved, and so absent from `spec.md` even though the impl
 
 - **F1: Colliding record keys.** 93 records under `order-fulfillment` use 67 distinct keys; e.g. `OFUL-BR-0001` names three different rules (supplier/a, supplier/b, lineitem/b), `FUL-ENT-0001` names a workflow record (processmanager/b) and a document (xmldocuments/a). The server reported 53 ingested records, so some records were likely overwritten at ingest. The recommendations file qualifies each key with its pass file.
 - **F2: Redacted configuration.** XML validation env-entry values and the supplier transition delegate class name are redacted in this tree, so validation mode in production cannot be established.
+
+## Target design
+
+### Components
+
+- **Message channels** `services/messaging/` replace the legacy broker with a persisted outbox in the same SQLite database (PRD constraints).
+  - `enqueue(tx, channel, payload)` inserts into `messages` inside the caller's transaction, so a step's outbound messages commit or roll back with its state changes (SWHR2-R-0140).
+  - A channel is point-to-point, with one row consumed by one handler, or publish/subscribe. For a publish/subscribe channel, `enqueue` writes one row per registered subscriber (SWHR2-R-0109).
+  - The channels are `order.new`, `order.approval`, `supplier.purchase-order` and `supplier.inventory-changed`, which are point-to-point, and `supplier.invoice`, which is publish/subscribe. The invoice subscribers are `order-processing.invoice` and `notify.shipment` (customer-notifications).
+  - Channels are registered in code, so they exist as soon as the migrations have run (SWHR2-R-0109.01). The module has no HTTP route (sign-on SWHR2-R-0121).
+- **Worker** `plugins/message-worker.ts`, a Nitro plugin that starts with the server. For each channel and subscriber, it polls `messages` for rows that are due and runs each one in a single transaction: run the handler, then mark the row delivered. If the handler throws, the transaction rolls back, `attempts` is incremented and `available_at` is pushed back with backoff, so the message is retried (SWHR2-R-0140, SWHR2-R-0095). Rows survive a restart because they are in SQLite (SWHR2-R-0109.03).
+- **Stage transitions** `services/orders/transitions.ts` (SWHR2-R-0106). A configuration map (`ORDER_TRANSITIONS`, defaulting to the outbox transitions) names, per step, the transition that receives the step's outbound message, its batch of messages, or both, and hands them to the next channel. Requesting a name that is not registered or cannot be constructed throws `TransitionError` with the underlying `cause`.
+- **Order processing**:
+  - **Receipt** (checkout) starts the workflow record with the caller-supplied initial status, PENDING. A second start for the same order id fails and leaves the record unchanged (SWHR2-R-0107).
+  - **Approval** (order-approval) moves PENDING to APPROVED or DENIED only. An APPROVED order is turned into a `TPA-SupplierOrder` document and enqueued on `supplier.purchase-order`. A PENDING or DENIED order is never sent (SWHR2-R-0100.02).
+  - **Invoice handling** (`order-processing.invoice` subscriber) accepts only an `Invoice` root, rejecting any other document such as a supplier order (SWHR2-R-0092). It adds each `(itemId, quantityShipped)` to the order's line items. The workflow becomes SHIPPED_PART while lines remain unshipped and COMPLETED when every line is fully shipped (SWHR2-R-0024, SWHR2-R-0096). At COMPLETED it enqueues `notify.completed` (customer-notifications).
+  - `getOrderStatus(orderId)` returns the status, or fails with `NotFound` (SWHR2-R-0108).
+  - The statuses run PENDING → APPROVED → SHIPPED_PART → COMPLETED, or PENDING → DENIED, with DENIED and COMPLETED as end states (SWHR2-R-0024).
+- **Supplier**:
+  - **Purchase order step**, the consumer of `supplier.purchase-order` (SWHR2-R-0097). It validates the document, then translates `TPA-SupplierOrder` into the internal supplier order (shipping address and lines) with the stylesheet `services/supplier/tpa-supplier-order.xsl`. In one transaction it creates the supplier order in PENDING with its contact and lines, each line copied from the incoming document with `quantity_shipped = 0` (SWHR2-R-0102, SWHR2-R-0103, SWHR2-R-0105). It then fulfils.
+  - **Fulfil** ships every unshipped line whose item's stock covers the line quantity, decrements `sup_inventory`, and publishes one invoice for that shipment on `supplier.invoice`. The supplier order becomes COMPLETED when all its lines are shipped. Receipt, recording, fulfilment and invoice publication form one unit, so a failed publish records nothing, consumes no stock and redelivers the message (SWHR2-R-0095).
+  - **Re-fulfilment**, the consumer of `supplier.inventory-changed` (SWHR2-R-0099), runs fulfil for every PENDING supplier order. The invoices it publishes are how order processing is notified and re-examines the waiting orders. An order still short of stock stays not completed.
+  - `listSupplierOrders(status)` returns each matching order once (SWHR2-R-0141).
+- **Documents** `services/documents/`:
+  - The supplier order document carries, in order, the order id, the order date, the shipping address (first name, last name, street, city, state, country, zip, e-mail, phone) and one or more line items (SWHR2-R-0138).
+  - The invoice carries the order id, the user id, the shipping date and the shipped lines.
+  - The builders refuse to produce a document with a missing order id, user id or date. A missing address field is written as empty (SWHR2-R-0094).
+  - Dates are written as `YYYY-MM-DD` (SWHR2-R-0137).
+  - Documents are UTF-8. The format is identified by DTD public identifier by default, or by namespace when `DOC_FORMAT_MODE=xsd` (SWHR2-R-0139).
+  - Format definitions resolve from the deployment catalog (`DOC_CATALOG_PATH`) first, then the built-in catalog `services/documents/catalog.xml`, and only then the network location (SWHR2-R-0139).
+  - Validation rejects a supplier order with no line items (SWHR2-R-0138.02).
+- **Published format catalog**: `routes/schemas/catalog.xml.get.ts` serves a catalog that maps the supplier order, invoice and line item type identifiers to absolute schema URLs built from the server's own address. The DTD and XSD files are served from `public/schemas/` (SWHR2-R-0093). This route needs no authorisation, because it publishes formats only.
+
+### Data
+
+These tables are in `db/schema/order-processing.ts`, `db/schema/supplier.ts` and `db/schema/messaging.ts`, and building them produces one new drizzle-kit migration in `drizzle/`.
+
+- `op_order_workflow`: `order_id` text primary key (one record per order, SWHR2-R-0142) and `status` text not null, with `CHECK` over PENDING, APPROVED, DENIED, SHIPPED_PART and COMPLETED.
+- The order line items are `op_po_line_items` (checkout), holding category, product, item, line number, quantity, unit price and `quantity_shipped` starting at 0 (SWHR2-R-0090). Deleting an `op_purchase_orders` row cascades to its contact, card and line items (SWHR2-R-0091).
+- `sup_orders`: `order_id` text primary key, so a duplicate is rejected (SWHR2-R-0101).
+  - `status` with `CHECK` over PENDING, APPROVED, DENIED and COMPLETED, default PENDING (SWHR2-R-0023, SWHR2-R-0102).
+  - `order_date` and `user_id`.
+- `sup_order_contacts`: `order_id` primary key, referencing `sup_orders` with `ON DELETE CASCADE`, holding the name and address fields, e-mail and phone. `sup_order_lines`: `(order_id, line_number)` primary key, cascade (SWHR2-R-0104).
+- `messages`: `id`, `channel`, `subscriber` (nullable), `payload` text, `status` (pending or delivered), `attempts`, `available_at` and `created_at`, indexed on `(channel, subscriber, status, available_at)`.
+
+### Interfaces
+
+- No HTTP route except `GET /schemas/catalog.xml` and the static schema files. Every hand-off is in-process through `enqueue` and the worker.
+- `order.new`: `PurchaseOrder` XML.
+- `order.approval`: the approval document XML.
+- `supplier.purchase-order`: `TPA-SupplierOrder` XML.
+- `supplier.invoice`: `Invoice` XML.
+- `supplier.inventory-changed`: JSON `{ itemIds }`.
+
+### Stack choices
+
+- A Nitro plugin (`plugins/`) for the in-process worker, and Drizzle ORM over SQLite for the outbox. Both follow the PRD assumption that durable, retried delivery is met by a persisted table inside the monolith instead of JMS. A single server process (`ecosystem.config.js`, `instances: 1`) means one worker.
+- `fast-xml-parser` for building and parsing documents (checkout).
+- `xslt-processor`, a pure JavaScript XSLT 1.0 engine, to run the TPA-to-supplier-order stylesheet.
+- `xmllint-wasm`, libxml2 compiled to WebAssembly, for DTD and XSD validation with a local catalog resolver. No native module is needed under Bun.
+
+  These three XML dependencies are assumed, because the pinned stack names none.
+
+- Tests: unit tests for the document builders (mandatory fields, empty address fields, date format, DTD and XSD modes, catalog precedence); worker tests proving rollback and retry on a failed publish, and pub/sub delivery to both invoice subscribers; an end-to-end service test of a two-shipment order reaching COMPLETED after a restock.

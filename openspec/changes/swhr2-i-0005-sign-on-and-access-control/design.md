@@ -86,3 +86,55 @@ Three approved record keys are carried by more than one `sign-on` record in diff
 - **SIGN-REQ-0003** (`SWHR2-R-0031`): written from `src/apps/admin/b.yaml` (administration sign-in screen). Other records with this key: `src/apps/petstore/a.yaml` (storefront sign-in error message), `src/apps/supplier/a.yaml` (54-minute supplier idle expiry).
 - **SIGN-BR-0006** (`SWHR2-R-0120`): written from `src/apps/petstore/a.yaml` (15-minute storefront idle expiry). Other record: `src/apps/admin/b.yaml` (administration data service session check, D3).
 - **SIGN-REQ-0005** (`SWHR2-R-0148`): written from `src/apps/petstore/a.yaml` (storefront sign-out). Other record: `src/apps/admin/a.yaml` (administration logout).
+
+## Target design
+
+### Components
+
+- **Session store** `services/session/store.ts`: server-owned, in-memory sessions keyed by an opaque random id. Each session holds `area`, `locale`, `userId` (when signed on), `cart` (shopping-cart) and `lastSeen`. Session data is never written to SQLite, which keeps the cart session-only (shopping-cart SWHR2-R-0118).
+- **Session middleware** `middleware/10.session.ts` runs after the UTF-8 middleware (localization SWHR2-R-0080). It reads the area cookie that matches the request path:
+  - `ps_sid` for `/api/**` storefront routes
+  - `admin_sid` for `/api/admin/**`
+  - `supplier_sid` for `/api/supplier/**`
+
+  It drops the session when the idle limit has passed, starts a fresh one when needed, attaches it as `event.context.session` and touches `lastSeen`. The idle limits are 15 minutes for storefront sessions, which discards the cart and sign-on state (SWHR2-R-0120), and 54 minutes for administration sessions (SWHR2-R-0032). No idle limit is specified for the supplier area, so supplier sessions end at sign-out or server restart until one is decided.
+
+- **Credential check** `services/session/auth.ts`. `verifyCustomer(userId, password)` compares against the hashed password in `signon_users` (customer-account). `verifyAdmin` and `verifySupplier` compare against operator-configured credentials. Passwords are stored and compared hashed (PRD constraints).
+- **Guards** `services/session/guards.ts`. `requireCustomer(event)` returns 401 with failure kind `SignOnRequired`, and the SPA answers that by sending the visitor to the sign-in screen and then back to where they were. It guards account editing, the sign-in landing page, placing and committing an order, and entering or validating billing and shipping information (SWHR2-R-0028). `requireAdmin(event)` and `requireSupplier(event)` guard every route under `/api/admin/**` and `/api/supplier/**`. Every administration and supplier route makes this explicit authorisation decision (PRD constraints). There is no data-population route (data-population).
+- **Area separation** (SWHR2-R-0029, SWHR2-R-0030). Administration and supplier sessions use separate cookies and separate credentials. `POST /api/supplier/sign-in` is refused with failure kind `AdminSignedIn` while the request carries a live `admin_sid` session, and the supplier sign-in screen tells the user to sign out of administration first.
+- **In-process hand-off** (SWHR2-R-0121, SWHR2-R-0124). The message enqueue function (order-fulfillment) and the order-line data functions (checkout, order-fulfillment) are server modules with no HTTP route. Only in-process callers can reach them, they apply no role check of their own, and they run under the identity their caller passes in. Access control sits on the API route that calls them.
+- **SPA screens**:
+  - `src/pages/petstore/signin.tsx`: the returning-customer form with Remember My User Name, and the new-customer form, which customer-account owns.
+  - `src/pages/petstore/signed-out.tsx`: "You are signed out" with a link to sign in again (SWHR2-R-0148).
+  - `src/pages/admin/index.tsx`: shows the administration sign-in screen (User ID, Password, submit) when not signed in. On rejection it shows "Login Error", "You could not be authenticated with the information provided. Please check your Username and Password." and a link back to sign-in (SWHR2-R-0031). When signed in, it shows the landing page describing the sales, revenue, order-status and approve/deny facilities, with "launch the administration tool" (link to `/admin/tool`) and "log out" (SWHR2-R-0123).
+  - `src/pages/supplier/index.tsx`: supplier sign-in with a login error on failure, then the supplier home.
+- **Storefront page header** `src/components/storefront/StorefrontHeader.tsx` (SWHR2-R-0122): main-page link, keyword search box, Account, Cart, and "Sign in" or "Sign out" depending on `GET /api/session`, plus the localization flags.
+- **Remembered user name** (SWHR2-R-0119). On a storefront sign-on with the option ticked, the response sets the cookie `remembered_username` with `Max-Age=2678400`. Without the option, it expires the cookie. The sign-in screen pre-fills the field from `GET /api/session`.
+- **Framework sample application** (SWHR2-R-0027). The PRD defines no framework sample application in the target, so no component carries its 30-minute expiry. The requirement needs a Business Owner disposition.
+
+### Data
+
+- **In memory, not persisted**: the session records described above.
+- **Persisted credentials**: the hashed customer password in `signon_users` (customer-account, `db/schema/storefront.ts`).
+- **Administration and supplier credentials**: operator-supplied environment configuration (`ADMIN_USERS` and `SUPPLIER_USERS`, each a list of `userId:passwordHash`). The spec seeds only the four storefront users (data-population SWHR2-R-0072), so the administration and supplier credentials stay out of the seed data.
+- Sign-on adds no new table.
+
+### Interfaces
+
+| Route                                                       | Body / response                                                    | Authorisation    |
+| ----------------------------------------------------------- | ------------------------------------------------------------------ | ---------------- |
+| `GET /api/session`                                          | `{ locale, signedOn, userId?, rememberedUserName?, preferences? }` | none             |
+| `POST /api/session/sign-in`                                 | `{ userId, password, remember }` → 200 or 401                      | none             |
+| `POST /api/session/sign-out`                                | ends the session, starts a new one carrying the old locale         | none             |
+| `POST /api/admin/sign-in`, `POST /api/admin/sign-out`       | `{ userId, password }` → 200 or 401                                | none for sign-in |
+| `GET /api/admin/session`                                    | 200 when signed in, 401 otherwise                                  | admin            |
+| `POST /api/supplier/sign-in`, `POST /api/supplier/sign-out` | `{ userId, password }` → 200, 401 or 409 `AdminSignedIn`           | none for sign-in |
+
+The session cookies are `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` when served over HTTPS.
+
+### Stack choices
+
+- Nitro (H3) middleware and file-based routes, pinned by the PRD constraints. H3's cookie helpers are used, but not `useSession`, because its sealed-cookie sessions keep state in the browser and the PRD requires server-owned sessions.
+- An in-process `Map` session store, valid for the single-process deployment (`ecosystem.config.js`, `instances: 1`). Sessions do not survive a restart, which the session-only cart allows.
+- `Bun.password` (argon2id), built into the Bun runtime, for password hashing. No auth library is added.
+- Tests: route integration tests for the sign-in and sign-out routes, the guards, the idle expiry (with a fake clock) and the admin-before-supplier refusal; UI tests for the sign-in, signed-out and admin screens.

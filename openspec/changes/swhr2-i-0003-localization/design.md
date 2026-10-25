@@ -97,3 +97,41 @@ Record keys repeat across pass files with different content. Each approved key i
 | Cart lines follow the cart locale                       | SWHR2-R-0081 | SC-BR-0006 (cart/a)                                         |
 
 Legacy behaviour described in the sections above but not in `spec.md` (change-locale error message, return to originating page, separately stated per-locale prices, UTF-8 page rendering and documents, configurable request encoding, order and invoice locale defaults, e-mail price formats, admin text catalogue) comes from records that are not approved, or from same-key records whose other text was not the one written, and is Not specified until an SME approves it.
+
+## Target design
+
+### Components
+
+- **Locale codes** `shared/i18n/locale.ts`. `parseLocale(code)` reads `language_COUNTRY` as that language and country. It resolves `default` in any letter case to the server default locale (`DEFAULT_LOCALE`, en_US unless configured) and returns no locale for a code without an underscore (SWHR2-R-0077). `SUPPORTED_LOCALES = ["en_US", "ja_JP", "zh_CN"]` and `DEFAULT = "en_US"` (SWHR2-R-0078). `shared/` is included by both `tsconfig.json` (SPA) and `tsconfig.node.json` (server), so both sides use one implementation.
+- **Formatting** `shared/i18n/format.ts`. `formatMoney(amountMinor, locale, precision)` and `formatNumber(value, locale, precision)` use `Intl.NumberFormat` with `minimumFractionDigits = maximumFractionDigits = precision`, giving `$1,234.50` for en_US at 2 places and `1,951` for ja_JP at 0 places (SWHR2-R-0018, SWHR2-R-0019). The currency per locale is USD for en_US, JPY for ja_JP and CNY for zh_CN.
+- **Keyword splitting** `shared/i18n/words.ts`. `splitWords(phrase, locale)` uses `Intl.Segmenter(locale, { granularity: "word" })`, keeps word-like segments and drops blank ones (SWHR2-R-0019). Catalog search uses its own whitespace tokenizer, which SWHR2-R-0001 and SWHR2-R-0048 specify; this utility is the locale-aware splitter that SWHR2-R-0019 requires.
+- **Screen definitions** `src/locales/<locale>/<screen>.ts`. Each storefront screen has one text-and-layout definition per supported locale (SWHR2-R-0078.01). A registry `src/locales/registry.ts` maps `(screen, locale)` to a definition.
+- **Screen locale resolver** `src/locales/resolveScreen.ts` (SWHR2-R-0133):
+  1. The chosen locale is the `locale` query parameter on the request if present and valid, otherwise the session locale.
+  2. If no definitions exist for that locale, en_US definitions are used.
+  3. If the screen is missing in that locale, the en_US definition of the screen is used.
+  4. If neither has it, the resolver renders the shared `ErrorFrame` with "Definition for screen <name> not found".
+- **Header language switch** `src/components/storefront/LanguageFlags.tsx`: three flag controls (English, Japanese, Chinese) in the storefront header (SWHR2-R-0078.03). Activating one posts the new locale and re-renders the current page in it.
+- **Change-language screen** `src/pages/petstore/change-language.tsx` (SWHR2-R-0020): one selector offering US English (en_US), German (de_DE), Japanese (ja_JP) and Simplified Chinese (zh_CN), and a "Change Locale" submit. After a successful change it shows a confirmation stating the new session locale. German has no screen definitions, so a de_DE session renders en_US screens (SWHR2-R-0133.02). It also has no catalog details, so a de_DE session shows an empty catalog (catalog-browsing SWHR2-R-0127). This is PRD open question 4.
+- **UTF-8 request middleware** `middleware/00.encoding.ts`. Nitro runs middleware in file-name order, so this file runs before the session and sign-on middleware. It decodes every request body and query string as UTF-8 before any handler, sign-on included, reads a value (SWHR2-R-0080, SWHR2-R-0134). It also sets `charset=utf-8` on every text response.
+- **Server locale helper** `services/locale.ts`. `requestLocale(event)` returns the request `locale` parameter if valid, otherwise the session locale. Catalog, cart and checkout routes call it to choose which localized rows to read (SWHR2-R-0079, SWHR2-R-0081).
+
+### Data
+
+- **Session locale**: a field on the server-owned session (sign-on), defaulting to en_US. It is not persisted to SQLite. Sign-out keeps the locale for the new session (sign-on SWHR2-R-0148).
+- **Cart locale**: the cart reads the session locale, so a locale change applies to the session and the cart together (SWHR2-R-0076). A cart in a session with no locale set reads en_US (SWHR2-R-0081).
+- **Per-locale catalog details** live in the catalog detail tables owned by catalog-browsing (`db/schema/storefront.ts`), keyed by `(id, locale)`. Localization adds no table.
+- SQLite stores text as UTF-8, so Japanese and Chinese values round-trip unchanged (SWHR2-R-0134.01).
+
+### Interfaces
+
+- `POST /api/session/locale` with body `{ locale: string }` (`routes/api/session/locale.post.ts`). It validates the code with `parseLocale` and sets the session locale. The response `{ locale }` drives the change-language confirmation. An invalid code returns 400. This route needs no authorisation, because any visitor may change language.
+- Every storefront `GET` API route accepts an optional `locale` query parameter that overrides the session locale for that request only (SWHR2-R-0133.01).
+- `GET /api/session` (sign-on) returns the current `locale`.
+
+### Stack choices
+
+- `Intl.NumberFormat` and `Intl.Segmenter`, built into the Bun runtime and the browser, for formatting and word splitting. No i18n library is added.
+- Per-locale screen definitions as TypeScript modules in the SPA source rather than a translation-file format, so that the fallback rules in SWHR2-R-0133 are plain code.
+- Nitro (H3) middleware for request decoding, as pinned by the PRD constraints. A new top-level `shared/` directory is added to both tsconfig `include` lists.
+- Tests: unit tests for `parseLocale`, the formatters, `splitWords` and `resolveScreen`; a route integration test for `POST /api/session/locale`; a Playwright spec switching the header flag with an item in the cart.
