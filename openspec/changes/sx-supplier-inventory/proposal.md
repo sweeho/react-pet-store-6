@@ -4,12 +4,11 @@ The legacy Java Pet Store 1.3.2 ships a supplier web application in which an adm
 
 ## What Changes
 
-- Adds the `supplier-inventory` capability with 10 draft requirements extracted from 9 distinct IR record keys (5 code-read records and 4 screen records, 2 of the screen records coming from the user guide):
+- Adds the `supplier-inventory` capability with 3 requirements, one per SME-approved record (SINV-ENT-0001, SUPPLIER-INVENTORY-SCR-0001, SUPPLIER-INVENTORY-SCREEN-0001):
   - one stock record per item with a mandatory whole-number quantity;
-  - inventory update overwrites (never adds to) the quantity of marked rows; blank, negative and unmarked entries are ignored;
-  - stock is reduced by the full line quantity when a line ships, and not at all when stock is short;
-  - an inventory update re-attempts every pending supplier order and sends invoices in one unit of work, then confirms;
-  - the supplier home screen, and the inventory screen split into display, batch submission and update marking.
+  - the supplier inventory screen's listing and update marking;
+  - the supplier inventory screen's single batch submission.
+- The other 6 records of the capability (SINV-BR-0001/0002/0003, SINV-WF-0001, SINV-SCR-0001, SINV-SCR-0002) are not yet approved and are Not specified here: overwrite semantics, stock draw-down on shipment, the restock unit of work, the supplier home screen, role gating and the confirmation screen. They await SME review in `legacy-analysis/ir/_recommendations/supplier-inventory.yaml`.
 - Carries the legacy defects and the pass A / pass B record-key collision to the SME. They are listed in `design.md` and in `legacy-analysis/ir/_recommendations/supplier-inventory.yaml`.
 
 ## Capabilities
