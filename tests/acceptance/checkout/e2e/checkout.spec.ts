@@ -54,6 +54,8 @@ test.describe("checkout form", () => {
 
 test.describe("server error page", () => {
   // case: SWHR2-C-0212@v1
+  // Page half of the case: the failure is faked here, and the server producing it is covered by
+  // the placement test in orders.test.ts.
   test("SWHR2-C-0212: the Server Error page shows the message and trace and asks the shopper to notify the administrator", async ({
     page,
   }) => {

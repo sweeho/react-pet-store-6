@@ -122,8 +122,8 @@ test.describe("order approval tool", () => {
     await markRow(page, "1001", /approve/i);
     await markRow(page, "1002", /approve/i);
     await markRow(page, "1003", /deny/i);
-    expect(reqs.filter((r) => r.method() === "POST")).toHaveLength(0);
-    expect(Object.values(stored)).toEqual(["PENDING", "PENDING", "PENDING"]);
+    // nothing that could change a stored status was sent: no write request of any kind
+    expect(reqs.filter((r) => !["GET", "HEAD", "OPTIONS"].includes(r.method()))).toHaveLength(0);
   });
 
   // case: SWHR2-C-0247@v1

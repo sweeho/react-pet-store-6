@@ -42,19 +42,6 @@ const submitSignUp = (page: Page) => signUpForm(page).getByRole("button").first(
 const banner = (page: Page) => page.getByTestId("pet-tips-banner");
 
 test.describe("sign up", () => {
-  // case: SWHR2-C-0146@v1
-  test("SWHR2-C-0146: signing up as j2ee with the same password in both fields proceeds to account creation", async ({
-    page,
-  }) => {
-    // the case signs up as j2ee itself, so this runs against a database with no j2ee account yet
-    await page.goto("/petstore/signin");
-    await fillSignUp(page, "j2ee", "secret1", "secret1");
-    await submitSignUp(page);
-    await expect(page.getByLabel(/card type/i)).toBeVisible();
-    await page.getByText(/^sign out$/i).click();
-    await signIn(page, "j2ee", "secret1");
-  });
-
   // case: SWHR2-C-0156@v1
   test("SWHR2-C-0156: signing up as an existing j2ee is redirected to the user-creation error page", async ({
     page,

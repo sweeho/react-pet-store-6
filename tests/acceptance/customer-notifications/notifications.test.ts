@@ -104,6 +104,8 @@ describe("notification switches", () => {
     const s = subjects(a.outbox);
     expect(s[0]).toBe("Order Status: 1008");
     expect(s.at(-1)).toBe("Java Pet Store Order COMPLETED: 1008");
+    expect(s.filter((x) => x === "Order Status: 1008")).toHaveLength(1);
+    expect(s.filter((x) => x === "Java Pet Store Order COMPLETED: 1008")).toHaveLength(1);
     expect(s.length).toBeGreaterThanOrEqual(3);
   });
 });

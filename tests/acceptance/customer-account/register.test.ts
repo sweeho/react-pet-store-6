@@ -41,6 +41,15 @@ describe("registration", () => {
     expect(count(app.client, "signon_users", "user_id = 'newuser'")).toBe(1);
   });
 
+  // case: SWHR2-C-0146@v1
+  it("SWHR2-C-0146: signing up as j2ee with the same password in both fields proceeds to account creation", async () => {
+    const app = await loadApp();
+    const r = await register(app, "j2ee", "secret1", "secret1");
+    expect(r.status).toBeLessThan(300);
+    expect(JSON.stringify(r.body)).not.toContain("UserExists");
+    expect(count(app.client, "signon_users", "user_id = 'j2ee'")).toBe(1);
+  });
+
   // case: SWHR2-C-0156@v1
   it("SWHR2-C-0156: a new-user submission for existing j2ee creates nothing and is refused with UserExists", async () => {
     const { client, ...app } = await customers();

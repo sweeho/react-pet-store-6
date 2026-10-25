@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { account, count, customers, failInsertsInto, profileOf } from "./harness";
 
@@ -215,10 +215,12 @@ describe("contact snapshot and address operations", () => {
 
   // case: SWHR2-C-0173@v1
   it("SWHR2-C-0173: updating an address outside any transaction runs in its own transaction and is saved", async () => {
-    const { create, client } = await customers();
+    const { create, db, client } = await customers();
     await create("j2ee");
     const addr = await import("../../../services/customers/address");
+    const transaction = vi.spyOn(db, "transaction");
     await addr.updateAddressField(addressId(client), "city", "San Jose");
+    expect(transaction).toHaveBeenCalledTimes(1);
     expect(city(client)).toBe("San Jose");
   });
 });
