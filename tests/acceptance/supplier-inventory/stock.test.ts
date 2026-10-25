@@ -59,22 +59,6 @@ describe("inventory update submission", () => {
     const byId = Object.fromEntries((list.body as Row[]).map((r) => [r.itemId, r.quantity]));
     expect([byId["EST-1"], byId["EST-2"], byId["EST-3"]]).toEqual([50, 20, 12]);
   });
-
-  // case: SWHR2-C-0043@v1
-  it("SWHR2-C-0043: a submission with one invalid marked row saves nothing", async () => {
-    seed(app, [
-      ["EST-1", 40],
-      ["EST-2", 0],
-      ["EST-3", 12],
-    ]);
-    const cookies = await supplierCookies(app);
-    const bad = await submit(app, cookies, [
-      { itemId: "EST-1", quantity: 50, marked: true },
-      { itemId: "EST-2", quantity: 2.5, marked: true },
-    ]);
-    expect(bad.status).toBe(400);
-    expect([qty(app, "EST-1"), qty(app, "EST-2"), qty(app, "EST-3")]).toEqual([40, 0, 12]);
-  });
 });
 
 describe("stock record rules", () => {

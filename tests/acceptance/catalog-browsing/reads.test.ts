@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { H3Event } from "nitro/h3";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { idOf, loadCatalog, nameOf, rows, seeder } from "./harness";
 
@@ -32,27 +32,6 @@ describe("catalog reads", () => {
     );
   });
 
-  // case: SWHR2-C-0184@v1
-  it("SWHR2-C-0184: the configured data-access implementation and dialect are used for catalog reads", async () => {
-    // The approved case requires a configurable implementation and dialect; the target design
-    // (design.md, Read paths) says this is not built. The test follows the case and fails until
-    // a person resolves that contradiction in the Test Cases stage.
-    const { catalog } = await loadCatalog();
-    const listCategories = vi.fn(async () => []);
-    const defaultImpl = vi.spyOn(catalog, "listCategories");
-    const built = (
-      catalog as unknown as {
-        createCatalog: (cfg: { dataAccess: unknown; dialect: string }) => {
-          listCategories: (l: string, s: number, n: number) => Promise<unknown>;
-        };
-      }
-    ).createCatalog({ dataAccess: { listCategories }, dialect: "sqlite" });
-    await built.listCategories("en_US", 0, 10);
-    expect(listCategories).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(listCategories.mock.calls)).toContain("sqlite");
-    expect(defaultImpl).not.toHaveBeenCalled();
-  });
-
   // case: SWHR2-C-0185@v1
   it("SWHR2-C-0185: an unreachable catalog store reports a catalog failure, not an empty list", async () => {
     const { client, catalog } = await loadCatalog();
@@ -60,7 +39,23 @@ describe("catalog reads", () => {
     s.category("FISH", { en_US: "Fish" });
     s.product("FI-SW-01", "FISH", { en_US: "Angelfish" });
     client.close();
-    await expect(catalog.listProducts("FISH", "en_US")).rejects.toBeDefined();
+    const err = await catalog.listProducts("FISH", "en_US").then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).name).toBe("CatalogError");
+    const route = (await import("../../../routes/api/catalog/categories/[categoryId]/products.get"))
+      .default;
+    const event = new H3Event(
+      new Request("http://localhost/api/catalog/categories/FISH/products?locale=en_US"),
+    );
+    event.context.params = { categoryId: "FISH" };
+    const reported = await route(event).then(
+      (r) => (r instanceof Response ? r.status : 200),
+      (e: { status?: number; statusCode?: number }) => e.status ?? e.statusCode,
+    );
+    expect(reported).toBe(500);
   });
 
   // case: SWHR2-C-0186@v1

@@ -125,16 +125,23 @@ describe("decision channel", () => {
     await deliver({ orderId: "1001", locale: "en_US", total: 600 });
     const cookies = await adminCookies(app);
     await commit(app, cookies, ["1001"]);
-    // The consumer is not running, so the row must still be waiting. The row lives in SQLite, not in
-    // process memory, which is what lets it survive a restart of the messaging system.
+    // The consumer is not running, so the row must still be waiting.
     const waiting = messagesOn(app.client, "order.approval");
     expect(waiting).toHaveLength(1);
     expect(waiting[0].status).toBe("pending");
     expect(statusOf(app.client, "1001")).toBe("PENDING");
-    // resume the consumer: the decision step receives the stored payload
+    // restart: drop every loaded module (all in-process state) but keep the same database
+    const { db } = await import("../../../db/client");
+    vi.resetModules();
+    vi.doMock("../../../db/client", () => ({ db }));
+    const stillWaiting = messagesOn(app.client, "order.approval");
+    expect(stillWaiting).toHaveLength(1);
+    expect(stillWaiting[0].payload).toBe(waiting[0].payload);
+    // the restarted consumer receives the stored payload
     const { decideBatch } = await import("../../../services/orders/decide");
-    await decideBatch(waiting[0].payload);
+    await decideBatch(stillWaiting[0].payload);
     expect(statusOf(app.client, "1001")).toBe("APPROVED");
+    vi.doUnmock("../../../db/client");
   });
 
   // case: SWHR2-C-0250@v1

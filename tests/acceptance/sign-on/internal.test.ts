@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { call } from "../shopping-cart/harness";
 import { loadApp } from "./harness";
 
 describe("in-process hand-off", () => {
@@ -28,7 +29,8 @@ describe("in-process hand-off", () => {
   });
 
   // case: SWHR2-C-0264@v1
-  it("SWHR2-C-0264: no public route reaches the hand-off service", () => {
+  it("SWHR2-C-0264: no public route reaches the hand-off service", async () => {
+    const app = await loadApp();
     const files: string[] = [];
     const walk = (dir: string) => {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -38,8 +40,42 @@ describe("in-process hand-off", () => {
       }
     };
     walk(path.join(process.cwd(), "routes/api"));
-    const offenders = files.filter((f) => /enqueue|hand-?off|message|queue|order-?line/i.test(f));
-    expect(offenders).toEqual([]);
+    // Call every public route as an anonymous outsider, whatever its name, carrying a marker in
+    // every field, then look for the marker in anything the hand-off service stored.
+    const MARK = "outside-probe-7f3a";
+    const methods = ["get", "post", "put", "patch", "delete"];
+    for (const f of files) {
+      const parts = f.replace(/\.ts$/, "").split(path.sep);
+      const last = parts[parts.length - 1].split(".");
+      const method = methods.includes(last[last.length - 1]) ? last.pop()! : "get";
+      parts[parts.length - 1] = last.join(".");
+      const params: Record<string, string> = {};
+      const url = parts
+        .map((seg) =>
+          seg.replace(/\[(?:\.\.\.)?([^\]]+)\]/g, (_m, name: string) => {
+            params[name] = MARK;
+            return MARK;
+          }),
+        )
+        .join("/");
+      await call(app, `../../../routes/api/${f.replace(/\.ts$/, "")}`, {
+        method: method.toUpperCase(),
+        url: `/api/${url}?q=${MARK}`,
+        params,
+        json:
+          method === "get" ? undefined : { orderId: MARK, body: MARK, message: MARK, userId: MARK },
+      });
+    }
+    const tables = app.client
+      .query(
+        "select name from sqlite_master where type = 'table' and (name like '%message%' or name like '%queue%')",
+      )
+      .all() as { name: string }[];
+    for (const t of tables)
+      expect(
+        JSON.stringify(app.client.query(`select * from "${t.name}"`).all()),
+        t.name,
+      ).not.toContain(MARK);
   });
 });
 

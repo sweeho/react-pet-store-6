@@ -219,9 +219,20 @@ describe("supplier orders", () => {
         ["EST-2", 1],
       ]),
     );
+    // the shipping address is held in the contact row, so no stored row may still carry it
+    const holdsAddress = () =>
+      (
+        f.client
+          .query("select name from sqlite_master where type = 'table' and name like 'sup_%'")
+          .all() as { name: string }[]
+      ).filter((t) =>
+        JSON.stringify(f.client.query(`select * from ${t.name}`).all()).includes("1 Main St"),
+      );
+    expect(holdsAddress().map((t) => t.name)).toContain("sup_order_contacts");
     f.client.exec("delete from sup_orders where order_id = '10011'");
     expect(count(f.client, "sup_order_contacts")).toBe(0);
     expect(count(f.client, "sup_order_lines")).toBe(0);
+    expect(holdsAddress()).toEqual([]);
   });
 
   // case: SWHR2-C-0128@v1

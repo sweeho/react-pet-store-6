@@ -51,3 +51,35 @@ test.describe("checkout form", () => {
     await expect(page.getByText(/Palo Alto/).first()).toBeVisible();
   });
 });
+
+test.describe("server error page", () => {
+  // case: SWHR2-C-0212@v1
+  test("SWHR2-C-0212: the Server Error page shows the message and trace and asks the shopper to notify the administrator", async ({
+    page,
+  }) => {
+    await page.route("**/api/orders", (route) =>
+      route.request().method() === "POST"
+        ? route.fulfill({
+            status: 500,
+            contentType: "application/json",
+            body: JSON.stringify({
+              kind: "AppFailure",
+              message: "boom-e2e",
+              trace: "Error: boom-e2e\n    at placeOrder",
+            }),
+          })
+        : route.continue(),
+    );
+    await toCheckout(page);
+    await page
+      .getByRole("button", { name: /continue|submit|place|next/i })
+      .first()
+      .click();
+    const confirm = page.getByRole("button", { name: /confirm|place order|submit/i });
+    if (await confirm.count()) await confirm.first().click();
+    await expect(page.getByText(/server error/i).first()).toBeVisible();
+    await expect(page.getByText(/boom-e2e/).first()).toBeVisible();
+    await expect(page.getByText(/placeOrder/).first()).toBeVisible();
+    await expect(page.getByText(/notify (the )?administrator/i).first()).toBeVisible();
+  });
+});

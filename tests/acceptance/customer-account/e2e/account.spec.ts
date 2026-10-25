@@ -46,13 +46,28 @@ test.describe("sign up", () => {
   test("SWHR2-C-0146: signing up as j2ee with the same password in both fields proceeds to account creation", async ({
     page,
   }) => {
-    // j2ee must be a name with no account yet in the e2e database
+    // the case signs up as j2ee itself, so this runs against a database with no j2ee account yet
     await page.goto("/petstore/signin");
-    await fillSignUp(page, "j2ee-new", "secret1", "secret1");
+    await fillSignUp(page, "j2ee", "secret1", "secret1");
     await submitSignUp(page);
     await expect(page.getByLabel(/card type/i)).toBeVisible();
     await page.getByText(/^sign out$/i).click();
-    await signIn(page, "j2ee-new", "secret1");
+    await signIn(page, "j2ee", "secret1");
+  });
+
+  // case: SWHR2-C-0156@v1
+  test("SWHR2-C-0156: signing up as an existing j2ee is redirected to the user-creation error page", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.getByText(/^sign out$/i).click();
+    await page.goto("/petstore/signin");
+    await fillSignUp(page, "j2ee", "other1", "other1");
+    await submitSignUp(page);
+    await expect(
+      page.getByText(/user name.*(in use|taken|exists)|already (exists|in use)/i).first(),
+    ).toBeVisible();
+    await expect(page.getByLabel(/card type/i)).toHaveCount(0);
   });
 
   // case: SWHR2-C-0147@v1

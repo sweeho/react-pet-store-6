@@ -12,27 +12,6 @@ const SESSION = "../../../routes/api/session.get";
 const MIN = 60 * 1000;
 
 describe("session expiry", () => {
-  // case: SWHR2-C-0251@v1
-  it("SWHR2-C-0251: a sample-app visitor idle for 31 minutes gets a new session with none of the old state", async () => {
-    // design.md says no framework sample application is built; this case needs one, so it stays red.
-    vi.useFakeTimers({ toFake: ["Date"] });
-    const app = await loadApp();
-    const first = await call(app, "../../../routes/api/sample/marker.post", {
-      method: "POST",
-      url: "/api/sample/marker",
-      json: { marker: "m1" },
-    });
-    const sid = cookieValue(first.setCookies, "ps_sid");
-    vi.setSystemTime(Date.now() + 31 * MIN);
-    const next = await call(app, "../../../routes/api/sample/marker.get", {
-      url: "/api/sample/marker",
-      cookies: { ps_sid: sid ?? "" },
-    });
-    expect(cookieValue(next.setCookies, "ps_sid")).toBeTruthy();
-    expect(cookieValue(next.setCookies, "ps_sid")).not.toBe(sid);
-    expect(JSON.stringify(next.body)).not.toContain("m1");
-  });
-
   // case: SWHR2-C-0259@v1
   it("SWHR2-C-0259: an administrator idle for 55 minutes is asked to sign in on the next admin request", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });

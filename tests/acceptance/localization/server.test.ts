@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { call } from "../shopping-cart/harness";
 import { seeder } from "../catalog-browsing/harness";
-import { cookieValue, loadApp, seedCustomer } from "../sign-on/harness";
+import { loadApp } from "../sign-on/harness";
 
 type App = Awaited<ReturnType<typeof loadApp>>;
 
@@ -41,15 +41,20 @@ describe("catalog item in the shopper's locale", () => {
 
   // case: SWHR2-C-0029@v1
   it("SWHR2-C-0029: a ja_JP shopper viewing EST-1 gets the Japanese details and none of the English", async () => {
+    // the item's name is its product name; item attribute text is not seedable from the design
     const out = await item("ja_JP");
+    expect(out).toContain("エンゼル");
     expect(out).toContain(JA);
+    expect(out).not.toContain("Angelfish");
     expect(out).not.toContain(EN);
   });
 
   // case: SWHR2-C-0030@v1
   it("SWHR2-C-0030: an en_US shopper viewing EST-1 gets the English details and none of the Japanese", async () => {
     const out = await item("en_US");
+    expect(out).toContain("Angelfish");
     expect(out).toContain(EN);
+    expect(out).not.toContain("エンゼル");
     expect(out).not.toContain(JA);
   });
 });
@@ -120,21 +125,28 @@ describe("request decoding", () => {
   // case: SWHR2-C-0032@v1
   it("SWHR2-C-0032: after sign-on every handler of a request sees 山田太郎 decoded as UTF-8", async () => {
     const app: App = await loadApp();
-    await seedCustomer(app.client, "j2ee", "j2ee");
-    const signed = await call(app, `${ROUTES}/session/sign-in.post`, {
-      method: "POST",
-      url: "/api/session/sign-in",
-      json: { userId: "j2ee", password: "j2ee", remember: false },
-    });
-    expect(signed.status).toBe(200);
-    const sid = cookieValue(signed.setCookies, "ps_sid") ?? "";
     const mw = await encoding();
-    const event = formEvent("/api/test/form", { name: "山田太郎" }, `ps_sid=${sid}`);
+    const event = formEvent("/api/account/register", {
+      userId: "山田太郎",
+      password: "pw-1234",
+      passwordRepeat: "pw-1234",
+      remember: "false",
+    });
     await mw(event);
     await app.session(event);
-    const seen: unknown[] = [];
-    for (const handler of [formValue, formValue]) seen.push(await handler(event, "name"));
-    expect(seen).toEqual(["山田太郎", "山田太郎"]);
+    // two real handlers read the one request's userId, one after the other
+    const run = async (route: string) => {
+      const handler = (await import(`${ROUTES}/${route}`)).default as (
+        e: H3Event,
+      ) => Promise<unknown>;
+      const out = await handler(event);
+      return out instanceof Response ? out.status : event.res.status || 200;
+    };
+    expect(await run("account/register.post")).toBeLessThan(300);
+    expect(
+      app.client.query("select count(*) c from signon_users where user_id = '山田太郎'").get(),
+    ).toEqual({ c: 1 });
+    expect(await run("session/sign-in.post")).toBe(200);
   });
 
   // case: SWHR2-C-0040@v1
