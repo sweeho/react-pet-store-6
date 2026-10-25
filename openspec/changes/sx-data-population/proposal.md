@@ -6,13 +6,13 @@ The legacy Java Pet Store 1.3.2 ships with a sample-data loader that every other
 
 ## What changes
 
-- Adds the `data-population` capability as a delta spec (`specs/data-population/spec.md`) with 18 draft requirements covering:
-  - when the storefront is judged already populated, and what a full sample load does (rebuild the catalog, replace sample accounts by id, keep other accounts)
-  - forced repopulation, session termination, the chained supplier load and the redirect and failure contract
-  - the seed data content: 4 users and customers, 5 categories, 16 products, 28 items in 3 languages, and 29 supplier stock lines at 10000
+- Adds the `data-population` capability as a delta spec (`specs/data-population/spec.md`) carrying the 8 SME-approved requirements of this capability:
+  - the seed data content: 4 users and customers, 5 categories, 16 products and 28 items in 3 languages, and 29 supplier stock lines at 10000
+  - the editable seed data set and creation of missing datastore structures
+  - replacement of sample accounts by id while other accounts are kept
   - datastore separation and the installation sequence
   - two entity-level operations the loader relies on: listing all customers, and creating contact information linked to a stored address
-- `design.md` records how the legacy system implements each requirement, the suspected defects and the open questions.
+- `design.md` records how the legacy system implements the capability, the suspected defects and the open questions.
 
 ## Out of scope
 
@@ -21,7 +21,4 @@ The legacy Java Pet Store 1.3.2 ships with a sample-data loader that every other
 
 ## Status of the requirements
 
-No record in this capability is SME-approved, so the spec carries no `ID:` lines. Recommendations for each record are in `legacy-analysis/ir/_recommendations/data-population.yaml`. Two requirements need a Business Owner decision before they are built, because they describe legacy behaviour that the extraction flagged as a defect:
-
-- **Population access without sign-on.** Anonymous callers can trigger a destructive reset.
-- **Populated-state check.** If the check fails with an error, the catalog is wiped.
+8 records of this capability are approved and each carries its minted `ID:` line in the spec. Every other `data-population` record is pending and is Not specified: it is left out of the spec, and `legacy-analysis/ir/_recommendations/data-population.yaml` gives a recommendation for each. Those pending records cover the core loader flow (when the store is judged populated, the catalog rebuild, forced repopulation, session termination, the chained supplier load, the supplier inventory gate, the redirect and failure contract, and access without sign-on). `design.md` describes how the legacy system implements them; none of it is a requirement until an SME approves the record.
