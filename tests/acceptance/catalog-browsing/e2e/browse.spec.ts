@@ -1,10 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const next = (p: Page) =>
   p.getByRole("link", { name: /next/i }).or(p.getByRole("button", { name: /next/i }));
 const previous = (p: Page) =>
   p.getByRole("link", { name: /previous/i }).or(p.getByRole("button", { name: /previous/i }));
-const addToCart = (p: Page) =>
+const addToCart = (p: Page | Locator) =>
   p.getByRole("button", { name: /add to cart/i }).or(p.getByRole("link", { name: /add to cart/i }));
 
 test.describe("catalog browsing", () => {
@@ -79,12 +79,10 @@ test.describe("catalog browsing", () => {
     await page.getByRole("complementary").getByRole("link", { name: "Dogs" }).click();
     await page.getByRole("link", { name: "Bulldog" }).click();
     await expect(page.getByText("Male Adult Bulldog")).toBeVisible();
-    const rowsCount = await page
-      .getByRole("row")
-      .filter({ hasText: /Bulldog/ })
-      .count();
+    const rows = page.getByRole("row").filter({ hasText: /Bulldog/ });
+    const rowsCount = await rows.count();
     expect(rowsCount).toBeGreaterThan(0);
-    expect(await addToCart(page).count()).toBeGreaterThanOrEqual(rowsCount);
+    for (let i = 0; i < rowsCount; i++) await expect(addToCart(rows.nth(i))).toHaveCount(1);
   });
 
   // case: SWHR2-C-0207@v1

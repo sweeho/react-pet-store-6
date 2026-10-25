@@ -155,7 +155,9 @@ test.describe("empty cart order", () => {
       .getByRole("button", { name: /continue|submit|place|next|confirm/i })
       .first()
       .click();
-    await expect(page.getByText(/empty/i).first()).toBeVisible();
+    // the dedicated page src/pages/petstore/error/empty-cart.tsx, not the Server Error page
+    await expect(page.getByRole("heading", { name: /empty/i }).first()).toBeVisible();
     await expect(page.getByText(/server error/i)).toHaveCount(0);
+    await expect(page.getByText(/notify (the )?administrator/i)).toHaveCount(0);
   });
 });
