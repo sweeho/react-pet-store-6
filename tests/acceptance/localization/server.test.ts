@@ -10,6 +10,8 @@ type App = Awaited<ReturnType<typeof loadApp>>;
 
 const EN = "Large Angelfish";
 const JA = "大きなエンゼルフィッシュ";
+const ATTR_EN = "Spotted fish";
+const ATTR_JA = "斑点のある魚";
 const ROUTES = "../../../routes/api";
 
 /** App whose EST-1 has distinct en_US and ja_JP details. */
@@ -26,6 +28,21 @@ async function twoLocaleApp() {
       ja_JP: { descn: JA, list: 1951, unit: 1551 },
     },
   });
+  // item attribute text: whichever columns the details table names as attributes
+  const cols = (
+    app.client.query("pragma table_info(catalog_item_details)").all() as { name: string }[]
+  )
+    .map((c) => c.name)
+    .filter((n) => /attr/i.test(n));
+  expect(cols, "catalog_item_details has attribute columns").not.toEqual([]);
+  for (const [locale, text] of [
+    ["en_US", ATTR_EN],
+    ["ja_JP", ATTR_JA],
+  ])
+    for (const c of cols)
+      app.client.exec(
+        `update catalog_item_details set "${c}" = '${text}' where item_id = 'EST-1' and locale = '${locale}'`,
+      );
   return app;
 }
 
@@ -41,12 +58,14 @@ describe("catalog item in the shopper's locale", () => {
 
   // case: SWHR2-C-0029@v1
   it("SWHR2-C-0029: a ja_JP shopper viewing EST-1 gets the Japanese details and none of the English", async () => {
-    // the item's name is its product name; item attribute text is not seedable from the design
+    // the item's name is its product name
     const out = await item("ja_JP");
     expect(out).toContain("エンゼル");
     expect(out).toContain(JA);
+    expect(out).toContain(ATTR_JA);
     expect(out).not.toContain("Angelfish");
     expect(out).not.toContain(EN);
+    expect(out).not.toContain(ATTR_EN);
   });
 
   // case: SWHR2-C-0030@v1
@@ -54,8 +73,10 @@ describe("catalog item in the shopper's locale", () => {
     const out = await item("en_US");
     expect(out).toContain("Angelfish");
     expect(out).toContain(EN);
+    expect(out).toContain(ATTR_EN);
     expect(out).not.toContain("エンゼル");
     expect(out).not.toContain(JA);
+    expect(out).not.toContain(ATTR_JA);
   });
 });
 

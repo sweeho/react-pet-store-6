@@ -143,3 +143,19 @@ test.describe("shopping cart", () => {
     await expect(page.getByText(EMPTY)).toBeVisible();
   });
 });
+
+test.describe("empty cart order", () => {
+  // case: SWHR2-C-0090@v1
+  test("SWHR2-C-0090: submitting an order with an empty cart shows the empty-cart error page", async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto("/petstore/checkout");
+    await page
+      .getByRole("button", { name: /continue|submit|place|next|confirm/i })
+      .first()
+      .click();
+    await expect(page.getByText(/empty/i).first()).toBeVisible();
+    await expect(page.getByText(/server error/i)).toHaveCount(0);
+  });
+});

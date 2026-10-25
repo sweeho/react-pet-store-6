@@ -164,8 +164,11 @@ test.describe("sign-on", () => {
       .click();
     await expect(page).toHaveURL(/signed-out/);
     await expect(page.getByRole("link").filter({ hasText: /./ }).first()).toBeVisible();
+    // the signed-out screen itself is in Japanese
+    await expect(page.locator("body")).toContainText(/[\u3040-\u30ff\u4e00-\u9fff]/);
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("lang", /ja/);
+    await expect(page.locator("body")).toContainText(/[\u3040-\u30ff]/);
     await page
       .getByRole("link", { name: /cart|カート/i })
       .first()

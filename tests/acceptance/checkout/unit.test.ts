@@ -62,6 +62,35 @@ describe("id sequences", () => {
     const { client } = await loadApp();
     const { nextId } = await import("../../../services/ids");
     client.close();
-    await expect(Promise.resolve().then(() => nextId("1001"))).rejects.toBeDefined();
+    let issued: unknown;
+    const failure = await Promise.resolve()
+      .then(async () => {
+        issued = await nextId("1001");
+      })
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
+    expect(failure).toBeInstanceOf(Error);
+    expect(issued).toBeUndefined();
+  });
+
+  // case: SWHR2-C-0225@v1
+  it("SWHR2-C-0225: a sequence that cannot be written issues no identifier and moves no counter", async () => {
+    const { client } = await loadApp();
+    const { nextId } = await import("../../../services/ids");
+    await nextId("1001");
+    const before = sequences(client);
+    client.exec(
+      "create trigger no_bump before update on id_sequences begin select raise(abort, 'store unavailable'); end",
+    );
+    let issued: unknown;
+    await Promise.resolve()
+      .then(async () => {
+        issued = await nextId("1001");
+      })
+      .catch(() => undefined);
+    expect(issued).toBeUndefined();
+    expect(sequences(client)).toEqual(before);
   });
 });

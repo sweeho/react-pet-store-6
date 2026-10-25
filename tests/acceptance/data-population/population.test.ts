@@ -208,4 +208,62 @@ describe("installation", () => {
     ).map((t) => t.name);
     for (const t of ["sup_orders", "op_purchase_orders"]) expect(tables).toContain(t);
   });
+
+  // case: SWHR2-C-0078@v1
+  it("SWHR2-C-0078: installing onto a database that lacks the supplier and order-processing datastores creates only those", async () => {
+    // an earlier install: only the storefront structures exist, with a customer in them
+    const { Database } = await import("bun:sqlite");
+    const { drizzle } = await import("drizzle-orm/bun-sqlite");
+    const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
+    const { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = await import(
+      "node:fs"
+    );
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const sqlFile = readdirSync("drizzle").find((f) => f.endsWith(".sql")) as string;
+    const parts = readFileSync(path.join("drizzle", sqlFile), "utf8").split(
+      "--> statement-breakpoint",
+    );
+    const later = (stmt: string) => /\b(sup_|op_|messages)/.test(stmt);
+    const dir = mkdtempSync(path.join(tmpdir(), "install-"));
+    mkdirSync(path.join(dir, "meta"));
+    writeFileSync(
+      path.join(dir, "0000_storefront.sql"),
+      parts.filter((x) => !later(x)).join("--> statement-breakpoint"),
+    );
+    writeFileSync(
+      path.join(dir, "0001_rest.sql"),
+      parts.filter(later).join("--> statement-breakpoint"),
+    );
+    const entry = (idx: number, tag: string) => ({
+      idx,
+      version: "6",
+      when: 1700000000000 + idx,
+      tag,
+      breakpoints: true,
+    });
+    const journal = (entries: unknown[]) =>
+      writeFileSync(
+        path.join(dir, "meta", "_journal.json"),
+        JSON.stringify({ version: "7", dialect: "sqlite", entries }),
+      );
+    const client = new Database(":memory:");
+    const db = drizzle(client);
+    journal([entry(0, "0000_storefront")]);
+    migrate(db, { migrationsFolder: dir });
+    const names = () =>
+      (
+        client.query("select name from sqlite_master where type = 'table'").all() as {
+          name: string;
+        }[]
+      ).map((t) => t.name);
+    expect(names()).not.toContain("sup_orders");
+    expect(names()).not.toContain("op_purchase_orders");
+    client.exec("insert into customers (user_id) values ('keepme')");
+    // installing again
+    journal([entry(0, "0000_storefront"), entry(1, "0001_rest")]);
+    migrate(db, { migrationsFolder: dir });
+    for (const t of ["sup_orders", "op_purchase_orders", "messages"]) expect(names()).toContain(t);
+    expect(count(client, "customers", "user_id = 'keepme'")).toBe(1);
+  });
 });

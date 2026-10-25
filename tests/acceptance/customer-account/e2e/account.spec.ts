@@ -64,10 +64,16 @@ test.describe("sign up", () => {
     await page.goto("/petstore/signin");
     await fillSignUp(page, "j2ee", "other1", "other1");
     await submitSignUp(page);
+    await expect(page).toHaveURL(/user-creation-error/);
     await expect(
       page.getByText(/user name.*(in use|taken|exists)|already (exists|in use)/i).first(),
     ).toBeVisible();
     await expect(page.getByLabel(/card type/i)).toHaveCount(0);
+    // nothing was created or changed: the existing account keeps its old password
+    const res = await page.request.post("/api/session/sign-in", {
+      data: { userId: "j2ee", password: "other1", remember: false },
+    });
+    expect(res.status()).toBe(401);
   });
 
   // case: SWHR2-C-0147@v1
