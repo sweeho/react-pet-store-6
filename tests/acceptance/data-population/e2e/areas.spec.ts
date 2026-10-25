@@ -13,6 +13,12 @@ test.describe("installed application areas", () => {
       const res = await request.get(area);
       expect(res.status(), area).toBeLessThan(400);
     }
+  });
+
+  // case: SWHR2-C-0079@v1
+  test("SWHR2-C-0079: the order-processing area is available and accepts an order", async ({
+    page,
+  }) => {
     // order processing is the in-process worker: it accepts an order from a signed-in shopper
     await page.goto("/petstore/signin");
     await page.getByLabel(/user id/i).fill("j2ee");

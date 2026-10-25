@@ -125,12 +125,15 @@ describe("purchase order storage", () => {
 
   // case: SWHR2-C-0222@v1
   it("SWHR2-C-0222: a document with root Invoice is rejected with 'PurchaseOrder element expected.' and creates no order", async () => {
-    const { client } = await loadApp();
+    const { db, client } = await loadApp();
     const { fromXml } = await import("../../../services/documents/purchase-order");
-    const before = count(client, "op_purchase_orders");
-    expect(() => fromXml("<Invoice><OrderId>1</OrderId></Invoice>")).toThrow(
-      "PurchaseOrder element expected.",
-    );
-    expect(count(client, "op_purchase_orders")).toBe(before);
+    const { createPurchaseOrder } = await import("../../../services/orders/receive");
+    // receipt of the document: parse it, then store the order it describes
+    await expect(
+      Promise.resolve().then(() =>
+        createPurchaseOrder(db, fromXml("<Invoice><OrderId>1</OrderId></Invoice>")),
+      ),
+    ).rejects.toThrow("PurchaseOrder element expected.");
+    for (const t of ORDER_TABLES) expect(count(client, t), t).toBe(0);
   });
 });

@@ -114,12 +114,8 @@ describe("customer creation", () => {
 
   // case: SWHR2-C-0176@v1
   it("SWHR2-C-0176: a profile with language en_US and no favourite category is stored with the favourite empty", async () => {
-    const { svc, client } = await customers();
-    await svc.registerUser("j2ee", "secret1");
-    client.exec("insert into customers (user_id) values ('j2ee')");
-    client.exec(
-      "insert into customer_profiles (user_id, preferred_language) values ('j2ee', 'en_US')",
-    );
+    const { create, client } = await customers();
+    await create("j2ee", { preferredLanguage: "en_US" });
     const p = profileOf(client, "j2ee")!;
     expect(p.preferred_language).toBe("en_US");
     expect(p.favourite_category).toBeNull();
