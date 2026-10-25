@@ -62,24 +62,21 @@ Three request types serve this capability:
 - **D3 End-date bound.** The finder is inclusive (`BETWEEN`), and the requirement says so, but the admin path passes midnight of the end date, so orders placed later on the end day are excluded. Suspected defect; the spec states the finder contract.
 - **D4 Per-item drill-down** kept as a requirement with `MAY be unreachable` wording; both passes marked it `unresolved-reachability`.
 - **D5 Default range** kept as stated in code; low confidence, demo literal.
-- **D6 Two screens.** The non-pending orders list (SALE-SCR-0001, SALES-REQ-0001 admin/a, SALES-SCR-0002, SALES-REPORTING-SCREEN-0001) and the Orders/Sales window with chart tabs (SALE-SCR-0008). SALES-SCR-0002 also describes the pending list's columns; that list's behaviour belongs to `order-approval`, so only the non-pending side is specified here.
+- **D6 Two screens.** SALES-REPORTING-SCREEN-0001 (the non-pending orders list) and SALES-SCR-0002 (the columns, sorting and -1 fallback shared by both order lists). SALES-SCR-0002 is approved as written, so its pending-list half is specified here too; the pending list's approve/deny behaviour stays with `order-approval`.
+- **D7 Approved records only.** spec.md carries only the 7 approved records. Revenue and sales-count reports (SALE-REQ-0002/0003, SALES-REQ-0004/0005, SREP-RULE-0002), date-entry validation (SALE-BR-0004, SALES-BR-0006), chart totals (SALE-BR-0007, SALES-BR-0009), the date-range finder (SALES-RULE-0001), the order-list protocol (SALES-INT-0003) and the chart window (SALE-SCR-0001/0008) are pending SME review and are Not specified. D1-D3 above describe legacy behaviour behind those pending records.
+- **D8 `SALES-REQ-0001` collision.** Three pass files emit this key. The approved record is taken to be the processmanager/a variant (orders by exact status): the admin/a variant is a screen and the server counts only 2 screens for this capability, and processmanager/a was committed first. The purchaseorder/a variant (orders between dates) duplicates SALES-RULE-0001. If the server holds a different variant, the "Orders by current status" requirement must be rewritten from it.
 
 ## Requirement-to-record traceability
 
-| Requirement                           | Records                                                                                               |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Orders within a date range            | SALES-RULE-0001 (purchaseorder/b), SALES-REQ-0001 (purchaseorder/a)                                   |
-| Orders by current status              | SALES-REQ-0001 (processmanager/a)                                                                     |
-| Order list data                       | SALES-INT-0003                                                                                        |
-| Revenue by category report            | SALE-REQ-0002, SALES-REQ-0004                                                                         |
-| Sales count by category report        | SALE-REQ-0003, SALES-REQ-0005                                                                         |
-| Chart date entry validation           | SALE-BR-0004, SALES-BR-0006                                                                           |
-| Default chart date range              | SALE-BR-0005, SALES-BR-0007                                                                           |
-| Per-item breakdown within a category  | SALE-BR-0006, SALES-BR-0008                                                                           |
-| Chart totals and invalid entries      | SALE-BR-0007, SALES-BR-0009                                                                           |
-| Report data load on start and refresh | SALES-WF-0010                                                                                         |
-| Non-pending orders screen (screen)    | SALE-SCR-0001, SALES-REQ-0001 (admin/a), SALES-SCR-0002, SALES-REPORTING-SCREEN-0001 (docs/a, docs/b) |
-| Sales charts screen (screen)          | SALE-SCR-0008, SALES-WF-0010 (view switching)                                                         |
+| Requirement                             | ID           | Record                                  |
+| --------------------------------------- | ------------ | --------------------------------------- |
+| Orders by current status                | SWHR2-R-0143 | SALES-REQ-0001 (processmanager/a)       |
+| Order list details by status            | SWHR2-R-0113 | SREP-REQ-0001 (apps/opc/a)              |
+| Default chart date range                | SWHR2-R-0026 | SALES-BR-0007                           |
+| Per-item breakdown within a category    | SWHR2-R-0025 | SALES-BR-0008                           |
+| Report data load on start and refresh   | SWHR2-R-0112 | SALES-WF-0010                           |
+| Non-pending orders screen (screen)      | SWHR2-R-0110 | SALES-REPORTING-SCREEN-0001 (docs/a, b) |
+| Order list columns and sorting (screen) | SWHR2-R-0111 | SALES-SCR-0002                          |
 
 ## Risks / gaps
 
