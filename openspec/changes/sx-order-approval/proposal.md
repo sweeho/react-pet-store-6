@@ -4,12 +4,11 @@ The legacy Java Pet Store 1.3.2 holds every order above a locale-dependent thres
 
 ## What Changes
 
-- Adds the `order-approval` capability with 18 draft requirements extracted from 31 distinct IR record keys in the pass files (the server reports 25 ingested):
-  - automatic approval of small orders by locale (US under 500, Japan under 50000, every other locale never);
-  - the administrator's review surfaces: the Process Pending Orders screen, its status colour coding, and the View Non-Pending Orders screen;
-  - bulk marking, commit (approvals batch, then denials batch), the uncommitted-refresh warning, the busy state and fatal-error handling;
-  - the orders-by-status query and the order fields shown to the administrator;
-  - server handling of a status update, asynchronous delivery on the order-approval channel, and the approval decision batch format.
+- Adds the `order-approval` capability with the 12 requirements an SME approved, out of the 25 IR records the server ingested for this capability. Records still pending review are not specified here; a recommendation for each is in `legacy-analysis/ir/_recommendations/order-approval.yaml`. The approved requirements cover:
+  - new orders starting PENDING, and automatic approval of small orders by locale (US under 500, Japan under 50000, every other locale never);
+  - the administrator's two order views (pending and non-pending) and the status colour coding of the pending list;
+  - batch marking committed together, the uncommitted-refresh warning, loading order data on start and refresh, and the busy state during server requests;
+  - asynchronous delivery of decisions on a durable order-approval channel, and the free-text status in the approval batch format.
 - Carries the legacy defects and document conflicts found during extraction to the SME. They are listed in `design.md` and in `legacy-analysis/ir/_recommendations/order-approval.yaml`.
 
 ## Capabilities

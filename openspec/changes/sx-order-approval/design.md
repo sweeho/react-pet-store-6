@@ -28,7 +28,7 @@ Order approval spans four legacy modules:
 
 **Refresh warning.** `RefreshAction.actionPerformed` scans column 4 of the approve model for any non-PENDING value and shows an OK/CANCEL dialog (`RefreshWarningDialog.*`) before running.
 
-**Busy state and errors.** All server calls run serially on one `WorkQueue` thread. `DataSource` fires `DISABLE_ACTIONS` before each `ServerAction` and `ENABLE_ACTIONS` in `response()`. Listeners in `PetStoreAdminClient`, `OrdersApprovePanel` and the chart panels toggle their actions, and the status bar shows `Status.retrieve` or `Status.update`. Every `ServerAction.handleException` routes to `DataSource.fatalServerError`, which shows a "Fatal Error!" `JOptionPane` and calls `System.exit(1)`. The refresh also fetches revenue and order-count chart data. That belongs to `sales-reporting` and is left out of this spec.
+**Busy state and errors.** All server calls run serially on one `WorkQueue` thread. `DataSource` fires `DISABLE_ACTIONS` before each `ServerAction` and `ENABLE_ACTIONS` in `response()`. Listeners in `PetStoreAdminClient`, `OrdersApprovePanel` and the chart panels toggle their actions, and the status bar shows `Status.retrieve` or `Status.update`. Every `ServerAction.handleException` routes to `DataSource.fatalServerError`, which shows a "Fatal Error!" `JOptionPane` and calls `System.exit(1)`. The refresh also fetches revenue and order-count chart data. That overlaps `sales-reporting`; the approved records keep it here (see D3).
 
 **Wire protocol.** The client posts custom XML to the admin servlet (`/AdminRequestProcessor`, protected by the `administrator` role in `web.xml`): `<Type>GETORDERS</Type><Status>..</Status>` for a list, and `UPDATESTATUS` carrying `<Order><OrderId/><OrderStatus/></Order>` entries for decisions. `ApplRequestProcessor.updateOrders` (lines 205-237) maps each complete entry to a `ChangedOrder`, skipping entries with a null id or status. Its comment reads "Assumes values of OrderStatus are the same for both schemas". `AdminRequestBD.updateOrders` sends `OrderApproval.toXML()` through `AsyncSenderEJB.sendAMessage`. The reply is `<Type>UPDATEORDERS</Type><Status>SUCCESS</Status>` or an `<Error>`. The client parser (`HttpPostPetStoreProxy.parseOrderStatus`, lines 266-282) maps any status other than the four known values to null.
 
@@ -42,9 +42,9 @@ Order approval spans four legacy modules:
 
 ## Decisions
 
-- D1. Pass A and pass B of the admin module each produced their own record for the same pending-orders screen (`OAPP-REQ-0001`, `ORDA-SCR-0003`). They are merged into one screen requirement, so the spec carries three screen requirements for four screen records.
-- D2. Duplicate records across passes (the auto-approval, commit, refresh-warning, busy-state, fatal-error, delivery and batch-format records) are each written once, as one requirement per behaviour.
-- D3. Chart loading in `ORDA-BR-0007` and chart controls in the busy-state records are dropped from this capability's requirements because they belong to `sales-reporting`.
+- D1. The spec carries only the 12 SME-approved records, one requirement each, with its minted key. Of the screen records, `OAPP-SCR-0009` and `ORDER-APPROVAL-SCR-0004` are approved and written as requirements. The pending-orders screen records `OAPP-REQ-0001` and `ORDA-SCR-0003` are still pending review, so the field list, edit restriction and Approve/Deny/Commit controls of that screen are not yet specified.
+- D2. Some approved records overlap: `ORDER-APPROVAL-BR-0001` (US threshold) and `OAPP-RULE-0001` (US and Japan thresholds), and `ORDER-APPROVAL-INTEGRATION-0001` and `order-approval-INT-0001` (decision delivery). Each is written as its own requirement because each carries its own key.
+- D3. `ORDA-BR-0007` and `OAPP-BR-0007` are written as approved, so they still include chart-data loading and the chart-submit action, which overlap `sales-reporting`.
 - D4. The exactly-500 boundary is written as the code behaves (pending). The document conflict goes to Intent.
 
 ## Risks / Trade-offs

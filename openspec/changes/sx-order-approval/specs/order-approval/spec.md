@@ -1,252 +1,160 @@
 ## ADDED Requirements
 
-### Requirement: Process Pending Orders screen
+### Requirement: Pending and non-pending order views
 
-The Process Pending Orders screen SHALL list only orders whose status is PENDING, one row per order showing its ID, User ID, Date, Amount and Status, and the list SHALL be sortable by column. The Status value SHALL be the only editable value in a row, and its choices MUST be exactly PENDING, APPROVED and DENIED. The screen SHALL offer an Approve control, a Deny control and a Commit control.
+ID: SWHR2-R-0087
+Recovered from: ORDER-APPROVAL-SCR-0004
+The system SHALL present administrators with two separate views of orders: one view listing pending orders, and one view listing non-pending orders, meaning orders that have been approved, denied or completed. The non-pending view SHALL be loaded on request.
 
-#### Scenario: Pending orders are displayed
+#### Scenario: Orders are split between the two views
 
-- **GIVEN** three orders with status PENDING and two orders with status APPROVED
-- **WHEN** the Process Pending Orders screen is displayed
-- **THEN** exactly the three PENDING orders are listed, each showing ID, User ID, Date, Amount and Status, together with Approve, Deny and Commit controls
+- **GIVEN** orders with statuses PENDING, APPROVED, DENIED and COMPLETED
+- **WHEN** the administrator opens the order views
+- **THEN** the PENDING order appears only in the pending view, and the APPROVED, DENIED and COMPLETED orders appear only in the non-pending view
 
-#### Scenario: Only the status can be edited
+#### Scenario: Non-pending view reloaded on request
 
-- **GIVEN** a pending order listed on the screen
-- **WHEN** the administrator tries to edit its ID, User ID, Date or Amount
-- **THEN** the value cannot be changed
-
-#### Scenario: Status choices offered
-
-- **GIVEN** a pending order listed on the screen
-- **WHEN** the administrator edits its Status
-- **THEN** the choices offered are PENDING, APPROVED and DENIED and no other value can be chosen
-
-#### Scenario: Sorting by a column
-
-- **GIVEN** several pending orders with different amounts
-- **WHEN** the administrator sorts by the Amount column
-- **THEN** the rows are reordered by amount
+- **GIVEN** an order approved since the non-pending view was last loaded
+- **WHEN** the administrator requests a refresh
+- **THEN** the order appears in the non-pending view with status APPROVED
 
 ### Requirement: Pending order status colour coding
 
-The Process Pending Orders screen SHALL colour each order's Status value by its current marking: APPROVED in green, DENIED in red and PENDING in yellow.
+ID: SWHR2-R-0084
+Recovered from: OAPP-SCR-0009
+The system SHALL colour each order's status in the pending-orders list: APPROVED in green, DENIED in red and PENDING in yellow.
 
 #### Scenario: Statuses are colour-coded
 
-- **GIVEN** three pending orders, one left PENDING, one marked APPROVED and one marked DENIED but not yet committed
-- **WHEN** the screen is displayed
+- **GIVEN** three orders in the pending-orders list, one left PENDING, one marked APPROVED and one marked DENIED
+- **WHEN** the list is displayed
 - **THEN** the PENDING status is shown in yellow, the APPROVED status in green and the DENIED status in red
 
-### Requirement: View Non-Pending Orders screen
+### Requirement: Batch approval and denial committed together
 
-The system SHALL provide a View Non-Pending Orders screen, separate from the Process Pending Orders screen, listing every order whose status is APPROVED, DENIED or COMPLETED, one row per order showing its ID, User ID, Date, Amount and Status. The list SHALL be sortable by column, SHALL NOT allow any value to be edited, and SHALL be reloaded when the administrator refreshes.
+ID: SWHR2-R-0088
+Recovered from: ORDER-APPROVAL-WF-0003
+The system SHALL let an administrator select one or more pending orders and set each to approved or denied, and SHALL apply all of those status changes together only when the administrator commits them.
 
-#### Scenario: Decided orders are displayed read-only
+#### Scenario: Decisions held until commit
 
-- **GIVEN** orders with statuses PENDING, APPROVED, DENIED and COMPLETED
-- **WHEN** the View Non-Pending Orders screen is displayed
-- **THEN** the APPROVED, DENIED and COMPLETED orders are listed with ID, User ID, Date, Amount and Status, the PENDING order is not listed, and no value can be edited
+- **GIVEN** three pending orders, of which the administrator marks two approved and one denied
+- **WHEN** the administrator has not yet committed
+- **THEN** none of the three orders' stored status has changed
 
-#### Scenario: Refresh shows newly decided orders
+#### Scenario: Decisions applied on commit
 
-- **GIVEN** an order approved and committed since the screen was last loaded
-- **WHEN** the administrator refreshes
-- **THEN** the order appears on the View Non-Pending Orders screen with status APPROVED
-
-### Requirement: Bulk marking of selected pending orders
-
-The system SHALL let the administrator select several pending orders and mark all of them APPROVED, or all of them DENIED, in one action. A marking MUST remain local to the administrator's screen and SHALL NOT be sent until the administrator commits.
-
-#### Scenario: Approve several selected orders
-
-- **GIVEN** five pending orders of which three are selected
-- **WHEN** the administrator activates Approve
-- **THEN** the three selected orders show status APPROVED, the other two still show PENDING, and nothing is sent to the server
-
-#### Scenario: Deny several selected orders
-
-- **GIVEN** two pending orders that are both selected
-- **WHEN** the administrator activates Deny
-- **THEN** both orders show status DENIED and nothing is sent to the server
-
-### Requirement: Committing approval decisions
-
-WHEN the administrator commits, the system SHALL send every order marked APPROVED as one approval batch and then every order marked DENIED as one denial batch, SHALL NOT send orders still marked PENDING, and SHALL then reload the order lists so that decided orders leave the pending list. GIVEN no order is marked APPROVED or DENIED, a commit MUST send nothing.
-
-#### Scenario: Commit approvals and denials
-
-- **GIVEN** pending orders A and B marked APPROVED, order C marked DENIED and order D left PENDING
+- **GIVEN** two pending orders marked approved and one marked denied
 - **WHEN** the administrator commits
-- **THEN** one batch containing A and B with status APPROVED is sent, then one batch containing C with status DENIED, D is not sent, and the order lists are reloaded
-
-#### Scenario: Commit with nothing marked
-
-- **GIVEN** every listed pending order is still marked PENDING
-- **WHEN** the administrator commits
-- **THEN** nothing is sent to the server
-
-#### Scenario: Only approvals marked
-
-- **GIVEN** order A marked APPROVED and no order marked DENIED
-- **WHEN** the administrator commits
-- **THEN** exactly one batch is sent, containing A with status APPROVED
+- **THEN** all three status changes are submitted together
 
 ### Requirement: Warning before discarding uncommitted decisions
 
-GIVEN at least one pending order is marked with a status other than PENDING and has not been committed, WHEN the administrator asks to refresh, the system SHALL warn "Data is not committed. Are you sure you want to refresh?" and SHALL reload, discarding the uncommitted markings, only if the administrator confirms.
+ID: SWHR2-R-0135
+Recovered from: OAPP-BR-0005
+GIVEN at least one pending order has been marked with a status other than PENDING and not committed, WHEN the administrator asks to refresh the data, the system SHALL warn "Data is not committed. Are you sure you want to refresh?" and SHALL refresh, discarding the uncommitted marks, only if the administrator confirms.
 
 #### Scenario: Refresh cancelled
 
 - **GIVEN** an order marked APPROVED and not committed
 - **WHEN** the administrator asks to refresh and declines the warning
-- **THEN** no reload happens and the order still shows APPROVED
+- **THEN** no refresh happens and the order still shows APPROVED
 
 #### Scenario: Refresh confirmed
 
 - **GIVEN** an order marked DENIED and not committed
 - **WHEN** the administrator asks to refresh and confirms the warning
-- **THEN** the lists are reloaded and the order shows its stored status PENDING
+- **THEN** the data is reloaded and the order shows its stored status PENDING
 
 #### Scenario: Refresh with nothing uncommitted
 
 - **GIVEN** every pending order is still marked PENDING
 - **WHEN** the administrator asks to refresh
-- **THEN** the lists are reloaded without a warning
+- **THEN** the data is reloaded without a warning
 
-### Requirement: Loading order lists on start and refresh
+### Requirement: Loading order data on start and refresh
 
-WHEN the administration tool starts, and whenever the administrator refreshes, the system SHALL load the orders in each of the statuses PENDING, APPROVED, DENIED and COMPLETED.
+ID: SWHR2-R-0086
+Recovered from: ORDA-BR-0007
+WHEN the administration tool starts, and whenever the administrator refreshes, the system SHALL load the orders in each of the statuses PENDING, APPROVED, DENIED and COMPLETED, together with the revenue and order-count chart data for the current date ranges.
 
 #### Scenario: Tool start
 
 - **GIVEN** orders exist in each of the four statuses
 - **WHEN** the administration tool starts
-- **THEN** the pending list and the non-pending list are populated without the administrator requesting a refresh
+- **THEN** the orders in all four statuses and the revenue and order-count chart data are loaded without the administrator requesting a refresh
+
+#### Scenario: Refresh
+
+- **GIVEN** the administration tool is open
+- **WHEN** the administrator refreshes
+- **THEN** the orders in all four statuses and the chart data for the current date ranges are loaded again
 
 ### Requirement: Busy state during server requests
 
-WHILE a request to the server is in progress, the system SHALL disable the Approve, Deny, Commit, Refresh, About and Exit actions, SHALL show "Retrieving data from the server..." while loading or "Updating data on the server..." while sending decisions, and SHALL re-enable the actions once the reply has been applied.
+ID: SWHR2-R-0083
+Recovered from: OAPP-BR-0007
+WHILE a request to the server is in progress, the system SHALL disable the approve, deny, commit, chart-submit, refresh, about and exit actions and SHALL show a status message ("Retrieving data from the server..." or "Updating data on the server..."), and SHALL re-enable those actions when the reply has been applied.
 
-#### Scenario: Commit in progress
+#### Scenario: Update in progress
 
 - **GIVEN** the administrator has committed decisions
-- **WHEN** the request is in progress
-- **THEN** Approve, Deny, Commit, Refresh, About and Exit are disabled and "Updating data on the server..." is shown, and they are enabled again after the reply
+- **WHEN** the request to the server is in progress
+- **THEN** the approve, deny, commit, chart-submit, refresh, about and exit actions are disabled and "Updating data on the server..." is shown
 
-#### Scenario: Load in progress
+#### Scenario: Retrieval in progress
 
 - **GIVEN** the administrator has asked to refresh
-- **WHEN** the request is in progress
+- **WHEN** the request to the server is in progress
 - **THEN** the actions are disabled and "Retrieving data from the server..." is shown
 
-### Requirement: Server communication failure
+#### Scenario: Reply applied
 
-WHEN a load or commit request to the server fails, the system SHALL show an error dialog titled "Fatal Error!" carrying the error message and SHALL then close the administration tool, discarding any uncommitted markings.
+- **GIVEN** a request to the server was in progress
+- **WHEN** its reply has been applied
+- **THEN** the actions are enabled again
 
-#### Scenario: Commit fails
+### Requirement: New orders start pending
 
-- **GIVEN** the administrator has committed decisions
-- **WHEN** the server request fails
-- **THEN** a "Fatal Error!" dialog is shown and, once it is dismissed, the administration tool closes
+ID: SWHR2-R-0085
+Recovered from: OAPP-WF-0002
+WHEN an order is received from the storefront, the system SHALL persist the order and start its fulfilment workflow in status PENDING before any approval decision is taken.
 
-### Requirement: Retrieve orders by status
+#### Scenario: Order recorded before the approval decision
 
-The system SHALL let an administrator retrieve all orders whose status exactly matches a given status, returning the requested status, the number of matching orders and, for each order, its id, user id, date, amount and status. Each order MUST appear at most once, and the order of the results is unspecified.
-
-#### Scenario: Pending orders requested
-
-- **GIVEN** four orders, three PENDING and one APPROVED
-- **WHEN** an administrator requests orders with status PENDING
-- **THEN** the reply carries status PENDING, a count of 3 and the three PENDING orders, each once
-
-#### Scenario: Status matched exactly
-
-- **GIVEN** an order with status PENDING
-- **WHEN** orders with status "pending" are requested
-- **THEN** that order is not returned
-
-### Requirement: Order as seen by the administrator
-
-The system SHALL represent an order to the administrator by its order id, the customer's user id, the order date, the order amount and its status, where the status MUST be one of PENDING, APPROVED, DENIED or COMPLETED.
-
-#### Scenario: Order fields
-
-- **GIVEN** an order placed by user j2ee for 612.50 on 2026-10-01 and awaiting approval
-- **WHEN** it is shown to the administrator
-- **THEN** it carries its order id, user id j2ee, date 2026-10-01, amount 612.50 and status PENDING
-
-### Requirement: Handling a submitted status update
-
-WHEN the server receives a status update batch from the administrator, it SHALL build one approval decision batch listing each (order id, new status) pair, SHALL skip without error any entry that lacks an order id or a status, SHALL pass each status value on unchanged, and SHALL reply SUCCESS once the batch has been handed to order processing, not once the orders have changed. WHEN the hand-off fails, the server SHALL reply with an error asking the administrator to try again.
-
-#### Scenario: Incomplete entry skipped
-
-- **GIVEN** a status update with entries (1001, APPROVED), (1002, no status) and (1003, APPROVED)
-- **WHEN** the server processes it
-- **THEN** a batch containing 1001 and 1003 is handed to order processing and the reply is SUCCESS
-
-#### Scenario: Hand-off fails
-
-- **GIVEN** a valid status update
-- **WHEN** handing the batch to order processing fails
-- **THEN** the reply is an error asking the administrator to try again
-
-### Requirement: Asynchronous delivery of approval decisions
-
-The system SHALL deliver approval and denial decisions to order processing asynchronously, as a single message per batch on a dedicated, durable order-approval channel, so that the sender does not wait for order processing to act on the decisions.
-
-#### Scenario: Administrator decisions delivered
-
-- **GIVEN** an administrator commits an approval batch for orders 1001 and 1003
-- **WHEN** the server hands it on
-- **THEN** one message carrying both decisions is placed on the order-approval channel and the server replies before order processing has acted on it
-
-### Requirement: Approval decision batch format
-
-An approval decision batch SHALL contain one or more entries, each carrying an order identifier followed by the order's new status. A receiver MUST reject a batch whose root is not an approval decision batch, that contains no entry, or in which an entry's order identifier or status is missing, empty or out of order.
-
-#### Scenario: Well-formed batch accepted
-
-- **GIVEN** a batch with entries (1001, APPROVED) and (1002, DENIED)
+- **GIVEN** a new order arrives from the storefront
 - **WHEN** it is received
-- **THEN** both decisions are read
+- **THEN** the order is stored and its workflow status is PENDING before the system decides whether it is approved
 
-#### Scenario: Entry with empty status rejected
+### Requirement: Automatic approval thresholds by locale
 
-- **GIVEN** a batch whose only entry has order identifier 1001 and an empty status
+ID: SWHR2-R-0022
+Recovered from: OAPP-RULE-0001
+The system SHALL automatically approve a newly received order WHEN the order locale is en_US AND the order total is strictly less than 500, OR WHEN the order locale is ja_JP AND the order total is strictly less than 50000. Every other order, in any other locale including zh_CN or with a total at or above the threshold, SHALL remain PENDING until an administrator approves or denies it.
+
+#### Scenario: Japanese order below threshold
+
+- **GIVEN** a ja_JP order with total 49999
 - **WHEN** it is received
-- **THEN** the batch is rejected
+- **THEN** it is approved automatically
 
-#### Scenario: Batch with no entries rejected
+#### Scenario: Japanese order at the threshold
 
-- **GIVEN** a batch containing no order entry
+- **GIVEN** a ja_JP order with total 50000
 - **WHEN** it is received
-- **THEN** the batch is rejected
+- **THEN** it remains PENDING until an administrator decides it
 
-### Requirement: Batch format does not restrict status values
+#### Scenario: Chinese order of a small total
 
-The approval decision batch format SHALL accept any non-empty text as an order's new status; the format itself MUST NOT restrict the status to a fixed set of values.
-
-#### Scenario: Unlisted status carried
-
-- **GIVEN** a batch entry with order identifier 1001 and status COMPLETED
-- **WHEN** the batch is read
-- **THEN** the entry is read with status COMPLETED and no format error is raised
-
-### Requirement: Approval batch schema validation by default
-
-The system SHALL validate an incoming approval decision batch against its declared schema by default, and SHALL skip that validation only when the receiver is explicitly configured to.
-
-#### Scenario: Default validation
-
-- **GIVEN** a receiver with no validation setting supplied
-- **WHEN** an approval decision batch is read
-- **THEN** it is validated against the declared schema
+- **GIVEN** a zh_CN order with total 10
+- **WHEN** it is received
+- **THEN** it remains PENDING until an administrator decides it
 
 ### Requirement: Automatic approval of small US orders
 
-WHEN a new order is received it SHALL first be recorded as PENDING; GIVEN its locale is US English and its total is strictly less than 500, the system SHALL then approve it automatically without administrator review, and SHALL otherwise leave it pending for an administrator.
+ID: SWHR2-R-0021
+Recovered from: ORDER-APPROVAL-BR-0001
+The system SHALL automatically approve a newly received US-locale order whose total price is strictly less than 500 (US dollars) without administrator review, and SHALL leave every other US-locale order pending for administrator review.
 
 #### Scenario: US order below threshold
 
@@ -256,34 +164,48 @@ WHEN a new order is received it SHALL first be recorded as PENDING; GIVEN its lo
 
 #### Scenario: US order at exactly the threshold
 
-- **GIVEN** a US-locale order with total 500.00
+- **GIVEN** a US-locale order with total exactly 500.00
 - **WHEN** it is received
-- **THEN** it remains PENDING for administrator review
+- **THEN** it is not approved automatically and remains pending
 
 #### Scenario: US order above threshold
 
 - **GIVEN** a US-locale order with total 612.50
 - **WHEN** it is received
-- **THEN** it remains PENDING and appears on the Process Pending Orders screen
+- **THEN** it remains pending for administrator review
 
-### Requirement: Automatic approval for other locales
+### Requirement: Asynchronous delivery of administrator decisions
 
-GIVEN a new order's locale is Japanese and its total is strictly less than 50000, the system SHALL approve it automatically. An order in any locale other than US English or Japanese MUST NOT be approved automatically, whatever its total.
+ID: SWHR2-R-0136
+Recovered from: ORDER-APPROVAL-INTEGRATION-0001
+The system SHALL deliver an administrator's order approval or denial decisions to order processing asynchronously, by placing the decision document, as a single text message, on the order approval queue.
 
-#### Scenario: Japanese order below threshold
+#### Scenario: Decisions delivered as one message
 
-- **GIVEN** a Japan-locale order with total 49999
-- **WHEN** it is received
-- **THEN** it is approved automatically
+- **GIVEN** an administrator commits approvals for orders 1001 and 1003
+- **WHEN** the decisions are handed to order processing
+- **THEN** one message carrying both decisions is placed on the order approval queue and the administrator does not wait for order processing to act on it
 
-#### Scenario: Japanese order at the threshold
+### Requirement: Durable order approval channel
 
-- **GIVEN** a Japan-locale order with total 50000
-- **WHEN** it is received
-- **THEN** it remains PENDING
+ID: SWHR2-R-0089
+Recovered from: order-approval-INT-0001
+The system SHALL provide an asynchronous, durable channel that carries order approval decisions into order processing.
 
-#### Scenario: Chinese order of a small total
+#### Scenario: Decision survives until consumed
 
-- **GIVEN** a zh_CN-locale order with total 10
-- **WHEN** it is received
-- **THEN** it remains PENDING for administrator review
+- **GIVEN** an approval decision has been placed on the order approval channel
+- **WHEN** order processing has not yet consumed it
+- **THEN** the decision remains on the channel until order processing receives it
+
+### Requirement: Approval batch status is free text
+
+ID: SWHR2-R-0082
+Recovered from: OA-BR-0001
+The system SHALL accept any text as an order's new status in an approval batch; the document format itself SHALL NOT restrict the status to a fixed set of values.
+
+#### Scenario: Unlisted status carried
+
+- **GIVEN** an approval batch entry with order identifier 1001 and status COMPLETED
+- **WHEN** the batch is read
+- **THEN** the entry is read with status COMPLETED and no format error is raised
