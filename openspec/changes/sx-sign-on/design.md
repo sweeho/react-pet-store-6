@@ -1,6 +1,6 @@
 # Sign-on: legacy implementation notes
 
-These notes record how Java Pet Store 1.3.2 implements sign-on and access control. The visible contract of each screen and every behaviour is stated in `specs/sign-on/spec.md`; this file explains where it lives in the legacy code and what the extraction could not settle. No target design is proposed here.
+These notes record how Java Pet Store 1.3.2 implements sign-on and access control. The visible contract of each approved screen and behaviour is stated in `specs/sign-on/spec.md`; this file explains where it lives in the legacy code and what the extraction could not settle. No target design is proposed here.
 
 Three independent sign-on mechanisms exist in the legacy suite: the storefront uses an application-level sign-on filter backed by its own credential store; the administration and supplier applications use container form login against the application server's realm. They share no code and no credential store.
 
@@ -53,19 +53,19 @@ All paths are relative to `legacy-source/petstore1.3.2/`.
 
 - **Q1 Password maximum length** (SIGN-RULE-0004). `UserLocal.MAX_PASSWD_LENGTH` is a redaction marker in this copy. An SME with the unredacted source or the live system must supply the number.
 - **Q2 Stand-alone account-creation servlet** (SIGN-REQ-0010). `CreateUserServlet` is excluded from the storefront build (`src/apps/petstore/src/build.xml:204-205`) and no `web.xml` in the tree maps it. Left out of the spec; recommended for rejection unless some deployment maps it.
-- **Q3 Orphaned sign-in flags** (SIGN-REQ-0011 in `src/waf/a.yaml`, SIGN-REQ-0002 in `src/waf/b.yaml`). `src/waf/src/docroot/WEB-INF/xml/requestmappings.xml` marks account editing and every checkout step `requiresSignin="true"`, but nothing loads that file and `URLMappingsXmlDAO` discards the flag. Left out of the spec. It matters because it lists order placement and commit as sign-in steps that the live `signon-config.xml` does not protect (see D5); whether the old list was the intent goes to Intent for the Business Owner.
-- **Q4 WAF sample session timeout** (SIGN-BR-0012, SIGN-REQ-0001 in `src/waf/b.yaml`). 30 minutes in the framework sample WAR only; the storefront declares 15. Left out of the spec.
-- **Q5 Admin-before-supplier sign-out** (SIGN-ON-REQ-0001, SIGN-ON-BR-0001). `docs/using.html:269-272` tells operators to log out of the admin client before using the supplier client. No code enforces it; the likely cause is that both applications authenticate against the same realm with role `administrator`. Left out of the spec as an operating note, not a behaviour.
+- **Q3 Orphaned sign-in flags** (SIGN-REQ-0011 in `src/waf/a.yaml`, SIGN-REQ-0002 in `src/waf/b.yaml`). `src/waf/src/docroot/WEB-INF/xml/requestmappings.xml` marks account editing and every checkout step `requiresSignin="true"`, but nothing loads that file and `URLMappingsXmlDAO` discards the flag. An SME approved SIGN-REQ-0011, so it is in the spec as "Pages that require a signed-on customer". It lists order placement and commit as sign-in steps that the live `signon-config.xml` does not protect (see D5), so the rebuild deliberately protects more than the legacy storefront did.
+- **Q4 WAF sample session timeout** (SIGN-BR-0012, SIGN-REQ-0001 in `src/waf/b.yaml`). 30 minutes in the framework sample WAR only; the storefront declares 15. SIGN-BR-0012 was approved and is in the spec scoped to the framework sample application; the storefront keeps 15 minutes.
+- **Q5 Admin-before-supplier sign-out** (SIGN-ON-REQ-0001, SIGN-ON-BR-0001). `docs/using.html:269-272` tells operators to log out of the admin client before using the supplier client. No code enforces it; the likely cause is that both applications authenticate against the same realm with role `administrator`. Both records were approved and are in the spec as written; no legacy code enforces the rule, so the rebuild has to decide how to enforce it.
 - **Q6 Timeout literals.** 15 and 54 minutes are bare descriptor values with no rationale. They are written as requirements at the legacy values; the Business Owner may choose to change them.
 - **Q7 Built-in accounts.** Whether the rebuild keeps the user IDs `jps_admin` and `supplier` and the shared group `administrator_group` is a business choice the source cannot settle.
 
 ## Suspected legacy defects (for the defect register)
 
-The spec states the legacy behaviour where it is plainly intended and states the corrected behaviour (marked by MUST or SHOULD NOT) where the legacy behaviour is a defect; each correction below is the Business Owner's decision.
+Whether to correct each of these is the Business Owner's decision; the spec carries only the approved records.
 
 - **D1 Pre-filled credentials.** The storefront sign-in form pre-fills `j2ee`/`j2ee`; the admin login pre-fills `jps_admin`/`admin`; the supplier login pre-fills `supplier`/`supplier`. Anyone reaching a sign-in page can sign in as the demo or privileged account.
 - **D2 Clear-text passwords.** `UserEJB` stores the password as given and compares with `String.equals`. The realm passwords for `jps_admin` and `supplier` are literals in `setup.xml`. No lockout, attempt counting or delay exists anywhere.
-- **D3 Admin data service checks only for a session.** `ApplRequestProcessor` accepts any live session, and `/ApplRequestProcessor` is not in the admin security constraint. A storefront-style or anonymous session in the admin web module would be accepted. The spec requires the administrator role in addition.
+- **D3 Admin data service checks only for a session.** `ApplRequestProcessor` accepts any live session, and `/ApplRequestProcessor` is not in the admin security constraint. A storefront-style or anonymous session in the admin web module would be accepted.
 - **D4 Order processing administration is unchecked and remote.** `OPCAdminFacadeEJB` has a remote interface (`ejb/opc/opc/OPCAdminFacadeEJBRemote`) and `<unchecked/>` permissions; the OPC message handlers are likewise unchecked, so anyone able to post to their queues can approve orders.
 - **D5 Unprotected storefront actions.** `order.do` (order submission), `update_customer.screen` and `createcustomer.do` are not in `signon-config.xml`. Only the screen leading to them is protected.
 - **D6 Session handling.** The session is not renewed on sign-on (`validateSignOn` reuses it), and the admin client carries the session id in the URL.
@@ -77,4 +77,12 @@ The spec states the legacy behaviour where it is plainly intended and states the
 
 ## Extraction coverage
 
-The pass files carry 79 records with `capability_key: sign-on` across 29 pass files (47 distinct record keys; keys repeat across modules). Nine are `kind: screen` and describe five distinct surfaces: storefront sign-in (with its error screen), storefront header, admin sign-in (with its error page), admin landing page and supplier sign-in (with its error page). The server reports 30 records and 4 screens for this capability; the difference was not reconciled from the tree. Fifteen records from data and back-office modules state that the module applies no role check; they were filed under sign-on as the closest access-control capability and are consolidated into the "Access control at the entry points" requirement. Two pass files (`src/components/cart/b.yaml`, `src/components/encodingfilter/b.yaml`) do not parse as YAML; a text search of them finds no `sign-on` record.
+The pass files carry 79 records with `capability_key: sign-on` across 29 pass files (47 distinct record keys; keys repeat across modules). Nine are `kind: screen` and describe five distinct surfaces: storefront sign-in (with its error screen), storefront header, admin sign-in (with its error page), admin landing page and supplier sign-in (with its error page). The server reports 30 records and 4 screens for this capability; the difference was not reconciled from the tree. Thirteen records are approved and each is one requirement in the spec; three of them are screens (storefront header, administration sign-in, administration landing page). The other screen records (storefront sign-in, its error screen, supplier sign-in) are not approved and are left out, so the spec carries 3 screen requirements against the server's count of 4. Two pass files (`src/components/cart/b.yaml`, `src/components/encodingfilter/b.yaml`) do not parse as YAML; a text search of them finds no `sign-on` record.
+
+## Ambiguous approved keys
+
+Three approved record keys are carried by more than one `sign-on` record in different pass files. The spec follows one record for each; an SME should confirm the choice:
+
+- **SIGN-REQ-0003** (`SWHR2-R-0031`): written from `src/apps/admin/b.yaml` (administration sign-in screen). Other records with this key: `src/apps/petstore/a.yaml` (storefront sign-in error message), `src/apps/supplier/a.yaml` (54-minute supplier idle expiry).
+- **SIGN-BR-0006** (`SWHR2-R-0120`): written from `src/apps/petstore/a.yaml` (15-minute storefront idle expiry). Other record: `src/apps/admin/b.yaml` (administration data service session check, D3).
+- **SIGN-REQ-0005** (`SWHR2-R-0148`): written from `src/apps/petstore/a.yaml` (storefront sign-out). Other record: `src/apps/admin/a.yaml` (administration logout).
