@@ -17,7 +17,7 @@ The Java Pet Store 1.3.2 rebuild needs a verifiable statement of how customer ac
   - `SWHR2-R-0056` (CUST-BR-0001) one customer per user id; `SWHR2-R-0057` (CUST-BR-0009) all-or-nothing customer creation;
   - `SWHR2-R-0128` (CUST-ENT-0001), `SWHR2-R-0129` (CUST-ENT-0002), `SWHR2-R-0058` (CUST-ENT-0003) customer, profile and account contents;
   - `SWHR2-R-0059` (CUST-REQ-0002) contact information snapshot; `SWHR2-R-0060` (CUST-RULE-0006) transactional address operations.
-- Adds the account screen (ACCT-SCR-0009) as a screen requirement with no key yet; its key is minted when an SME approves the record.
+- The one screen record (ACCT-SCR-0009, the account screen) is pending SME review, so it is Not specified in `spec.md` until an approval mints its key.
 - The other records of the capability are not yet approved and are Not specified here. Recommendations for them are in `legacy-analysis/ir/_recommendations/customer-account.yaml`.
 
 ## Impact

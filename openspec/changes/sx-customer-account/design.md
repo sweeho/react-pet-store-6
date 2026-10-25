@@ -82,27 +82,26 @@ These notes record how Java Pet Store 1.3.2 implements the capability. They are 
 
 ## Record-to-requirement map
 
-| Requirement (ID)                                          | Source record (pass module)                                      |
-| --------------------------------------------------------- | ---------------------------------------------------------------- |
-| Password entered twice at sign-up (SWHR2-R-0009)          | ACCT-BR-0003 (petstore a)                                        |
-| Payment card type and expiry year options (SWHR2-R-0010)  | ACCT-RULE-0009 (petstore b)                                      |
-| Customer profile defaults at creation (SWHR2-R-0011)      | CUST-BR-0003 (customer a; customer b agrees)                     |
-| Account status values (SWHR2-R-0012)                      | CUST-BR-0005 (customer a)                                        |
-| Stand-alone user registration (SWHR2-R-0013)              | CUST-WF-0001 (signon a)                                          |
-| My List panel for the favourite category (SWHR2-R-0053)   | ACCT-BR-0010 (petstore a)                                        |
-| Pet-tips banner for the favourite category (SWHR2-R-0054) | ACCT-BR-0011 (petstore a)                                        |
-| Sign-up from the sign-in screen (SWHR2-R-0055)            | ACCT-REQ-0001 (petstore b)                                       |
-| One customer per user id (SWHR2-R-0056)                   | CUST-BR-0001 (customer a)                                        |
-| Customer creation is all-or-nothing (SWHR2-R-0057)        | CUST-BR-0009 (customer b)                                        |
-| Customer record keyed by user id (SWHR2-R-0128)           | CUST-ENT-0001 (customer a)                                       |
-| Customer profile contents (SWHR2-R-0129)                  | CUST-ENT-0002 (customer a)                                       |
-| Account contents (SWHR2-R-0058)                           | CUST-ENT-0003 (customer a)                                       |
-| Contact information snapshot (SWHR2-R-0059)               | CUST-REQ-0002 (contactinfo b)                                    |
-| Address operations are transactional (SWHR2-R-0060)       | CUST-RULE-0006 (address b)                                       |
-| Account creation before purchase (SWHR2-R-0061)           | CUSTOMER-ACCOUNT-WF-0001 (docs a; b, c agree)                    |
-| Account screen display (no key yet)                       | ACCT-SCR-0009 (petstore a; pass b ACCT-SCR-0004 / ACCT-SCR-0007) |
+| Requirement (ID)                                          | Source record (pass module)                   |
+| --------------------------------------------------------- | --------------------------------------------- |
+| Password entered twice at sign-up (SWHR2-R-0009)          | ACCT-BR-0003 (petstore a)                     |
+| Payment card type and expiry year options (SWHR2-R-0010)  | ACCT-RULE-0009 (petstore b)                   |
+| Customer profile defaults at creation (SWHR2-R-0011)      | CUST-BR-0003 (customer a; customer b agrees)  |
+| Account status values (SWHR2-R-0012)                      | CUST-BR-0005 (customer a)                     |
+| Stand-alone user registration (SWHR2-R-0013)              | CUST-WF-0001 (signon a)                       |
+| My List panel for the favourite category (SWHR2-R-0053)   | ACCT-BR-0010 (petstore a)                     |
+| Pet-tips banner for the favourite category (SWHR2-R-0054) | ACCT-BR-0011 (petstore a)                     |
+| Sign-up from the sign-in screen (SWHR2-R-0055)            | ACCT-REQ-0001 (petstore b)                    |
+| One customer per user id (SWHR2-R-0056)                   | CUST-BR-0001 (customer a)                     |
+| Customer creation is all-or-nothing (SWHR2-R-0057)        | CUST-BR-0009 (customer b)                     |
+| Customer record keyed by user id (SWHR2-R-0128)           | CUST-ENT-0001 (customer a)                    |
+| Customer profile contents (SWHR2-R-0129)                  | CUST-ENT-0002 (customer a)                    |
+| Account contents (SWHR2-R-0058)                           | CUST-ENT-0003 (customer a)                    |
+| Contact information snapshot (SWHR2-R-0059)               | CUST-REQ-0002 (contactinfo b)                 |
+| Address operations are transactional (SWHR2-R-0060)       | CUST-RULE-0006 (address b)                    |
+| Account creation before purchase (SWHR2-R-0061)           | CUSTOMER-ACCOUNT-WF-0001 (docs a; b, c agree) |
 
-Every other record of the capability is pending SME review and is Not specified in `spec.md`, with one exception: the extraction counts one screen record for this capability (ACCT-SCR-0009), and `spec.md` carries it as the "Account screen display" requirement with a `Recovered from:` line and no `ID:` line, because no approval has minted its key yet. The legacy notes above still cover the pending records as evidence for the reviewers.
+Every other record of the capability is pending SME review and is Not specified in `spec.md`. That includes the capability's one screen record (ACCT-SCR-0009, the account screen): the validator refuses a requirement without an approved `ID:` line, so the screen requirement is added once an SME approves the record (recommendation: approve with the card number masked, see SD1). The legacy notes above still cover the pending records as evidence for the reviewers.
 
 Record keys are reused across modules: `CUST-BR-0003`, for example, names a different rule in the address, contactinfo, creditcard, customer and signon passes. The approved key `SWHR2-R-0011` is read as the customer-module record (profile defaults), the only one of them that both customer passes state identically. If the SME approved a different module's `CUST-BR-0003`, that requirement must be rewritten from that record. The same reading was applied to the other reused keys: `CUST-BR-0001`, `CUST-ENT-0001`, `CUST-ENT-0002` and `CUST-ENT-0003` are read as the customer-module records; `ACCT-REQ-0001` as the petstore pass-b record (sign-up), not the creditcard pass-a record (empty card at account creation); `CUST-REQ-0002` as the contactinfo record (contact snapshot), not the address record (system-generated address key).
 
