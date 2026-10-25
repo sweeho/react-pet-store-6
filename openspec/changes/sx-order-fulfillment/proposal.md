@@ -4,10 +4,9 @@ The legacy Java Pet Store 1.3.2 fulfils customer orders across three cooperating
 
 ## What Changes
 
-- Add the `order-fulfillment` capability as a delta spec: 46 requirements covering the staged order flow, the order workflow status store and lifecycle, order lines, supplier orders, the trading-partner supplier-order and invoice documents, supplier-side fulfilment and invoicing, and the application of invoices to customer orders.
+- Add the `order-fulfillment` capability as a delta spec of 28 requirements, one per SME-approved record, each carrying its minted `ID:` key: the staged order flow and message channels, the order workflow record and lifecycle, order lines, supplier orders, the supplier order and invoice documents, purchase-order receipt at the supplier, re-fulfilment after an inventory change, and invoice receipt by order processing.
 - Record the legacy implementation, the record-to-requirement trace, cross-source conflicts and suspected legacy defects in `design.md`.
-- Recommend an SME decision for every extracted record in `legacy-analysis/ir/_recommendations/order-fulfillment.yaml`.
-- No requirement carries an `ID:` line: no record of this capability is approved yet.
+- Recommend an SME decision for every record not yet approved in `legacy-analysis/ir/_recommendations/order-fulfillment.yaml`; those records are Not specified in `spec.md`.
 
 ## Capabilities
 

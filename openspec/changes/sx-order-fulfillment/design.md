@@ -57,72 +57,54 @@ No screen records were extracted for this capability; its user interface is unsp
 
 ### Requirement-to-record trace
 
-Pass files are under `legacy-analysis/ir/_passes/legacy-source/petstore1.3.2/`. Record keys collide across modules, so each key is qualified by its pass file.
+Pass files are under `legacy-analysis/ir/_passes/legacy-source/petstore1.3.2/`. Record keys collide across modules (F1), so each key is qualified by the pass file whose text matches the current-run IR record the requirement key was minted for. `spec.md` carries exactly the 28 approved records; every other record of this capability is pending and Not specified, and has a recommendation in `legacy-analysis/ir/_recommendations/order-fulfillment.yaml`.
 
-| Requirement                                       | Records (pass file)                                                                                  |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Staged asynchronous order processing              | ORDER-FULFILLMENT-WF-0002 (docs/a, docs/b), ORDER-FULFILLMENT-INT-0002 (docs/c)                      |
-| Fulfilment message channels                       | order-fulfillment-INT-0001 (setup.xml/a), FUL-INT-0001 (setup.xml/b)                                 |
-| One workflow status record per order              | ORDFUL-ENT-0001 (processmanager/a), FUL-ENT-0001 (processmanager/b)                                  |
-| Order status vocabulary                           | ORDFUL-BR-0001 (processmanager/a), FUL-BR-0001 (processmanager/b)                                    |
-| Order lifecycle                                   | ORDFUL-WF-0001 (processmanager/a), FUL-WF-0001 (processmanager/b)                                    |
-| Starting an order workflow                        | ORDFUL-REQ-0001 (processmanager/a), FUL-REQ-0001 (processmanager/b)                                  |
-| Updating an order status                          | ORDFUL-REQ-0002 (processmanager/a), FUL-BR-0003 (processmanager/b)                                   |
-| Reading an order status                           | ORDFUL-REQ-0003 (processmanager/a), FUL-REQ-0002 (processmanager/b)                                  |
-| Atomic workflow status operations                 | FUL-REQ-0003 (processmanager/b)                                                                      |
-| Internal-only order status operations             | FUL-BR-0004 (processmanager/b)                                                                       |
-| Configurable stage hand-off                       | ORDFUL-INT-0001 (processmanager/a), FUL-INT-0001 (processmanager/b)                                  |
-| Order line record                                 | order-fulfillment-BR-0001 (lineitem/a), OFUL-BR-0002 (lineitem/b), FUL-ENTITY-0001 (purchaseorder/b) |
-| Order line immutability                           | order-fulfillment-BR-0002 (lineitem/a), OFUL-BR-0001 (lineitem/b)                                    |
-| Order line snapshot                               | order-fulfillment-REQ-0001 (lineitem/a)                                                              |
-| Supplier order record                             | ORDF-ENT-0001 (supplierpo/a), OF-ENT-0001 (supplierpo/b), OFUL-ENT-0001 (supplier/b)                 |
-| Supplier order identity                           | ORDF-BR-0001 (supplierpo/a), OF-BR-0001 (supplierpo/b)                                               |
-| Initial supplier order state                      | ORDF-BR-0002, ORDF-BR-0004 (supplierpo/a), OF-BR-0002 (supplierpo/b)                                 |
-| Supplier order status vocabulary                  | ORDF-BR-0003 (supplierpo/a), OF-WF-0001 (supplierpo/b)                                               |
-| Listing supplier orders by status                 | ORDF-REQ-0001 (supplierpo/a), OF-REQ-0001 (supplierpo/b)                                             |
-| Atomic supplier order creation                    | ORDF-REQ-0002 (supplierpo/a), OF-BR-0004 (supplierpo/b)                                              |
-| Dependent records removed with their order        | ORDF-BR-0005 (supplierpo/a), OF-BR-0003 (supplierpo/b), FUL-RULE-0003 (purchaseorder/b)              |
-| Supplier order read-only view                     | OF-REQ-0002 (supplierpo/b)                                                                           |
-| Internal supplier order document                  | ORDF-INT-0001 (supplierpo/a), OF-INT-0001 (supplierpo/b)                                             |
-| Supplier order date handling                      | ORDF-BR-0006 (supplierpo/a), OF-BR-0005 (supplierpo/b)                                               |
-| Contact details in order documents                | FUL-BR-0001, FUL-BR-0002 (contactinfo/b)                                                             |
-| Order line exchange element                       | OFUL-INT-0001 (lineitem/b)                                                                           |
-| Supplier purchase order document                  | FUL-ENT-0001 (xmldocuments/a), OF-ENT-0001 (xmldocuments/b)                                          |
-| Supplier invoice document                         | FUL-ENT-0002 (xmldocuments/a), OF-ENT-0002 (xmldocuments/b)                                          |
-| Trading-partner line attributes                   | FUL-BR-0003 (xmldocuments/a), OF-ENT-0003 (xmldocuments/b)                                           |
-| Schema-mode line value ranges                     | FUL-BR-0004 (xmldocuments/a), OF-BR-0001 (xmldocuments/b)                                            |
-| Schema-mode unique items per document             | FUL-BR-0005 (xmldocuments/a), OF-BR-0002 (xmldocuments/b)                                            |
-| Trading-partner document dates                    | FUL-BR-0006 (xmldocuments/a), OF-BR-0003 (xmldocuments/b)                                            |
-| Trading-partner document completeness             | OF-BR-0004 (xmldocuments/b)                                                                          |
-| Document format identification and resolution     | FUL-INT-0007 (xmldocuments/a), OF-INT-0002 (xmldocuments/b)                                          |
-| Inbound document type check                       | FUL-BR-0008 (xmldocuments/a), OF-INT-0001 (xmldocuments/b)                                           |
-| Inbound supplier purchase order conversion        | OFUL-INT-0001 (supplier/a), OFUL-INT-0002 (supplier/b)                                               |
-| Supplier purchase order receipt                   | OFUL-WF-0001 (supplier/a, supplier/b)                                                                |
-| Whole-line fulfilment                             | OFUL-BR-0001 (supplier/a, supplier/b), OFUL-BR-0002 (supplier/b)                                     |
-| Supplier order completion                         | OFUL-BR-0002 (supplier/a), OFUL-BR-0003 (supplier/b)                                                 |
-| Item with no supplier stock record                | OFUL-BR-0004 (supplier/a), OFUL-BR-0005 (supplier/b)                                                 |
-| Shipment invoice content                          | OFUL-BR-0003 (supplier/a), OFUL-BR-0004 (supplier/b)                                                 |
-| Re-fulfilment after a stock update                | OFUL-WF-0002 (supplier/b), ORDER-FULFILLMENT-WF-0001 (docs/a, docs/b, docs/c)                        |
-| Invoice publication                               | OFUL-INT-0002 (supplier/a), OFUL-INT-0001 (supplier/b)                                               |
-| Purchase order receipt as one unit of work        | OFUL-BR-0006 (supplier/b)                                                                            |
-| Applying a supplier invoice to the customer order | ORDFUL-BR-0001 (purchaseorder/a), FUL-RULE-0001 (purchaseorder/b)                                    |
-| Customer order completion                         | ORDFUL-BR-0001 (purchaseorder/a), FUL-RULE-0002 (purchaseorder/b)                                    |
+| Requirement (spec.md)                                     | ID           | Record (pass file)                       |
+| --------------------------------------------------------- | ------------ | ---------------------------------------- |
+| Asynchronous hand-off from storefront to order processing | SWHR2-R-0098 | ORDER-FULFILLMENT-INT-0002 (docs/c)      |
+| Staged order processing                                   | SWHR2-R-0100 | ORDER-FULFILLMENT-WF-0002 (docs/b)       |
+| Fulfilment message channels                               | SWHR2-R-0109 | order-fulfillment-INT-0001 (setup.xml/a) |
+| One workflow record per order                             | SWHR2-R-0142 | ORDFUL-ENT-0001 (processmanager/a)       |
+| Starting an order workflow                                | SWHR2-R-0107 | ORDFUL-REQ-0001 (processmanager/a)       |
+| Reading an order status                                   | SWHR2-R-0108 | ORDFUL-REQ-0003 (processmanager/a)       |
+| Order lifecycle                                           | SWHR2-R-0024 | ORDFUL-WF-0001 (processmanager/a)        |
+| Order status tracking                                     | SWHR2-R-0096 | OFUL-ENT-0003 (opc/a)                    |
+| Configurable stage hand-off                               | SWHR2-R-0106 | ORDFUL-INT-0001 (processmanager/a)       |
+| Order message processed as one unit                       | SWHR2-R-0140 | OFUL-REQ-0004 (opc/a)                    |
+| Order line record                                         | SWHR2-R-0090 | FUL-ENTITY-0001 (purchaseorder/b)        |
+| Dependent records removed with a purchase order           | SWHR2-R-0091 | FUL-RULE-0003 (purchaseorder/b)          |
+| Supplier order identity                                   | SWHR2-R-0101 | ORDF-BR-0001 (supplierpo/a)              |
+| New supplier order is pending                             | SWHR2-R-0102 | ORDF-BR-0002 (supplierpo/a)              |
+| Supplier order status vocabulary                          | SWHR2-R-0023 | ORDF-BR-0003 (supplierpo/a)              |
+| Supplier order lines start unshipped                      | SWHR2-R-0103 | ORDF-BR-0004 (supplierpo/a)              |
+| Supplier order contact and lines belong to the order      | SWHR2-R-0104 | ORDF-BR-0005 (supplierpo/a)              |
+| Listing supplier orders by status                         | SWHR2-R-0141 | ORDF-REQ-0001 (supplierpo/a)             |
+| Atomic supplier order creation                            | SWHR2-R-0105 | ORDF-REQ-0002 (supplierpo/a)             |
+| Supplier order document content                           | SWHR2-R-0138 | FUL-ENT-0001 (xmldocuments/a)            |
+| Supplier document mandatory fields                        | SWHR2-R-0094 | OF-BR-0004 (xmldocuments/b)              |
+| Supplier document dates                                   | SWHR2-R-0137 | FUL-BR-0006 (xmldocuments/a)             |
+| Supplier document format identification and resolution    | SWHR2-R-0139 | FUL-INT-0007 (xmldocuments/a)            |
+| Published document format catalog                         | SWHR2-R-0093 | FULF-INT-0004 (opc/b)                    |
+| Supplier receives purchase orders by message              | SWHR2-R-0097 | OFUL-INT-0001 (supplier/a)               |
+| Purchase order receipt as one unit of work                | SWHR2-R-0095 | OFUL-BR-0006 (supplier/b)                |
+| Re-fulfilment after an inventory change                   | SWHR2-R-0099 | ORDER-FULFILLMENT-WF-0001 (docs/c)       |
+| Supplier invoice accepted by order processing             | SWHR2-R-0092 | FULF-INT-0002 (opc/b)                    |
 
-One record has no requirement of its own: OFUL-BR-0003 (lineitem/b, "no range checks on line quantities or price") states an absence of validation. It is recorded under Risks below and recommended for rejection as a requirement.
+Legacy rules not yet approved, and so absent from `spec.md` even though the implementation notes above describe them: whole-line fulfilment from supplier stock, supplier order completion, item with no stock record, shipment invoice content, invoice publication, applying an invoice to the customer order and customer order completion (supplier/a, supplier/b, purchaseorder/a, purchaseorder/b); status update, internal-only access and atomic status operations (processmanager); line immutability and line snapshot (lineitem); contact element order (contactinfo/b); schema-mode ranges, item uniqueness, invoice document and inbound type check (xmldocuments). These are Not specified until an SME approves them.
 
 ### Synthesis choices
 
-- **Lifecycle vs. status store.** The lifecycle (PENDING -> APPROVED -> SHIPPED_PART -> COMPLETED | DENIED) exists only in the `OrderStatusNames` javadoc; `ProcessManagerEJB.updateStatus` writes any string without a transition or value check (FUL-BR-0003). The spec states the documented lifecycle and leaves the unguarded write out of the requirement text. Whether the rebuild enforces the lifecycle is a defect-register decision.
-- **Access control.** FUL-BR-0004 says no role check exists (`<unchecked/>` method permissions, local interfaces only). The spec states only the observable property, that the operations are internal-only.
-- **Observed defects kept as observed behaviour.** Order line snapshot without shipped quantity, supplier order view with empty contact and no status, accept-on-unreadable-date, and accept-on-absent-DOCTYPE are written as the legacy behaves. Each is also a suspected defect (below); the Business Owner decides whether the rebuild keeps them.
-- **Invoice quantity.** The supplier invoices the line's full ordered quantity (it never ships part of a line), and OPC adds the invoiced quantity to `quantityShipped`. The two rules are consistent in the normal path.
+- **Duplicate record keys resolved against the platform IR.** Where one key appears in several pass files (FUL-ENT-0001, OF-BR-0004, OFUL-INT-0001, ORDFUL-ENT-0001, ORDER-FULFILLMENT-WF-0001, ORDER-FULFILLMENT-WF-0002, order-fulfillment-INT-0001), the requirement is written from the variant whose text matches the current-run approved IR record; the other variants are separate records awaiting review.
+- **Lifecycle vs. status store.** The lifecycle (PENDING -> APPROVED -> SHIPPED_PART -> COMPLETED | DENIED) exists only in the `OrderStatusNames` javadoc; `ProcessManagerEJB.updateStatus` writes any string without a transition or value check. The only guard in code is `OrderApprovalMDB` skipping orders that are not PENDING (`OrderApprovalMDB.java:201-207`), which the "Order status tracking" scenarios state. Whether the rebuild enforces the whole lifecycle is a defect-register decision.
+- **Atomic supplier order creation.** `CreateException` is an application exception, so in the legacy code the rollback of partial rows depends on the caller marking the transaction; the approved requirement states the all-or-nothing outcome.
+- **Restock notification.** The approved record (ORDER-FULFILLMENT-WF-0001, docs/c) follows the documentation, which says order processing is notified of inventory changes; see conflict C2.
 
 ## Risks / Trade-offs
 
 ### Cross-source conflicts
 
 - **C1: Two status vocabularies.** OPC workflow uses 5 statuses; the supplier order uses 4 (no SHIPPED_PART), and the supplier's documented PENDING -> APPROVED -> COMPLETED path is never followed in code (PENDING -> COMPLETED directly). Goes to Intent: which vocabulary a supplier order should carry.
-- **C2: Docs vs. code on restock.** `docs/using.html:290-293` says the supplier "notifies the OPC about the changes to the inventory". The code re-runs pending supplier orders inside the supplier and publishes invoices; no inventory-change message to OPC was found. The spec follows the code.
+- **C2: Docs vs. code on restock.** `docs/using.html:290-293` says the supplier "notifies the OPC about the changes to the inventory". The code re-runs pending supplier orders inside the supplier and publishes invoices; no inventory-change message to OPC was found. The approved requirement (SWHR2-R-0099) states the documented notification; the code behaviour is in the pending records OFUL-WF-0002 (supplier/b). Goes to Intent for the Business Owner: whether order processing must be notified of inventory changes.
 - **C3: XSD-only constraints.** Value ranges and item uniqueness exist only in the XSDs; the default DTD mode enforces none of them, and the production validation flag values are redacted in this tree. Production behaviour depends on a deployment setting nobody has read.
 
 ### Suspected legacy defects touching this capability (from the pass files)
