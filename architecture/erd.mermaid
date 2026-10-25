@@ -1,0 +1,220 @@
+%% EXTRACTED FROM LEGACY SOURCE — evidence of what exists, not a build target. Where this disagrees with a capability delta spec, the delta spec wins.
+%%
+%% Java Pet Store 1.3.2 entity relationships, spec extraction SX-0001. Companion to
+%% architecture/schema.sql, which carries the column-level DDL and source line pointers.
+%% Entities are grouped by the legacy datasource they live in (prefix PS_ = PetStoreDB,
+%% OPC_ = OPCDB, SUP_ = SupplierDB). No table is shared across datasources; the dotted
+%% relationships marked "by value" are joins on equal identifiers with no constraint or CMR,
+%% and the cross-datasource ones are carried only by XML documents over JMS queues.
+%% Solid relationships are either declared foreign keys (catalog) or CMP container-managed
+%% relationships with cascade-delete (ejb-jar.xml <ejb-relation>).
+%% The shopping cart is not persisted and therefore does not appear.
+erDiagram
+    PS_CATEGORY ||--o{ PS_CATEGORY_DETAILS : "fk_category_details_1, one row per locale"
+    PS_CATEGORY ||--o{ PS_PRODUCT : "fk_product_1"
+    PS_PRODUCT ||--o{ PS_PRODUCT_DETAILS : "fk_product_details_1, one row per locale"
+    PS_PRODUCT ||--o{ PS_ITEM : "fk_item_1"
+    PS_ITEM ||--o{ PS_ITEM_DETAILS : "fk_item_details_1, one row per locale"
+
+    PS_CUSTOMER ||--|| PS_ACCOUNT : "CMR account, cascade-delete"
+    PS_CUSTOMER ||--|| PS_PROFILE : "CMR profile, cascade-delete"
+    PS_ACCOUNT ||--|| PS_CONTACT_INFO : "CMR contactInfo, cascade-delete"
+    PS_ACCOUNT ||--|| PS_CREDIT_CARD : "CMR creditCard, cascade-delete"
+    PS_CONTACT_INFO ||--|| PS_ADDRESS : "CMR address, cascade-delete"
+    PS_USER |o..o| PS_CUSTOMER : "by value userName = userId"
+    PS_PROFILE }o..o| PS_CATEGORY : "by value favoriteCategory = catid"
+
+    OPC_PURCHASE_ORDER ||--|| OPC_CONTACT_INFO : "CMR contactInfo, cascade-delete"
+    OPC_PURCHASE_ORDER ||--|| OPC_CREDIT_CARD : "CMR creditCard, cascade-delete"
+    OPC_PURCHASE_ORDER ||--|{ OPC_LINE_ITEM : "CMR lineItems, cascade-delete"
+    OPC_CONTACT_INFO ||--|| OPC_ADDRESS : "CMR address, cascade-delete"
+    OPC_PURCHASE_ORDER ||..|| OPC_PROCESS_MANAGER : "by value poId = orderId"
+    PS_CUSTOMER ||..o{ OPC_PURCHASE_ORDER : "by value userId = poUserId, PurchaseOrderQueue XML"
+    PS_COUNTER ||..o{ OPC_PURCHASE_ORDER : "issues poId (name 1001 + counter)"
+
+    SUP_SUPPLIER_ORDER ||--|| SUP_CONTACT_INFO : "CMR contactInfo, cascade-delete"
+    SUP_SUPPLIER_ORDER ||--|{ SUP_LINE_ITEM : "CMR lineItems, cascade-delete"
+    SUP_CONTACT_INFO ||--|| SUP_ADDRESS : "CMR address, cascade-delete"
+    SUP_INVENTORY ||..o{ SUP_LINE_ITEM : "by value itemId"
+    OPC_PURCHASE_ORDER ||..o| SUP_SUPPLIER_ORDER : "by value poId, supplier PurchaseOrderQueue XML"
+    PS_ITEM ||..o| SUP_INVENTORY : "by value itemid = itemId"
+
+    PS_CATEGORY {
+        char10 catid PK
+    }
+    PS_CATEGORY_DETAILS {
+        char10 catid PK, FK
+        char10 locale PK
+        varchar80 name "NOT NULL"
+        varchar255 image
+        varchar255 descn
+    }
+    PS_PRODUCT {
+        char10 productid PK
+        char10 catid FK "NOT NULL"
+    }
+    PS_PRODUCT_DETAILS {
+        char10 productid PK, FK
+        char10 locale PK
+        varchar80 name "NOT NULL"
+        varchar255 image
+        varchar255 descn
+    }
+    PS_ITEM {
+        char10 itemid PK
+        char10 productid FK "NOT NULL"
+    }
+    PS_ITEM_DETAILS {
+        char10 itemid PK, FK
+        char10 locale PK
+        decimal listprice "NOT NULL, charged price"
+        decimal unitcost "NOT NULL"
+        char255 image "NOT NULL"
+        varchar255 descn "NOT NULL"
+        varchar80 attr1
+        varchar80 attr2
+        varchar80 attr3
+        varchar80 attr4
+        varchar80 attr5
+    }
+    PS_USER {
+        varchar userName PK
+        varchar password "plain text"
+    }
+    PS_CUSTOMER {
+        varchar userId PK
+        longint account_ref
+        longint profile_ref
+    }
+    PS_ACCOUNT {
+        longint pmPrimaryKey PK
+        varchar reverse_account_userId FK
+        longint contactInfo_ref FK
+        longint creditCard_ref FK
+        varchar status
+    }
+    PS_PROFILE {
+        longint pmPrimaryKey PK
+        varchar reverse_profile_userId FK
+        boolean bannerPreference "NOT NULL"
+        varchar favoriteCategory
+        boolean myListPreference "NOT NULL"
+        varchar preferredLanguage
+    }
+    PS_CONTACT_INFO {
+        longint pmPrimaryKey PK
+        longint reverse_contactInfo_ref FK
+        longint address_ref FK
+        varchar email
+        varchar familyName
+        varchar givenName
+        varchar telephone
+    }
+    PS_ADDRESS {
+        longint pmPrimaryKey PK
+        longint reverse_address_ref FK
+        varchar streetName1
+        varchar streetName2
+        varchar city
+        varchar state
+        varchar zipCode
+        varchar country
+    }
+    PS_CREDIT_CARD {
+        longint pmPrimaryKey PK
+        longint reverse_creditCard_ref FK
+        varchar cardNumber "unmasked"
+        varchar cardType
+        varchar expiryDate
+    }
+    PS_COUNTER {
+        varchar name PK
+        integer counter "NOT NULL"
+    }
+    OPC_PURCHASE_ORDER {
+        varchar poId PK
+        varchar poUserId
+        varchar poEmailId
+        longint poDate "NOT NULL, epoch ms"
+        varchar poLocale
+        real poValue "NOT NULL"
+        longint contactInfo_ref FK
+        longint creditCard_ref FK
+    }
+    OPC_PROCESS_MANAGER {
+        varchar orderId PK
+        varchar status "PENDING APPROVED DENIED SHIPPED_PART COMPLETED"
+    }
+    OPC_LINE_ITEM {
+        longint pmPrimaryKey PK
+        varchar categoryId
+        varchar productId
+        varchar itemId
+        varchar lineNumber
+        integer quantity "NOT NULL"
+        integer quantityShipped "NOT NULL"
+        real unitPrice "NOT NULL"
+    }
+    OPC_CONTACT_INFO {
+        longint pmPrimaryKey PK
+        varchar reverse_contactInfo_poId FK
+        longint address_ref FK
+        varchar email
+        varchar familyName
+        varchar givenName
+        varchar telephone
+    }
+    OPC_ADDRESS {
+        longint pmPrimaryKey PK
+        varchar streetName1
+        varchar streetName2
+        varchar city
+        varchar state
+        varchar zipCode
+        varchar country
+    }
+    OPC_CREDIT_CARD {
+        longint pmPrimaryKey PK
+        varchar reverse_creditCard_poId FK
+        varchar cardNumber
+        varchar cardType
+        varchar expiryDate
+    }
+    SUP_SUPPLIER_ORDER {
+        varchar poId PK
+        longint poDate "NOT NULL, epoch ms"
+        varchar poStatus "PENDING APPROVED DENIED COMPLETED"
+        longint contactInfo_ref FK
+    }
+    SUP_LINE_ITEM {
+        longint pmPrimaryKey PK
+        varchar categoryId
+        varchar productId
+        varchar itemId
+        varchar lineNumber
+        integer quantity "NOT NULL"
+        integer quantityShipped "NOT NULL"
+        real unitPrice "NOT NULL"
+    }
+    SUP_CONTACT_INFO {
+        longint pmPrimaryKey PK
+        varchar reverse_contactInfo_poId FK
+        longint address_ref FK
+        varchar email
+        varchar familyName
+        varchar givenName
+        varchar telephone
+    }
+    SUP_ADDRESS {
+        longint pmPrimaryKey PK
+        varchar streetName1
+        varchar streetName2
+        varchar city
+        varchar state
+        varchar zipCode
+        varchar country
+    }
+    SUP_INVENTORY {
+        varchar itemId PK
+        integer quantity "NOT NULL"
+    }
