@@ -6,19 +6,16 @@ The legacy Pet Store serves shoppers in three languages and currencies, and its 
 
 ## What Changes
 
-- New capability `localization`, captured as a delta spec of the legacy behaviour:
-  - supported storefront locales (en_US, ja_JP, zh_CN) and the en_US default;
-  - session locale defaulting, locale-code interpretation, and the change-locale action with its error message;
-  - the storefront header language switch, return-to-originating-page, and the change-language screen;
-  - page locale resolution and its two-step fallback to en_US;
-  - per-locale catalog content and separately stated per-locale prices;
-  - cart locale handling;
-  - UTF-8 request decoding (before sign-on), UTF-8 page rendering and UTF-8 business documents;
-  - order and invoice locale defaults;
-  - per-locale price formatting in customer e-mails;
-  - the admin tool's English/German text catalogue;
-  - locale-aware number formatting and keyword splitting (reachability unconfirmed).
-- No requirement is approved yet; every requirement is a draft awaiting SME review. Recommendations are in `legacy-analysis/ir/_recommendations/localization.yaml`.
+- New capability `localization`, captured as a delta spec of the 11 approved legacy behaviours:
+  - supported storefront locales (en_US, ja_JP, zh_CN), the en_US default and the header flag switch;
+  - locale change applied to session and cart;
+  - locale-code interpretation;
+  - page locale resolution and its fallback to en_US;
+  - the change-language screen;
+  - catalog display details per locale and cart lines in the cart's locale (en_US default);
+  - UTF-8 interpretation of submitted text, established before sign-on;
+  - locale-aware money and number formatting and keyword splitting.
+- Records not approved are Not specified and left out; recommendations are in `legacy-analysis/ir/_recommendations/localization.yaml`.
 
 ## Capabilities
 
@@ -33,4 +30,4 @@ The legacy Pet Store serves shoppers in three languages and currencies, and its 
 ## Impact
 
 - Cross-cuts catalog (locale-keyed content and prices), cart (line localisation), checkout/purchase orders (order locale), order processing (e-mail formatting) and authentication (encoding before sign-on).
-- Open decisions for the Business Owner, detailed in `design.md`: whether zh_CN is a supported locale (code says yes, the English guide says no), whether the framework's sample change-language screen and unused formatting utilities are in production scope, and whether the admin, supplier and order-processing applications need UTF-8 input decoding.
+- Open decisions for the Business Owner, detailed in `design.md`: whether zh_CN is a supported locale (code says yes, the English guide says no), and whether the admin, supplier and order-processing applications need UTF-8 input decoding. The change-language screen and the formatting utilities were approved by an SME although no caller was found in the legacy tree.

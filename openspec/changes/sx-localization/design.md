@@ -76,30 +76,24 @@ IR pass files carrying `capability_key: localization`: `docs/{a,b,c}`, `src/apps
 
 ## Unreached utilities
 
-- `I18nUtil.formatCurrency`/`formatNumber` (100-112) and `parseKeywords` (136-157): a grep across `legacy-source` finds no caller outside `src/waf`. Recorded with `dispute: unresolved-reachability`. If no compiled JSP or tag library outside the tree calls them, these requirements should be rejected.
+- `I18nUtil.formatCurrency`/`formatNumber` (100-112) and `parseKeywords` (136-157): a grep across `legacy-source` finds no caller outside `src/waf`. Recorded with `dispute: unresolved-reachability`. Both records (LOC-BR-0007, LOC-BR-0010) were nevertheless approved by an SME, so they are specified.
 
 ## Requirement-to-record map
 
-| Spec requirement                                     | Records (pass file)                                                                                                                                           |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Supported storefront locales                         | LOCALIZATION-REQ-0001 (docs/a,b,c), LOC-REQ-0001 (petstore/a,b)                                                                                               |
-| Default locale for a new session                     | LOC-BR-0001 (waf/a), LOC-REQ-0001 (waf/b)                                                                                                                     |
-| Locale code interpretation                           | LOC-BR-0003 (waf/a,b), LOC-BR-0001 (catalog/a), CATB-RULE-0014 (catalog/b), LOC-BR-0001 (xmldocuments/a), LOC-BR-0003 (xmldocuments/b), LOC-RULE-0001 (opc/a) |
-| Change session locale                                | LOC-REQ-0002 (waf/a,b), LOC-BR-0002 (petstore/a)                                                                                                              |
-| Language switch from the storefront header           | LOC-REQ-0001 (petstore/a), LOC-REQ-0002 (petstore/b)                                                                                                          |
-| Return to the originating page                       | LOC-WF-0006 (waf/b), LOC-REQ-0002 (petstore/b)                                                                                                                |
-| Change-language screen                               | LOC-SCR-0005 (waf/a,b) — the one `kind: screen` record                                                                                                        |
-| Page locale resolution and fallback                  | LOC-BR-0004 (waf/a,b)                                                                                                                                         |
-| Locale-specific catalog content                      | LOC-REQ-0001 (catalog/a), LOCALIZATION-BR-0002 (docs/c), LOC-BR-0003 (petstore/a)                                                                             |
-| Separately stated price per locale                   | LOC-RULE-0005 (petstore/b), LOC-BR-0003 (petstore/a)                                                                                                          |
-| Catalog text and currency follow page locale         | LOC-RULE-0004 (petstore/b), LOC-BR-0003 (petstore/a)                                                                                                          |
-| Cart follows the shopper's locale                    | SC-BR-0006 (cart/a), LOC-BR-0002 (petstore/a)                                                                                                                 |
-| UTF-8 decoding of storefront input                   | LOCALIZATION-REQ-0001, LOCALIZATION-RULE-0001 (encodingfilter/a), LOC-REQ-0001 (encodingfilter/b,c), LOC-BR-0002 (encodingfilter/c), LOC-BR-0004 (petstore/a) |
-| UTF-8 rendering of storefront pages                  | LOC-RULE-0003 (petstore/b)                                                                                                                                    |
-| Request encoding is a deployment setting             | LOC-RULE-0001 (encodingfilter/b), LOC-BR-0003 (encodingfilter/c)                                                                                              |
-| Order locale is recorded                             | LOC-BR-0001 (purchaseorder/a), LOC-RULE-0001 (purchaseorder/b)                                                                                                |
-| Invoice locale default                               | LOC-BR-0002 (xmldocuments/b)                                                                                                                                  |
-| UTF-8 encoding of business documents                 | LOC-BR-0001 (xmldocuments/b)                                                                                                                                  |
-| Customer e-mail price format per locale              | LOC-BR-0001 (opc/b)                                                                                                                                           |
-| Administration tool text catalogue                   | LOC-REQ-0001 (admin/a,b)                                                                                                                                      |
-| Locale-aware number formatting and keyword splitting | LOC-BR-0010 (waf/a), LOC-BR-0007 (waf/b)                                                                                                                      |
+Record keys repeat across pass files with different content. Each approved key is written from the pass file named below; the other same-key records, and every record not in the approved set, are Not specified and left out of `spec.md` (recommendations in `legacy-analysis/ir/_recommendations/localization.yaml`).
+
+| Spec requirement                                        | ID           | Record (pass file the text is taken from)                   |
+| ------------------------------------------------------- | ------------ | ----------------------------------------------------------- |
+| Supported storefront locales and header language switch | SWHR2-R-0078 | LOC-REQ-0001 (petstore/a, confirmed by petstore/b)          |
+| Locale change applies to session and cart               | SWHR2-R-0076 | LOC-BR-0002 (petstore/a)                                    |
+| Locale code interpretation                              | SWHR2-R-0077 | LOC-BR-0003 (waf/a, waf/b, xmldocuments/b agree)            |
+| Page locale resolution and fallback                     | SWHR2-R-0133 | LOC-BR-0004 (waf/a, waf/b agree)                            |
+| Locale-aware money and number formatting                | SWHR2-R-0018 | LOC-BR-0007 (waf/b)                                         |
+| Locale-aware formatting and keyword splitting           | SWHR2-R-0019 | LOC-BR-0010 (waf/a)                                         |
+| Change-language screen                                  | SWHR2-R-0020 | LOC-SCR-0005 (waf/a, waf/b) — the one `kind: screen` record |
+| Catalog shown in the shopper's locale                   | SWHR2-R-0079 | LOCALIZATION-BR-0002 (docs/c)                               |
+| UTF-8 interpretation of submitted text                  | SWHR2-R-0134 | LOCALIZATION-REQ-0001 (encodingfilter/a)                    |
+| Encoding established before sign-on                     | SWHR2-R-0080 | LOCALIZATION-RULE-0001 (encodingfilter/a)                   |
+| Cart lines follow the cart locale                       | SWHR2-R-0081 | SC-BR-0006 (cart/a)                                         |
+
+Legacy behaviour described in the sections above but not in `spec.md` (change-locale error message, return to originating page, separately stated per-locale prices, UTF-8 page rendering and documents, configurable request encoding, order and invoice locale defaults, e-mail price formats, admin text catalogue) comes from records that are not approved, or from same-key records whose other text was not the one written, and is Not specified until an SME approves it.
