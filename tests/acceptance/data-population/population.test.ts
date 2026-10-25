@@ -193,23 +193,6 @@ describe("installation", () => {
   });
 
   // case: SWHR2-C-0078@v1
-  it("SWHR2-C-0078: installing again keeps existing storefront data and creates only what is missing", async () => {
-    const { db, client } = await seeded();
-    const svc = await import("../../../services/customers");
-    await svc.registerUser("keepme", "secret1");
-    client.exec("insert into customers (user_id) values ('keepme')");
-    const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-    migrate(db, { migrationsFolder: "drizzle" });
-    expect(count(client, "customers", "user_id = 'keepme'")).toBe(1);
-    const tables = (
-      client.query("select name from sqlite_master where type = 'table'").all() as {
-        name: string;
-      }[]
-    ).map((t) => t.name);
-    for (const t of ["sup_orders", "op_purchase_orders"]) expect(tables).toContain(t);
-  });
-
-  // case: SWHR2-C-0078@v1
   it("SWHR2-C-0078: installing onto a database that lacks the supplier and order-processing datastores creates only those", async () => {
     // an earlier install: only the storefront structures exist, with a customer in them
     const { Database } = await import("bun:sqlite");

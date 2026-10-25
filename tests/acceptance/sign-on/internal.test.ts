@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { shopper } from "../checkout/harness";
 import { fulfilment } from "../order-fulfillment/harness";
 import { call } from "../shopping-cart/harness";
 import { loadApp } from "./harness";
@@ -11,17 +12,22 @@ import { loadApp } from "./harness";
 describe("in-process hand-off", () => {
   // case: SWHR2-C-0263@v1
   it("SWHR2-C-0263: the hand-off service accepts a message from an order component without a role check and records the caller", async () => {
-    // an in-process caller with no session, role or cookie hands a message to messaging.enqueue
-    const f = await fulfilment();
-    const payload = JSON.stringify({ orderId: "1001", userId: "j2ee" });
-    expect(() => f.messaging.enqueue(f.db, "order.new", payload)).not.toThrow();
-    const rows = f.client
+    // the checkout component, acting for signed-in j2ee, hands the new order to messaging.enqueue
+    // itself; the test supplies no identity, so j2ee in the stored message came from the caller
+    const app = await shopper();
+    const placed = await app.place();
+    expect(placed.status).toBe(200);
+    const rows = app.client
       .query("select * from messages where channel = 'order.new'")
       .all() as Record<string, unknown>[];
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe("pending");
-    // the message that was accepted is the one carrying the caller
     expect(JSON.stringify(rows[0])).toContain("j2ee");
+    // and the hand-off itself takes a message from a caller with no session or role at all
+    const f = await fulfilment();
+    expect(() =>
+      f.messaging.enqueue(f.db, "order.new", JSON.stringify({ orderId: "1001" })),
+    ).not.toThrow();
   });
 
   // case: SWHR2-C-0264@v1

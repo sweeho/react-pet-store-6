@@ -41,10 +41,15 @@ describe("message channels", () => {
     const f = await fulfilment();
     const { toXml } = await import("../../../services/documents/purchase-order");
     f.messaging.enqueue(f.db, "order.new", toXml(purchaseOrder("10024", [["EST-1", 1]])));
-    // The message sits in the messages table, which is what survives a restart; a fresh worker run consumes it.
+    expect(messages(f.client, "order.new", "%10024%")[0].status).toBe("pending");
+    // restart: drop every loaded module (all in-process state) but keep the same database
+    const { db } = await import("../../../db/client");
+    vi.resetModules();
+    vi.doMock("../../../db/client", () => ({ db }));
     expect(messages(f.client, "order.new", "%10024%")[0].status).toBe("pending");
     const worker = await mod("../../../services/messaging/worker");
     await worker.processDue();
+    vi.doUnmock("../../../db/client");
     expect(messages(f.client, "order.new", "%10024%")[0].status).toBe("delivered");
     expect(
       f.client.query("select count(*) n from op_purchase_orders where order_id = '10024'").get(),

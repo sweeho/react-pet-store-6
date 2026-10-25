@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -37,7 +37,10 @@ describe("cart screen", () => {
     });
     const link = await screen.findByRole("link", { name: /Large Angelfish/ });
     expect(link.getAttribute("href")).toContain("item/EST-1");
-    expect(screen.getByRole("button", { name: /remove/i }).tagName).toBeDefined();
+    const row = link.closest("tr, li") as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(within(row).getByRole("button", { name: /remove/i })).toBeInTheDocument();
+    expect(within(row).getByDisplayValue("2")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2")).toBeInTheDocument();
     expect(screen.getAllByText(/\$16\.50/).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /update cart/i })).toBeInTheDocument();
