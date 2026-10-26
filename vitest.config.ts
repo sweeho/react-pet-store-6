@@ -39,7 +39,11 @@ export default defineConfig({
           environment: "jsdom",
           setupFiles: ["./src/test/setup.ts"],
           css: false,
-          exclude: ["node_modules", "dist", ".output", "e2e", "routes/**"],
+          // tests/acceptance/** is written ahead of the product code and stays
+          // red until the Build phase lands; it runs via `bun run
+          // test:acceptance` (vitest.acceptance.config.ts) instead. This also
+          // keeps its Playwright specs (tests/acceptance/<capability>/e2e/) out.
+          exclude: ["node_modules", "dist", ".output", "e2e", "routes/**", "tests/acceptance/**"],
         },
       },
       {
