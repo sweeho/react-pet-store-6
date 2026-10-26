@@ -20,7 +20,9 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    # Pinned, not `ubuntu-latest`: the latest image moved to Ubuntu 26.04, which Playwright 1.50
+    # cannot install Chromium on, and a moving runner fails the same commit on a different day.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -51,6 +53,23 @@ jobs:
           path: .vortex-results/junit.xml
           if-no-files-found: warn
 
+      # The locked acceptance suite (tests/acceptance/**) is written before the product code, so
+      # it is red until the Build phase makes it pass. It is kept out of the default test step
+      # above, and run here so its results are still produced and uploaded as test evidence.
+      # `continue-on-error` keeps the workflow's verdict about everything else: remove it from
+      # these two steps once the Build phase has made the suite green.
+      - name: Acceptance tests (red until Build)
+        continue-on-error: true
+        run: bun run test:acceptance --reporter=default --reporter=junit --outputFile.junit=.vortex-results/junit-acceptance.xml
+
+      - name: Upload acceptance test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vortex-test-results-acceptance
+          path: .vortex-results/junit-acceptance.xml
+          if-no-files-found: warn
+
       - name: Build
         run: bun run build
 
@@ -59,3 +78,7 @@ jobs:
 
       - name: E2E tests
         run: bun run test:e2e
+
+      - name: Acceptance E2E tests (red until Build)
+        continue-on-error: true
+        run: bun run test:acceptance:e2e

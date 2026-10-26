@@ -60,6 +60,12 @@ commands:
       `verify` plus the E2E tier. Prefer this: every environment this template
       targets (agent workspace containers, CI, local dev) ships a Chromium.
   extra:
+    test-acceptance:
+      command: bun run test:acceptance
+      description: >-
+        The locked acceptance suite (tests/acceptance/**), kept out of `bun run test` because
+        it is red until the Build phase writes the product code. Its browser specs run with
+        `bun run test:acceptance:e2e`.
     doc-links:
       command: node scripts/check-doc-links.mjs
       description: >-

@@ -11,6 +11,13 @@ import react from "@vitejs/plugin-react";
 // left out — unit/integration/UI tests don't need a server or a router.
 // Uses @vitejs/plugin-react (Babel-based), not the -swc variant, so the
 // JSX transform has no platform-specific native binary to resolve.
+// The locked acceptance suite lives under tests/acceptance/** and is red until the Build phase
+// writes the product code, so the default run (`bun run test`) leaves it out, and
+// `bun run test:acceptance` (VORTEX_ACCEPTANCE=1) runs only it. Its Playwright browser specs
+// (tests/acceptance/**/e2e/) are never collected here: they belong to
+// playwright.acceptance.config.ts, and vitest cannot run them.
+const acceptance = process.env.VORTEX_ACCEPTANCE === "1";
+
 export default defineConfig({
   plugins: [
     react(),
@@ -39,7 +46,16 @@ export default defineConfig({
           environment: "jsdom",
           setupFiles: ["./src/test/setup.ts"],
           css: false,
-          exclude: ["node_modules", "dist", ".output", "e2e", "routes/**"],
+          ...(acceptance ? { include: ["tests/acceptance/**/*.test.{ts,tsx}"] } : {}),
+          exclude: [
+            "node_modules",
+            "dist",
+            ".output",
+            "e2e",
+            "routes/**",
+            "tests/acceptance/**/e2e/**",
+            ...(acceptance ? [] : ["tests/acceptance/**"]),
+          ],
         },
       },
       {
