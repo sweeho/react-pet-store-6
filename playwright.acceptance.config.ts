@@ -15,7 +15,12 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // No retries and a short per-test timeout: the suite is red until Build, so a retry cannot turn
+  // a test green, it only makes the run slower, and the design gate waits for the whole run.
+  // Restore the template's retries once the Build phase has made the suite green.
+  retries: 0,
+  timeout: 15_000,
+  expect: { timeout: 3_000 },
   reporter: process.env.CI
     ? [["list"], ["junit", { outputFile: ".vortex-results/acceptance/e2e-junit.xml" }]]
     : "list",
