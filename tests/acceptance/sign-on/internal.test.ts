@@ -1,0 +1,116 @@
+// @vitest-environment node
+import { readdirSync } from "node:fs";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { SHIPPING, orderIdOf, shopper } from "../checkout/harness";
+import { fulfilment } from "../order-fulfillment/harness";
+import { call } from "../shopping-cart/harness";
+
+describe("in-process hand-off", () => {
+  // case: SWHR2-C-0263@v1
+  it("SWHR2-C-0263: the hand-off service accepts a message from an order component without a role check and records the caller", async () => {
+    // the checkout component, acting for signed-in j2ee, hands the new order to messaging.enqueue
+    // itself; the test supplies no identity, so j2ee in the stored message came from the caller
+    const app = await shopper();
+    const placed = await app.place();
+    expect(placed.status).toBe(200);
+    const rows = app.client
+      .query("select * from messages where channel = 'order.new'")
+      .all() as Record<string, unknown>[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("pending");
+    const { fromXml } = await import("../../../services/documents/purchase-order");
+    const stored = fromXml(rows[0].payload as string);
+    expect(stored.userId).toBe("j2ee");
+    expect(stored.orderId).toBe(orderIdOf(placed.body));
+    // and the hand-off itself takes a message from a caller with no session or role at all
+    const f = await fulfilment();
+    const payload = JSON.stringify({ orderId: "1001" });
+    expect(() => f.messaging.enqueue(f.db, "order.new", payload)).not.toThrow();
+    expect(
+      f.client.query("select status, payload from messages where payload = ?").all(payload),
+    ).toEqual([{ status: "pending", payload }]);
+  });
+
+  // case: SWHR2-C-0264@v1
+  it("SWHR2-C-0264: no public route reaches the hand-off service", async () => {
+    // a working storefront (catalog, customer j2ee) whose own checkout is known to hand off a message
+    const app = await shopper();
+    const total = () =>
+      (app.client.query("select count(*) n from messages").get() as { n: number }).n;
+    const start = total();
+    expect((await app.place()).status).toBe(200);
+    const before = total();
+    expect(before).toBeGreaterThan(start);
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (!/\.test\./.test(e.name)) files.push(path.relative("routes/api", p));
+      }
+    };
+    walk(path.join(process.cwd(), "routes/api"));
+    // Call every public route as an anonymous outsider, whatever its name, with order-shaped
+    // input (so a route is not stopped by a malformed body) and a marker in every id field.
+    const MARK = "outside-probe-7f3a";
+    const methods = ["get", "post", "put", "patch", "delete"];
+    for (const f of files) {
+      const parts = f.replace(/\.ts$/, "").split(path.sep);
+      const last = parts[parts.length - 1].split(".");
+      const method = methods.includes(last[last.length - 1]) ? last.pop()! : "get";
+      parts[parts.length - 1] = last.join(".");
+      const params: Record<string, string> = {};
+      const url = parts
+        .map((seg) =>
+          seg.replace(/\[(?:\.\.\.)?([^\]]+)\]/g, (_m, name: string) => {
+            params[name] = MARK;
+            return MARK;
+          }),
+        )
+        .join("/");
+      await call(app, `../../../routes/api/${f.replace(/\.ts$/, "")}`, {
+        method: method.toUpperCase(),
+        url: `/api/${url}?q=${MARK}`,
+        params,
+        json:
+          method === "get"
+            ? undefined
+            : {
+                orderId: MARK,
+                body: MARK,
+                message: MARK,
+                userId: MARK,
+                itemId: "EST-1",
+                channel: "order.new",
+                payload: MARK,
+                billing: SHIPPING,
+                shipping: SHIPPING,
+              },
+      });
+    }
+    // the hand-off may be reached by nothing in the application's public surface: no route adds a
+    // stored message, whatever it is called (the checkout control above shows the count would move)
+    expect(total()).toBe(before);
+  });
+});
+
+describe("order line data layer", () => {
+  // case: SWHR2-C-0268@v1
+  it("SWHR2-C-0268: an order process creates, reads and updates order lines without a role error", async () => {
+    // order processes act with no session or role: receipt creates the lines, the invoice step updates them
+    const f = await fulfilment();
+    await f.approvedOrder("10011", [["EST-1", 2]]);
+    const line = () =>
+      f.client
+        .query(
+          "select item_id, quantity, quantity_shipped from op_po_line_items where order_id = '10011'",
+        )
+        .all();
+    expect(line()).toEqual([{ item_id: "EST-1", quantity: 2, quantity_shipped: 0 }]);
+    await f.invoices.handleInvoice(f.invoiceFor("10011", [["EST-1", 2]]));
+    expect(line()).toEqual([{ item_id: "EST-1", quantity: 2, quantity_shipped: 2 }]);
+  });
+});
