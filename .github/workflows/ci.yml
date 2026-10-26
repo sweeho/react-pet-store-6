@@ -20,7 +20,9 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: the latest image moved to a version
+    # Playwright could not install its browser dependencies on.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -41,7 +43,22 @@ jobs:
         run: bun run lint
 
       - name: Unit and integration tests
-        run: bun run test
+        run: bun run test --reporter=default --reporter=junit --outputFile.junit=.vortex-results/junit.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vortex-test-results
+          path: .vortex-results/junit.xml
+          if-no-files-found: warn
+
+      # Acceptance suite (tests/acceptance/**) is written before the product code
+      # and stays red until the Build phase makes it pass.
+      # TODO: remove continue-on-error once the Build phase has made the suite green.
+      - name: Acceptance tests
+        continue-on-error: true
+        run: bun run test:acceptance --reporter=default --reporter=junit --outputFile.junit=.vortex-results/acceptance/junit.xml
 
       - name: Build
         run: bun run build
@@ -51,3 +68,16 @@ jobs:
 
       - name: E2E tests
         run: bun run test:e2e
+
+      # TODO: remove continue-on-error once the Build phase has made the acceptance suite green.
+      - name: Acceptance E2E tests
+        continue-on-error: true
+        run: bun run test:acceptance:e2e
+
+      - name: Upload acceptance test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vortex-test-results-acceptance
+          path: .vortex-results/acceptance/
+          if-no-files-found: warn

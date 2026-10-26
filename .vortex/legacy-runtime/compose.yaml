@@ -1,0 +1,45 @@
+# Legacy Java Pet Store 1.3.2 on the J2EE 1.3.1 reference implementation.
+# Cloudscape (the database) and the JMS provider ship inside the J2EE RI, so
+# there is no separate database service. See README.md for the one input that is
+# not in the repository: the J2EE 1.3.1 SDK (J2EE_SDK_DIR).
+services:
+  petstore:
+    build:
+      # The legacy source is not on this branch. Build it from the branch that
+      # carries it, unchanged. Override LEGACY_SOURCE_CONTEXT to use a local checkout.
+      context: ${LEGACY_SOURCE_CONTEXT:-https://github.com/sweeho/react-pet-store-6.git#vortex/legacy-spec/sx-0001:legacy-source/petstore1.3.2}
+      args:
+        # Petstore 1.3.2 needs J2SE 1.4.1 or higher; the J2EE 1.3.1 RI runs on it.
+        LEGACY_JDK_IMAGE: ${LEGACY_JDK_IMAGE:-eclipse-temurin:8-jdk}
+      dockerfile_inline: |
+        ARG LEGACY_JDK_IMAGE
+        FROM ${LEGACY_JDK_IMAGE}
+        WORKDIR /opt/petstore
+        COPY . /opt/petstore
+        RUN chmod +x setup.sh src/build.sh
+    environment:
+      J2EE_HOME: /opt/j2ee
+    volumes:
+      # J2EE SDK 1.3.1 install directory on the host (licensed download).
+      - ${J2EE_SDK_DIR:?set J2EE_SDK_DIR to the J2EE SDK 1.3.1 install directory}:/opt/j2ee
+    ports:
+      # The only published port: the storefront (/petstore), admin and supplier apps.
+      - "${LEGACY_HTTP_PORT:-8000}:8000"
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        cd /opt/petstore
+        sh setup.sh
+        "$$J2EE_HOME/bin/cloudscape" -start &
+        "$$J2EE_HOME/bin/j2ee" -verbose &
+        until curl -sf -o /dev/null http://localhost:8000/ 2>/dev/null || nc -z localhost 8000; do sleep 5; done
+        sh setup.sh deploy
+        wait
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -o /dev/null http://localhost:8000/petstore/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 120s

@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": ["src/**/*.{ts,tsx}", "!src/**/*.test.{ts,tsx}", "!src/test/**", "!src/main.tsx"],
+  "testRunner": "vitest",
+  "vitest": { "configFile": "vitest.mutation.config.ts" },
+  "reporters": ["json", "clear-text"],
+  "jsonReporter": { "fileName": "reports/mutation/mutation.json" }
+}
