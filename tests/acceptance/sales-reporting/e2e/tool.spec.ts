@@ -98,8 +98,12 @@ test.describe("sales reporting tool", () => {
     await tab(page, /sales/i).click();
     await tab(page, /pie/i).click();
     await expect(page.locator(".recharts-wrapper").first()).toBeVisible();
+    await expect(page.locator(".recharts-pie-sector").first()).toBeVisible();
+    await expect(page.locator(".recharts-wrapper").first()).toContainText(/fish/i);
     await tab(page, /bar/i).click();
     await expect(page.locator(".recharts-wrapper").first()).toBeVisible();
+    await expect(page.locator(".recharts-bar-rectangle").first()).toBeVisible();
+    await expect(page.locator(".recharts-wrapper").first()).toContainText(/fish/i);
   });
 
   // case: SWHR2-C-0010@v1
