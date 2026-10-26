@@ -1,0 +1,61 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0}body{font:14px system-ui,sans-serif;color:#3f3f46;background:#fff}
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr 40px;min-height:100vh}
+header{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #d4d4d8}
+.logo{width:120px;height:24px;border:1px solid #a1a1aa;border-radius:4px;font-size:11px;display:flex;align-items:center;justify-content:center}
+.search{flex:1;max-width:360px;height:32px;border:1px solid #a1a1aa;border-radius:4px;padding:0 8px;font-size:12px;line-height:30px;color:#71717a}
+.sp{flex:1}.hb{border:1px solid #a1a1aa;border-radius:4px;padding:4px 10px;font-size:12px}
+.flag{border:1px solid #a1a1aa;border-radius:4px;padding:2px 6px;font-size:11px}.flag.on{background:#a1a1aa;color:#fff}
+nav{border-right:1px solid #d4d4d8;padding:16px 12px;background:#fafafa}
+.grp{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#71717a;margin:16px 8px 6px}
+.it{padding:8px;border-radius:4px;font-size:13px}.it.cur{background:#a1a1aa;color:#fff}
+main{padding:24px 32px}
+.crumb{font-size:12px;color:#71717a;margin-bottom:8px}
+.t{height:22px;width:220px;background:#a1a1aa;border-radius:4px}.d{height:10px;width:340px;background:#d4d4d8;border-radius:4px;margin:10px 0 24px}
+.frame{border:1px solid #a1a1aa;border-left:4px solid #52525b;border-radius:8px;padding:24px}
+.pill{display:inline-block;border:1px solid #a1a1aa;border-radius:999px;padding:1px 8px;font-size:11px;margin-bottom:10px}
+.frame b{display:block;font-size:16px;color:#27272a;margin-bottom:6px}
+.frame p{color:#71717a;font-size:13px;margin-bottom:16px}
+.btn{display:inline-block;border:1px solid #52525b;border-radius:4px;padding:6px 12px;font-size:13px;margin-right:8px}.btn.p{background:#52525b;color:#fff}
+details{margin-top:16px;font-size:12px;color:#71717a}
+.trace{margin-top:8px;background:#f4f4f5;border:1px solid #d4d4d8;border-radius:4px;padding:8px;font-family:ui-monospace,monospace;font-size:11px}
+.trace div{height:8px;background:#d4d4d8;border-radius:2px;margin:4px 0}
+.loading{margin-top:24px;border:1px dashed #d4d4d8;border-radius:8px;padding:16px}
+.loading small{font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:.05em}
+.row{height:40px;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:12px}
+.row span{height:10px;background:#e4e4e7;border-radius:4px}
+footer{grid-column:1/3;border-top:1px solid #d4d4d8;display:flex;align-items:center;gap:16px;padding:0 24px;font-size:12px;color:#71717a}
+</style></head><body><div class="app">
+<header><div class="logo">Pet Store ⌂</div><div class="search">Search the catalog…</div><div class="sp"></div>
+<span class="hb">Account</span><span class="hb">Cart (0)</span><span class="hb">Sign in</span>
+<span class="flag on">EN</span><span class="flag">日本語</span><span class="flag">中文</span></header>
+<nav>
+<div class="it">Home</div>
+<div class="grp">Shop</div>
+<div class="it cur">Catalog &amp; search</div><div class="it">Shopping cart</div><div class="it">Checkout</div>
+<div class="grp">My account</div>
+<div class="it">Sign on</div><div class="it">Account &amp; profile</div><div class="it">Language</div>
+<div class="grp">Admin</div>
+<div class="it">Order approval</div><div class="it">Sales reporting</div>
+<div class="grp">Supplier</div>
+<div class="it">Supplier inventory</div>
+</nav>
+<main>
+<div class="crumb">Home › Page</div>
+<div class="t"></div><div class="d"></div>
+<div class="frame">
+<span class="pill">● Error</span>
+<b>This page couldn't load</b>
+<p>Something went wrong fetching the data. Try again; if it keeps happening, tell the administrator.</p>
+<span class="btn p">Try again</span><span class="btn">Back to Home</span>
+<details open><summary>Details</summary><div class="trace">Error message<div style="width:80%"></div><div style="width:65%"></div><div style="width:40%"></div></div></details>
+</div>
+<div class="loading"><small>Shared loading frame (shown while data loads)</small>
+<div class="row"><span style="width:30%"></span><span style="width:20%"></span><span style="width:15%"></span></div>
+<div class="row"><span style="width:25%"></span><span style="width:22%"></span><span style="width:12%"></span></div>
+<div class="row"><span style="width:28%"></span><span style="width:18%"></span><span style="width:14%"></span></div>
+</div>
+</main>
+<footer><span>Pet Store</span><span>Home</span><span>Change language</span><span>Admin sign-in</span><span>Supplier sign-in</span></footer>
+</div></body></html>

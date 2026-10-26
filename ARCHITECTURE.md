@@ -23,8 +23,11 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 .
 ├── src/
 │   ├── components/ui/   # shadcn/ui-style primitives (+ *.test.tsx)
+│   ├── components/shell/ # AppShell, GlobalNav, Empty/Error/LoadingFrame — the one frame every page renders in
 │   ├── pages/            # Frontend routes, file-based (+ *.test.tsx)
-│   ├── hooks/, utils/, types/, constants/, data/, store/
+│   ├── hooks/            # useApi — fetch → { data, error, loading, retry }
+│   ├── constants/        # areas.ts — PRIMARY_AREAS, the single list of primary areas
+│   ├── utils/, types/, data/, store/
 │   ├── test/              # Vitest setup
 │   ├── index.css           # Tailwind v4 + design tokens
 │   └── main.tsx
@@ -47,6 +50,10 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 
 **Backend**: `routes/api/*.ts` → `/api/*`, `middleware/*.ts` runs first and can set `event.context`. Requires `nitro({ serverDir: "./" })` in `vite.config.ts` — default is `false` (no scanning). `*.test.ts` excluded via `nitro({ ignore })`.
 
+## Site shell
+
+`src/main.tsx` mounts `AppShell` (`src/components/shell/`) once, around `useRoutes(routes)`. Every routed page renders inside it: a header, the global navigation rail, `<main>`, and a footer. Pages render content only. The primary areas the landing page and the navigation link to come from one list, `PRIMARY_AREAS` in `src/constants/areas.ts`. A data-driven page loads through `useApi` (`src/hooks/useApi.ts`) and maps its `loading`, `error` and empty `data` onto `LoadingFrame`, `ErrorFrame` (with Retry) and `EmptyFrame`. Contract and route map: → `openspec/specs/site-shell/` (change `swhr2-i-0002-bootstrap-landing-page-and` until it archives).
+
 ## Data flow example
 
 `GET /api/hello`: `middleware/auth.ts` sets `event.context.user` → `routes/api/hello.ts` reads it and responds. `routes/api/users/[id].ts` shows the dynamic-route + `createError()` 404 pattern, backed by a real query against `db/client.ts`'s Drizzle instance.
@@ -63,6 +70,12 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 ## Testing
 
 Four tiers, one worked example each. Commands and how to extend: [README.md](./README.md#testing), [AGENTS.md](./AGENTS.md).
+
+## Key Decisions
+
+- **One shell, mounted once at the root.** Pages, area layouts and capabilities never render their own header, navigation or footer, nor a second `AppShell`. This keeps a single banner/navigation/main/contentinfo landmark set on every route. _Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md, SD-1)._
+- **One list of primary areas.** A capability that adds a primary area adds one row to `PRIMARY_AREAS`, never a second menu or a hard-coded landing link, so the navigation and the landing page cannot drift. _Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md §Interface contracts)._
+- **One data-state pattern.** Pages load JSON through `useApi` and render the shared Empty, Error and Loading frames rather than bespoke states, so every page fails and retries the same way. _Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md §Interface contracts)._
 
 ## Deployment
 

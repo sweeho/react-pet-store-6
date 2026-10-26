@@ -51,3 +51,73 @@ None. The shell holds no persisted data. The signed-on state and locale it displ
 - Tailwind CSS (CSS-first) and the shadcn/ui-style primitives in `src/components/ui/` for shell chrome. Icons come from lucide-react.
 - React and react-router APIs are auto-imported by `unplugin-auto-import`.
 - Tests: Testing Library UI tests for `AppShell`, `GlobalNav` and each frame; a Playwright spec asserting that the shell and navigation render on `/`, a storefront page, `/admin` and `/supplier`.
+
+## Planning findings (sprint SWHR2-S-0001)
+
+_Added at sprint planning (ticket SWHR2-T-0001). The sections above are the adopted specification and are unchanged; this appendix records what the repository actually contains and how the work is split._
+
+### Codebase findings
+
+- **Scaffold exists.** Vite 8 + React 19 SPA with Nitro, `vite-plugin-pages` (`src/pages/`, `importMode: "sync"`), `unplugin-auto-import` for React and react-router, Tailwind v4 CSS-first tokens in `src/index.css`, and shadcn-style primitives in `src/components/ui/`. Per §Decisions "Existing boilerplate wins", it is extended, never re-scaffolded.
+- **Branding is still the boilerplate's.** `index.html` title is "Vite + React + TS"; `configs/fonts.config.ts` loads Space Grotesk; `src/index.css` has neutral shadcn tokens and no brand colour.
+- **`src/pages/index.tsx` is the Vortex hero page.** It is a dark full-bleed page with `#` links and a headlessui mobile dialog. `src/pages/index.test.tsx` and `e2e/home.spec.ts` assert that hero, including "no vertical scrollbar", and must be rewritten with the page.
+- **There is no shell.** `src/main.tsx` renders `useRoutes(routes)` inside `BrowserRouter` with no layout. `about.tsx`, `NotFound.tsx` and `users/*` each draw their own full-height wrappers.
+- **`src/hooks/` is empty.** `src/pages/users/index.tsx` renders a hard-coded array. `GET /api/users` (`routes/api/users/index.get.ts`) returns `{ users: [...] }`.
+- **The acceptance suite is pre-written and code-owner protected** (`tests/acceptance/site-shell/shell.test.tsx` and `e2e/shell.spec.ts`). It fixes the import paths `src/components/shell/AppShell`, `src/pages/index` and `src/pages/users/index`. It also fixes the test ids `empty-frame` and `error-frame`, a retry button matching `/retry/i`, and the area routes `/petstore`, `/petstore/cart`, `/petstore/signin`, `/admin` and `/supplier`. It runs through `vitest.acceptance.config.ts` and `playwright.acceptance.config.ts` (port 5179), outside the default `test` and `test:e2e` runs.
+- **CI** (`.github/workflows/ci.yml`) already triggers on push and pull request to `vortex/**`, `dev` and `main`. It runs the doc-link check, typecheck, lint, unit, build and E2E. Both acceptance steps are `continue-on-error: true`, because every other capability's suite is still red.
+- **Routes later capabilities expect** (from their acceptance suites and specs): `/petstore/checkout`, `/petstore/change-language`, `/petstore/account`, `/petstore/item/:itemId`, `/petstore/category/:id`, `/petstore/product/:id` and `/admin/tool`.
+
+### Primary-area route map (fixed)
+
+| Group          | Label              | href                        | Capability         |
+| -------------- | ------------------ | --------------------------- | ------------------ |
+| Shop           | Catalog and search | `/petstore`                 | catalog-browsing   |
+| Shop           | Cart               | `/petstore/cart`            | shopping-cart      |
+| Shop           | Checkout           | `/petstore/checkout`        | checkout           |
+| Shop           | Language           | `/petstore/change-language` | localization       |
+| Account        | Sign in            | `/petstore/signin`          | sign-on            |
+| Account        | My account         | `/petstore/account`         | customer-account   |
+| Administration | Order approval     | `/admin`                    | order-approval     |
+| Administration | Orders and sales   | `/admin/tool`               | sales-reporting    |
+| Supplier       | Inventory          | `/supplier`                 | supplier-inventory |
+
+Labels and groups follow the idea canvas §Solution. The `/` "Home" link is not an area. It is the first link of the global navigation.
+
+### Interface contracts (fixed — later capabilities code against these)
+
+- `src/constants/areas.ts`: `export type PrimaryArea = { key: string; label: string; description: string; href: string; group: "shop" | "account" | "administration" | "supplier" }` and `export const PRIMARY_AREAS: readonly PrimaryArea[]`, holding the nine rows above in that order. A capability that adds a primary area adds one row here. The landing page and the global navigation both read it.
+- `src/components/shell/AppShell.tsx`: `export default function AppShell({ children }: { children: ReactNode })`. It renders `<header>` (banner), `<GlobalNav />`, `<main>{children}</main>` and `<footer>` (contentinfo), in that document order.
+- `src/components/shell/GlobalNav.tsx`: `export default function GlobalNav()`. It renders `<nav aria-label="Global">`; its first link is `href="/"`, followed by one link per `PRIMARY_AREAS` row under its group heading. The active link carries `aria-current="page"`.
+- `src/components/shell/EmptyFrame.tsx`: `EmptyFrame({ title?: string; message: ReactNode; action?: ReactNode })`, root `data-testid="empty-frame"`.
+- `src/components/shell/ErrorFrame.tsx`: `ErrorFrame({ title?: string; message?: ReactNode; onRetry: () => void })`, root `data-testid="error-frame"` with `role="alert"`, and a button labelled **Retry** that calls `onRetry`.
+- `src/components/shell/LoadingFrame.tsx`: `LoadingFrame({ label?: string })`, root `data-testid="loading-frame"` with `role="status"`, default label "Loading…".
+- `src/hooks/useApi.ts`: `export function useApi<T>(url: string): { data: T | undefined; error: Error | undefined; loading: boolean; retry: () => void }`. A rejected fetch or a non-2xx response sets `error`; `retry()` re-issues the request. A page maps `loading` to `LoadingFrame`, `error` to `ErrorFrame onRetry={retry}`, and empty `data` to `EmptyFrame`.
+- **Shell mounting:** `AppShell` is mounted once, in `src/main.tsx`, around `useRoutes(routes)`. Pages and area layouts never render a second `AppShell`, header, navigation or footer (see discrepancy SD-1).
+
+### Phases
+
+1. **Boilerplate** (SWHR2-T-0004): Pet Store title, design-guide tokens and Inter font in the existing CSS-first theme; the root smoke spec stays green.
+2. **Landing page** (SWHR2-T-0005): `PRIMARY_AREAS` plus the landing page at `/`, with its UI test and E2E spec.
+3. **Site shell** (SWHR2-T-0006): `AppShell` and `GlobalNav`, mounted once in `src/main.tsx`; existing pages lose their own full-screen chrome.
+4. **Shared frames** (SWHR2-T-0007): the three frames, `useApi`, the Users page converted to the frames, and placeholder pages for the nine area routes using `EmptyFrame`.
+5. **Test harness (folded into 1–4).** Each TASK adds Testing Library UI tests beside its components and pages, in the `client` vitest project. T-0005, T-0006 and T-0007 each add or update a Playwright spec under `e2e/` for their part. The protected acceptance suite (`tests/acceptance/site-shell/**`) is never edited; it is the oracle, and it is fully green only after T-0007.
+6. **CI (folded into T-0007).** CI keeps triggering on `vortex/**` pushes and PRs. Once T-0007 lands, the site-shell acceptance cases (unit and browser) run as a **blocking** CI step, separate from the whole-suite acceptance steps, which stay `continue-on-error` until the other capabilities are built.
+
+Sequencing is linear (T-0004 → T-0005 → T-0006 → T-0007). Each step builds on the previous one's files and contracts: tokens, then areas, then the shell, then frames inside the shell.
+
+### Design reference
+
+Exported byte-exact to `artifacts/SWHR2-S-0001/design/` (index: `MANIFEST.md`). The layout grid follows `mockup-site-shell.html`: a 56px header across the top, a 240px left navigation rail and a 40px footer. Per canvas §Out of Scope, the header's search box, language flags, Cart, Account and Sign-in controls are **not** built here, nor are the rail's category links or the landing page's pet selection map.
+
+## Spec discrepancies
+
+Recorded at planning. The delta spec is unchanged; the plan resolves each item as stated.
+
+- **SD-1 — Where AppShell is mounted.** §Components "Area layouts" wraps `AppShell` in the `petstore.tsx`, `admin.tsx` and `supplier.tsx` parent routes. But SWHR2-C-0273 and SWHR2-C-0276 require the shell on `/`, `/about` and `/does-not-exist`, which have no area layout, and a per-area shell plus a root shell would render two banners. **Plan:** mount `AppShell` once in `src/main.tsx` and create no area parent-route files this sprint. A later capability that needs area-specific header content adds it without a second `AppShell`; the header-slot mechanism is left to that capability.
+- **SD-2 — `/` versus the storefront Home screen.** §Components "Root landing page" says `/` renders the same Home component as `/petstore`. catalog-browsing has not been built yet, and SWHR2-C-0271 requires exactly one link each to `/petstore`, `/petstore/cart`, `/petstore/signin`, `/admin` and `/supplier` on the landing page. **Plan:** `/` is the Pet Store landing page from `mockup-landing-page.html`, minus the pet selection map (canvas §Out of Scope), and `/petstore` is an empty-frame placeholder. Merging the two stays PRD open question 3.
+- **SD-3 — Users data shape.** `GET /api/users` returns `{ users: [...] }`, but SWHR2-C-0277 and SWHR2-C-0279 stub `fetch` to return a bare array. **Plan:** the Users page accepts either shape.
+- **SD-4 — "Try again" versus "Retry".** The canvas solution and the error mockup label the control "Try again", but SWHR2-C-0278 and SWHR2-C-0279 locate the button by `/retry/i`. **Plan:** the visible label is "Retry", so the accessible name matches the visible text (WCAG 2.5.3) and the protected test.
+- **SD-5 — Data-driven page used by the frame cases.** The frame cases bind to the boilerplate's `/users` demo page, which is not a Pet Store area. **Plan:** keep `/users` and convert it to `useApi` plus the frames; it is the first reference consumer of the pattern.
+- **SD-6 — Navigation labels.** `mockup-site-shell.html` groups the rail as Shop / You / Store staff, with labels such as "Sales reporting" and "Supplier inventory". The canvas §Solution groups it as Shop / Account / Administration / Supplier, with "Orders and sales" and "Inventory". **Plan:** follow the canvas text and the mockup's visual treatment.
+- **SD-7 — Areas with no route in the spec.** Checkout, Language, My account and Orders and sales have no route stated in this change. **Plan:** use the routes the later capabilities' suites already use (`/petstore/checkout`, `/petstore/change-language`, `/petstore/account` and `/admin/tool`).
+- **SD-8 — PRD stack line.** `PRODUCT.md` §Constraints says "SQLite through better-sqlite3", but the repository uses Bun's `bun:sqlite` (`db/client.ts`). This does not affect this change; it is recorded for the PRD owner.

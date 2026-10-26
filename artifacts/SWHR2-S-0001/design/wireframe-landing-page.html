@@ -1,0 +1,67 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0}body{font:14px system-ui,sans-serif;color:#3f3f46;background:#fff}
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr 40px;min-height:100vh}
+header{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #d4d4d8}
+.logo{width:120px;height:24px;border:1px solid #a1a1aa;border-radius:4px;font-size:11px;display:flex;align-items:center;justify-content:center}
+.search{flex:1;max-width:360px;height:32px;border:1px solid #a1a1aa;border-radius:4px;padding:0 8px;font-size:12px;line-height:30px;color:#71717a}
+.sp{flex:1}.hb{border:1px solid #a1a1aa;border-radius:4px;padding:4px 10px;font-size:12px}
+.flag{border:1px solid #a1a1aa;border-radius:4px;padding:2px 6px;font-size:11px}.flag.on{background:#a1a1aa;color:#fff}
+nav{border-right:1px solid #d4d4d8;padding:16px 12px;background:#fafafa}
+.grp{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#71717a;margin:16px 8px 6px}
+.it{padding:8px;border-radius:4px;font-size:13px}.it.cur{background:#a1a1aa;color:#fff}
+main{padding:24px 32px;overflow:auto}
+.hero{display:flex;gap:24px;align-items:center;border:1px solid #d4d4d8;border-radius:8px;padding:24px;margin-bottom:24px}
+.img{flex:0 0 260px;height:150px;background:#f4f4f5;border:1px solid #d4d4d8;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#71717a}
+.bar{height:10px;background:#d4d4d8;border-radius:4px;margin:6px 0}
+h1{font-size:24px;font-weight:600;color:#27272a}h2{font-size:15px;font-weight:600;margin:20px 0 10px;color:#27272a}
+.btn{display:inline-block;border:1px solid #52525b;border-radius:4px;padding:6px 12px;font-size:13px;margin-right:8px;margin-top:12px}.btn.p{background:#52525b;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{border:1px solid #d4d4d8;border-radius:8px;padding:16px}.card b{display:block;font-size:13px;margin-bottom:4px}
+.card small{color:#71717a;font-size:12px}.card .go{font-size:12px;margin-top:8px;text-decoration:underline}
+.card.bg{border-style:dashed;background:#fafafa}
+.pill{display:inline-block;border:1px solid #a1a1aa;border-radius:999px;padding:1px 8px;font-size:11px;margin-top:8px}
+footer{grid-column:1/3;border-top:1px solid #d4d4d8;display:flex;align-items:center;gap:16px;padding:0 24px;font-size:12px;color:#71717a}
+</style></head><body><div class="app">
+<header><div class="logo">Pet Store</div><div class="search">Search the catalog…</div><div class="sp"></div>
+<span class="hb">Account</span><span class="hb">Cart (0)</span><span class="hb">Sign in</span>
+<span class="flag on">EN</span><span class="flag">日本語</span><span class="flag">中文</span></header>
+<nav>
+<div class="it cur">Home</div>
+<div class="grp">Shop</div>
+<div class="it">Catalog &amp; search</div><div class="it">Shopping cart</div><div class="it">Checkout</div>
+<div class="grp">My account</div>
+<div class="it">Sign on</div><div class="it">Account &amp; profile</div><div class="it">Language</div>
+<div class="grp">Admin</div>
+<div class="it">Order approval</div><div class="it">Sales reporting</div>
+<div class="grp">Supplier</div>
+<div class="it">Supplier inventory</div>
+</nav>
+<main>
+<div class="hero"><div style="flex:1"><h1>Pet Store</h1><div class="bar" style="width:90%"></div><div class="bar" style="width:60%"></div>
+<span class="btn p">Browse pets</span><span class="btn">Sign in</span></div>
+<div class="img">Pet selection map (Birds · Fish · Dogs · Reptiles · Cats)</div></div>
+
+<h2>Shop</h2><div class="grid">
+<div class="card"><b>Catalog browsing and search</b><small>Browse categories, products and items; search by keyword</small><div class="go">Browse catalog →</div></div>
+<div class="card"><b>Shopping cart</b><small>Items kept for this session</small><div class="go">Open cart →</div></div>
+<div class="card"><b>Checkout and order placement</b><small>Billing and shipping, then place the order</small><div class="go">Check out →</div></div>
+</div>
+<h2>My account</h2><div class="grid">
+<div class="card"><b>Sign-on and access control</b><small>Sign in, sign up, sign out</small><div class="go">Sign in →</div></div>
+<div class="card"><b>Customer account and profile</b><small>Contact, card and preferences</small><div class="go">Edit account →</div></div>
+<div class="card"><b>Localization</b><small>English, 日本語, 中文</small><div class="go">Change language →</div></div>
+</div>
+<h2>Staff</h2><div class="grid">
+<div class="card"><b>Order approval</b><small>Approve or deny pending orders</small><div class="go">Admin sign-in →</div></div>
+<div class="card"><b>Admin order and sales reporting</b><small>Order lists and sales charts</small><div class="go">Admin sign-in →</div></div>
+<div class="card"><b>Supplier inventory</b><small>Update stock quantities</small><div class="go">Supplier sign-in →</div></div>
+</div>
+<h2>Runs behind the scenes</h2><div class="grid">
+<div class="card bg"><b>Order fulfilment and invoicing</b><small>Ships and invoices approved orders</small><br><span class="pill">● No screen</span></div>
+<div class="card bg"><b>Customer notifications</b><small>Approval, shipment and completion e-mails</small><br><span class="pill">● No screen</span></div>
+<div class="card bg"><b>Sample data population</b><small>Seeds catalog, customers and stock at install</small><br><span class="pill">● No screen</span></div>
+</div>
+</main>
+<footer><span>Pet Store</span><span>Home</span><span>Change language</span><span>Admin sign-in</span><span>Supplier sign-in</span></footer>
+</div></body></html>
