@@ -92,7 +92,10 @@ describe("notification switches", () => {
     expect(s.at(-1)).toBe("Java Pet Store Order COMPLETED: 1007");
     expect(s.filter((x) => x === "Order Status: 1007")).toHaveLength(1);
     expect(s.filter((x) => x === "Java Pet Store Order COMPLETED: 1007")).toHaveLength(1);
-    expect(s.length).toBeGreaterThanOrEqual(3);
+    // every other e-mail is a shipment confirmation: exactly one per shipment, between the two
+    const shipments = s.slice(1, -1);
+    expect(shipments).toHaveLength(2);
+    for (const x of shipments) expect(x).not.toMatch(/^Order Status:|COMPLETED/);
   });
 
   // case: SWHR2-C-0060@v1
@@ -106,7 +109,10 @@ describe("notification switches", () => {
     expect(s.at(-1)).toBe("Java Pet Store Order COMPLETED: 1008");
     expect(s.filter((x) => x === "Order Status: 1008")).toHaveLength(1);
     expect(s.filter((x) => x === "Java Pet Store Order COMPLETED: 1008")).toHaveLength(1);
-    expect(s.length).toBeGreaterThanOrEqual(3);
+    // every other e-mail is a shipment confirmation: exactly one per shipment, between the two
+    const shipments = s.slice(1, -1);
+    expect(shipments).toHaveLength(1);
+    for (const x of shipments) expect(x).not.toMatch(/^Order Status:|COMPLETED/);
   });
 });
 

@@ -67,7 +67,7 @@ describe("change-language screen", () => {
   // case: SWHR2-C-0020@v1
   it("SWHR2-C-0020: shows four locale options and a Change Locale button for any session locale", async () => {
     const { default: ChangeLanguage } = await import("../../../src/pages/petstore/change-language");
-    for (const locale of ["en_US", "ja_JP"]) {
+    for (const locale of ["en_US", "de_DE", "ja_JP", "zh_CN"]) {
       vi.stubGlobal(
         "fetch",
         vi.fn(async () => Response.json({ locale })),

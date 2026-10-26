@@ -20,6 +20,8 @@ async function openTool(page: Page, stored: Record<string, Status>) {
       return route.fulfill({ json: { items: orders, orders } });
     }
     if (p.endsWith("/decisions")) return route.fulfill({ status: 202, json: {} });
+    if (/revenue|count|orders-by/i.test(p))
+      return route.fulfill({ json: [{ key: "FISH", label: "Fish", value: 35 }] });
     return route.fulfill({ json: { items: [], data: [] } });
   });
   await page.goto("/admin/tool");
@@ -55,6 +57,13 @@ test.describe("order approval tool", () => {
     expect(orderReqs(reqs).sort()).toEqual(ALL);
     expect(chartReqs(reqs, /revenue/i).length).toBeGreaterThan(0);
     expect(chartReqs(reqs, /count|orders-by|order-count/i).length).toBeGreaterThan(0);
+    // the fake returns a FISH value for both charts: it must be drawn, without any refresh
+    const chart = page.locator(".recharts-wrapper").first();
+    await expect(chart).toBeVisible();
+    await expect(chart).toContainText(/fish/i);
+    await expect(
+      page.locator(".recharts-pie-sector, .recharts-bar-rectangle").first(),
+    ).toBeVisible();
   });
 
   // case: SWHR2-C-0241@v1

@@ -41,14 +41,6 @@ describe("automatic approval", () => {
       50000,
       "PENDING",
     ],
-    // case: SWHR2-C-0233@v1
-    [
-      "SWHR2-C-0233: a zh_CN order totalling 10 is never approved automatically",
-      "1006",
-      "zh_CN",
-      10,
-      "PENDING",
-    ],
   ];
   for (const [title, orderId, locale, total, expected] of cases) {
     it(title, async () => {
@@ -57,6 +49,18 @@ describe("automatic approval", () => {
       expect(statusOf(client, orderId)).toBe(expected);
     });
   }
+
+  // case: SWHR2-C-0233@v1
+  it("SWHR2-C-0233: a zh_CN order totalling 10 is never approved automatically", async () => {
+    const { client } = await loadOrders();
+    // 10 is the stated total; "never" also covers totals below, at and above every other locale's threshold
+    const totals = [10, 0.01, 499.99, 500, 49999, 50000, 1_000_000];
+    for (const [i, total] of totals.entries()) {
+      const orderId = String(1100 + i);
+      await deliver({ orderId, locale: "zh_CN", total });
+      expect(statusOf(client, orderId), `total ${total}`).toBe("PENDING");
+    }
+  });
 
   // case: SWHR2-C-0229@v1 (second expectation: no purchase order sent)
   it("SWHR2-C-0229: no purchase order is sent for the order left PENDING", async () => {
@@ -137,10 +141,12 @@ describe("decision channel", () => {
     const stillWaiting = messagesOn(app.client, "order.approval");
     expect(stillWaiting).toHaveLength(1);
     expect(stillWaiting[0].payload).toBe(waiting[0].payload);
-    // the restarted consumer receives the stored payload
-    const { decideBatch } = await import("../../../services/orders/decide");
-    await decideBatch(stillWaiting[0].payload);
+    // the restarted consumer (freshly loaded worker) receives the stored payload from the channel
+    const worker = await import("../../../services/messaging/worker");
+    app.client.exec("update messages set available_at = 0 where status = 'pending'");
+    await worker.processDue();
     expect(statusOf(app.client, "1001")).toBe("APPROVED");
+    expect(messagesOn(app.client, "order.approval")[0].status).toBe("delivered");
     vi.doUnmock("../../../db/client");
   });
 

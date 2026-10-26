@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { SHIPPING, shopper } from "../checkout/harness";
+import { SHIPPING, orderIdOf, shopper } from "../checkout/harness";
 import { fulfilment } from "../order-fulfillment/harness";
 import { call } from "../shopping-cart/harness";
 
@@ -21,12 +21,17 @@ describe("in-process hand-off", () => {
       .all() as Record<string, unknown>[];
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe("pending");
-    expect(JSON.stringify(rows[0])).toContain("j2ee");
+    const { fromXml } = await import("../../../services/documents/purchase-order");
+    const stored = fromXml(rows[0].payload as string);
+    expect(stored.userId).toBe("j2ee");
+    expect(stored.orderId).toBe(orderIdOf(placed.body));
     // and the hand-off itself takes a message from a caller with no session or role at all
     const f = await fulfilment();
-    expect(() =>
-      f.messaging.enqueue(f.db, "order.new", JSON.stringify({ orderId: "1001" })),
-    ).not.toThrow();
+    const payload = JSON.stringify({ orderId: "1001" });
+    expect(() => f.messaging.enqueue(f.db, "order.new", payload)).not.toThrow();
+    expect(
+      f.client.query("select status, payload from messages where payload = ?").all(payload),
+    ).toEqual([{ status: "pending", payload }]);
   });
 
   // case: SWHR2-C-0264@v1
