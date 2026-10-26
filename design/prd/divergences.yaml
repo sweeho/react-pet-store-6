@@ -1,0 +1,57 @@
+divergences:
+  - claim: |
+      Simplified Chinese (zh_CN) is a supported storefront locale
+    code_says: |
+      Requirement "Supported storefront locales and header language switch": The storefront SHALL support the English (en_US), Japanese (ja_JP) and Chinese (zh_CN) locales with en_US as the default.
+    document_says: |
+      The build manifest records: "Whether zh_CN is a supported locale is disputed: the code ships it, the English guide does not list it".
+    code_ref: openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md#supported-storefront-locales-and-header-language-switch
+    document_ref: build/manifest.yaml#L58
+    capability: localization
+    requirement: SWHR2-R-0078
+    severity: major
+  - claim: |
+      The change-language screen offers German (de_DE)
+    code_says: |
+      Requirement "Change-language screen": a single locale selector offering US English (en_US), German (de_DE), Japanese (ja_JP) and Simplified Chinese (zh_CN).
+    document_says: |
+      The build manifest records: "The change-language screen offers de_DE although no German storefront page set exists; whether it is in production scope is an open Business Owner decision".
+      The rebuild guidance says: "Supported locales are en_US, ja_JP and zh_CN."
+    code_ref: openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md#change-language-screen
+    document_ref: build/manifest.yaml#L59
+    capability: localization
+    requirement: SWHR2-R-0020
+    severity: minor
+  - claim: |
+      The system keeps three separate datastores
+    code_says: |
+      Requirement "Separate datastores per application area": The system SHALL keep three separate datastores, one each for the storefront, the supplier and order processing, each created empty at installation if it does not already exist.
+    document_says: |
+      The rebuild guidance maps "Three datasources (PetStoreDB, OPCDB, SupplierDB)" to "One SQLite database: tables in db/schema.ts".
+    code_ref: openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md#separate-datastores-per-application-area
+    document_ref: architecture/rebuild-guidance.md#3-translating-the-legacy-shape-onto-this-repositorys-stack
+    capability: data-population
+    requirement: SWHR2-R-0074
+    severity: major
+  - claim: |
+      Customer order notifications are disabled unless enabled at deployment
+    code_says: |
+      Requirement "Order notifications disabled unless enabled at deployment": the system SHALL have them disabled unless enabled at deployment.
+    document_says: |
+      The build manifest records: "The default on/off state of the notifications is disputed (conflicting documentation, deployed values redacted)".
+    code_ref: openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md#order-notifications-disabled-unless-enabled-at-deployment
+    document_ref: build/manifest.yaml#L588
+    capability: customer-notifications
+    requirement: SWHR2-R-0014
+    severity: minor
+  - claim: |
+      The initiative builds a site-shell capability with a landing page at the root route
+    code_says: |
+      Requirement "Landing page": The application SHALL serve a landing page at its root route that introduces the product and links to every primary area.
+    document_says: |
+      The rebuild guidance says: "build/manifest.yaml schedules the 12 capabilities in this order", and its list has no site-shell entry.
+    code_ref: openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md#landing-page
+    document_ref: architecture/rebuild-guidance.md#2-build-order
+    capability: site-shell
+    requirement: SWHR2-R-0288
+    severity: major

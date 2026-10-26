@@ -1,0 +1,140 @@
+sections:
+  - section: Summary
+    from:
+      - openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0004-catalog-browsing-and-search/specs/catalog-browsing/spec.md
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0011-order-fulfilment-and-invoic/specs/order-fulfillment/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+  - section: Context
+    from:
+      - openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0004-catalog-browsing-and-search/specs/catalog-browsing/spec.md
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0011-order-fulfilment-and-invoic/specs/order-fulfillment/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+      - build/manifest.yaml
+      - architecture/rebuild-guidance.md
+  - section: Goals
+    from:
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0004-catalog-browsing-and-search/specs/catalog-browsing/spec.md
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0011-order-fulfilment-and-invoic/specs/order-fulfillment/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+  - section: Non-goals
+    from:
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+      - build/manifest.yaml
+      - architecture/rebuild-guidance.md
+  - section: Users
+    from:
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+  - section: User journeys
+    from:
+      - openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0004-catalog-browsing-and-search/specs/catalog-browsing/spec.md
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+  - section: Capability map
+    from:
+      - openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0004-catalog-browsing-and-search/specs/catalog-browsing/spec.md
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0011-order-fulfilment-and-invoic/specs/order-fulfillment/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+      - build/manifest.yaml
+  - section: Screens
+    from:
+      - openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0004-catalog-browsing-and-search/specs/catalog-browsing/spec.md
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+      - build/manifest.yaml
+  - section: Constraints and assumptions
+    from:
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0011-order-fulfilment-and-invoic/specs/order-fulfillment/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - architecture/rebuild-guidance.md
+  - section: Open questions
+    from:
+      - openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+      - build/manifest.yaml
+      - architecture/rebuild-guidance.md
+  - section: Sources
+    from:
+      - openspec/changes/swhr2-i-0002-bootstrap-landing-page-and/specs/site-shell/spec.md
+      - openspec/changes/swhr2-i-0003-localization/specs/localization/spec.md
+      - openspec/changes/swhr2-i-0004-catalog-browsing-and-search/specs/catalog-browsing/spec.md
+      - openspec/changes/swhr2-i-0005-sign-on-and-access-control/specs/sign-on/spec.md
+      - openspec/changes/swhr2-i-0006-customer-account-and-profil/specs/customer-account/spec.md
+      - openspec/changes/swhr2-i-0007-shopping-cart/specs/shopping-cart/spec.md
+      - openspec/changes/swhr2-i-0008-checkout-and-order-placemen/specs/checkout/spec.md
+      - openspec/changes/swhr2-i-0009-order-approval/specs/order-approval/spec.md
+      - openspec/changes/swhr2-i-0010-supplier-inventory/specs/supplier-inventory/spec.md
+      - openspec/changes/swhr2-i-0011-order-fulfilment-and-invoic/specs/order-fulfillment/spec.md
+      - openspec/changes/swhr2-i-0012-customer-notifications/specs/customer-notifications/spec.md
+      - openspec/changes/swhr2-i-0013-admin-order-and-sales-repor/specs/sales-reporting/spec.md
+      - openspec/changes/swhr2-i-0014-sample-data-population/specs/data-population/spec.md
+      - build/manifest.yaml
+      - architecture/rebuild-guidance.md
