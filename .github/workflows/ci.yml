@@ -58,6 +58,7 @@ jobs:
       # TODO: remove continue-on-error once the Build phase has made the suite green.
       - name: Acceptance tests
         continue-on-error: true
+        timeout-minutes: 10
         run: bun run test:acceptance --reporter=default --reporter=junit --outputFile.junit=.vortex-results/acceptance/junit.xml
 
       - name: Build
@@ -72,6 +73,7 @@ jobs:
       # TODO: remove continue-on-error once the Build phase has made the acceptance suite green.
       - name: Acceptance E2E tests
         continue-on-error: true
+        timeout-minutes: 10
         run: bun run test:acceptance:e2e
 
       - name: Upload acceptance test results
