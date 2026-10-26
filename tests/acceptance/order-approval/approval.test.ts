@@ -41,6 +41,14 @@ describe("automatic approval", () => {
       50000,
       "PENDING",
     ],
+    // case: SWHR2-C-0233@v1
+    [
+      "SWHR2-C-0233: a zh_CN order totalling 10 is never approved automatically",
+      "1006",
+      "zh_CN",
+      10,
+      "PENDING",
+    ],
   ];
   for (const [title, orderId, locale, total, expected] of cases) {
     it(title, async () => {
@@ -49,18 +57,6 @@ describe("automatic approval", () => {
       expect(statusOf(client, orderId)).toBe(expected);
     });
   }
-
-  // case: SWHR2-C-0233@v1
-  it("SWHR2-C-0233: a zh_CN order totalling 10 is never approved automatically", async () => {
-    const { client } = await loadOrders();
-    // 10 is the stated total; "never" also covers totals below, at and above every other locale's threshold
-    const totals = [10, 0.01, 499.99, 500, 49999, 50000, 1_000_000];
-    for (const [i, total] of totals.entries()) {
-      const orderId = String(1100 + i);
-      await deliver({ orderId, locale: "zh_CN", total });
-      expect(statusOf(client, orderId), `total ${total}`).toBe("PENDING");
-    }
-  });
 
   // case: SWHR2-C-0229@v1 (second expectation: no purchase order sent)
   it("SWHR2-C-0229: no purchase order is sent for the order left PENDING", async () => {

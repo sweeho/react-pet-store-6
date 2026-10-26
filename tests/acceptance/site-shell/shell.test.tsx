@@ -54,6 +54,9 @@ describe("app shell", () => {
       { initialEntries: ["/test"] },
     );
     render(<RouterProvider router={router} />);
+    expect(screen.getAllByRole("banner")).toHaveLength(1);
+    expect(screen.getAllByRole("contentinfo")).toHaveLength(1);
+    expect(screen.getAllByRole("main")).toHaveLength(1);
     const header = screen.getByRole("banner");
     const footer = screen.getByRole("contentinfo");
     expect(screen.getAllByRole("navigation").length).toBeGreaterThanOrEqual(1);
