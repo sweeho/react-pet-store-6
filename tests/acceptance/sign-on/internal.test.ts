@@ -2,12 +2,11 @@
 import { readdirSync } from "node:fs";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { shopper } from "../checkout/harness";
+import { SHIPPING, shopper } from "../checkout/harness";
 import { fulfilment } from "../order-fulfillment/harness";
 import { call } from "../shopping-cart/harness";
-import { loadApp } from "./harness";
 
 describe("in-process hand-off", () => {
   // case: SWHR2-C-0263@v1
@@ -32,10 +31,14 @@ describe("in-process hand-off", () => {
 
   // case: SWHR2-C-0264@v1
   it("SWHR2-C-0264: no public route reaches the hand-off service", async () => {
-    const app = await loadApp();
-    const messaging = await import("../../../services/messaging");
-    const enqueue = vi.spyOn(messaging, "enqueue");
-    const before = (app.client.query("select count(*) n from messages").get() as { n: number }).n;
+    // a working storefront (catalog, customer j2ee) whose own checkout is known to hand off a message
+    const app = await shopper();
+    const total = () =>
+      (app.client.query("select count(*) n from messages").get() as { n: number }).n;
+    const start = total();
+    expect((await app.place()).status).toBe(200);
+    const before = total();
+    expect(before).toBeGreaterThan(start);
     const files: string[] = [];
     const walk = (dir: string) => {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -45,8 +48,8 @@ describe("in-process hand-off", () => {
       }
     };
     walk(path.join(process.cwd(), "routes/api"));
-    // Call every public route as an anonymous outsider, whatever its name, carrying a marker in
-    // every field, then look for the marker in anything the hand-off service stored.
+    // Call every public route as an anonymous outsider, whatever its name, with order-shaped
+    // input (so a route is not stopped by a malformed body) and a marker in every id field.
     const MARK = "outside-probe-7f3a";
     const methods = ["get", "post", "put", "patch", "delete"];
     for (const f of files) {
@@ -68,13 +71,24 @@ describe("in-process hand-off", () => {
         url: `/api/${url}?q=${MARK}`,
         params,
         json:
-          method === "get" ? undefined : { orderId: MARK, body: MARK, message: MARK, userId: MARK },
+          method === "get"
+            ? undefined
+            : {
+                orderId: MARK,
+                body: MARK,
+                message: MARK,
+                userId: MARK,
+                itemId: "EST-1",
+                channel: "order.new",
+                payload: MARK,
+                billing: SHIPPING,
+                shipping: SHIPPING,
+              },
       });
     }
-    // the hand-off may be reached by nothing in the application's public surface: neither the
-    // enqueue function nor the stored messages change, whatever the routes are called or read
-    expect(enqueue).not.toHaveBeenCalled();
-    expect(app.client.query("select count(*) n from messages").get()).toEqual({ n: before });
+    // the hand-off may be reached by nothing in the application's public surface: no route adds a
+    // stored message, whatever it is called (the checkout control above shows the count would move)
+    expect(total()).toBe(before);
   });
 });
 

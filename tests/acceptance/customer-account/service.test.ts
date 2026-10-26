@@ -184,15 +184,29 @@ describe("contact snapshot and address operations", () => {
   it("SWHR2-C-0171: changing the telephone in a snapshot does not change the stored contact record", async () => {
     const { create, svc, client } = await customers();
     await create("j2ee");
-    const snap = (await svc.contactSnapshot(contactId(client))) as Record<string, unknown>;
+    const snap = (await svc.contactSnapshot(contactId(client))) as Record<string, unknown> & {
+      address: Record<string, unknown>;
+    };
+    expect(snap.telephone).toBe("555-0100");
+    // edit the snapshot, and the copy of its address; a frozen snapshot may refuse, which also
+    // leaves the record alone, so only a refusal of the write itself is tolerated
+    let refused = false;
     try {
       snap.telephone = "555-9999";
-    } catch {
-      /* a frozen snapshot refuses the write, which also leaves the record alone */
+      snap.address.city = "Elsewhere";
+    } catch (e) {
+      refused = e instanceof TypeError;
     }
+    if (!refused) expect(snap.telephone).toBe("555-9999");
     expect(client.query("select telephone from contact_info").get()).toEqual({
       telephone: "555-0100",
     });
+    expect(city(client)).toBe("Palo Alto");
+    const fresh = (await svc.contactSnapshot(contactId(client))) as Record<string, unknown> & {
+      address: Record<string, unknown>;
+    };
+    expect(fresh.telephone).toBe("555-0100");
+    expect(fresh.address.city).toBe("Palo Alto");
   });
 
   // case: SWHR2-C-0172@v1
