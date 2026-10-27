@@ -10,3 +10,5 @@ Landing page at `/` linking every primary area.
 Deviations: mockup header, rail, footer and category cards belong to the shell / catalog tickets and are not built; the hero "Browse the catalog" button is omitted so `/petstore` has exactly one link. Landing and stubs render their own `<main>`; the shell ticket should move that into `AppShell`. No design-check screenshots: no Chromium in this container, E2E not run.
 
 Verification: `bun run verify` passes (37 tests).
+
+CODE-REVIEW: self-review — sub-agent skipped for a small diff; checked contract types, unique hrefs, no not-found text on stubs; no findings.
