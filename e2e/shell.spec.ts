@@ -1,8 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-import { NAV_AREAS } from "../src/constants/navigation";
+// Mirrors the hrefs in src/constants/navigation.ts (NAV_AREAS).
+const NAV_AREA_ROUTES = [
+  "/petstore",
+  "/petstore/cart",
+  "/petstore/checkout",
+  "/petstore/signin",
+  "/petstore/account",
+  "/petstore/language",
+  "/admin/orders",
+  "/admin/sales",
+  "/supplier",
+];
 
-const routes = ["/", "/about", ...NAV_AREAS.map((a) => a.href), "/does-not-exist"];
+const routes = ["/", "/about", ...NAV_AREA_ROUTES, "/does-not-exist"];
 
 async function expectShell(page: import("@playwright/test").Page) {
   await expect(page.getByRole("banner")).toHaveCount(1);
