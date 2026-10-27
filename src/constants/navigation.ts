@@ -9,6 +9,8 @@ export interface NavArea {
   staff: boolean;
 }
 
-export const NAV_AREAS: readonly NavArea[] = (() => {
-  throw new Error("VortexNotImplemented");
-})();
+export const NAV_AREAS: readonly NavArea[] = new Proxy([], {
+  get() {
+    throw new Error("VortexNotImplemented");
+  },
+});
