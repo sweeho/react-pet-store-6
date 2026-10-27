@@ -6,6 +6,18 @@ import { NAV_AREAS } from "@/constants/navigation";
 
 import Home from "./index";
 
+const AREA_HREFS = [
+  "/petstore",
+  "/petstore/cart",
+  "/petstore/checkout",
+  "/petstore/change-language",
+  "/petstore/signin",
+  "/petstore/account",
+  "/admin",
+  "/admin/tool",
+  "/supplier",
+];
+
 describe("Landing page", () => {
   it("[SWHR2-C-0271] links to every primary area exactly once", () => {
     render(
@@ -33,7 +45,7 @@ describe("Landing page", () => {
     expect(screen.queryByText(/not found|404/i)).not.toBeInTheDocument();
   });
 
-  it.each(NAV_AREAS.map((a) => a.href))("[SWHR2-C-0272] %s has a page of its own", (href) => {
+  it.each(AREA_HREFS)("[SWHR2-C-0272] %s has a page of its own", (href) => {
     const pages = Object.keys(import.meta.glob("./**/*.tsx", { eager: false }));
     const file = `.${href}/index.tsx`;
     const flat = `.${href}.tsx`;
