@@ -41,7 +41,7 @@ describe("Landing page", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /welcome to pet store/i })).toBeVisible();
     expect(screen.queryByText(/not found|404/i)).not.toBeInTheDocument();
   });
 
