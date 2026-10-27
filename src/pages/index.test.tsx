@@ -21,4 +21,22 @@ describe("Landing page", () => {
       expect(hrefs.filter((h) => h === area.href)).toHaveLength(1);
     }
   });
+
+  it("[SWHR2-C-0270] shows the landing heading at the root route", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(screen.queryByText(/not found|404/i)).not.toBeInTheDocument();
+  });
+
+  it.each(NAV_AREAS.map((a) => a.href))("[SWHR2-C-0272] %s has a page of its own", (href) => {
+    const pages = Object.keys(import.meta.glob("./**/*.tsx", { eager: false }));
+    const file = `.${href}/index.tsx`;
+    const flat = `.${href}.tsx`;
+    expect(pages.some((p) => p === file || p === flat)).toBe(true);
+  });
 });
