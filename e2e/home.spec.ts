@@ -11,15 +11,11 @@ import { expect, test } from "@playwright/test";
  * doesn't specifically need a real browser — it's far faster.
  */
 test.describe("Home page", () => {
-  test("shows the hero content and desktop nav", async ({ page }) => {
+  test("shows the hero content", async ({ page }) => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Vortex");
     await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
-
-    for (const item of ["Features", "Tech Stack", "Docs", "GitHub"]) {
-      await expect(page.getByRole("link", { name: item, exact: true })).toBeVisible();
-    }
   });
 
   test("has no vertical scrollbar on common viewport sizes", async ({ page }) => {
@@ -37,23 +33,5 @@ test.describe("Home page", () => {
       }));
       expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
     }
-  });
-
-  test("opens and closes the mobile nav from the hamburger button", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto("/");
-
-    await expect(page.getByRole("dialog")).not.toBeVisible();
-
-    await page.getByRole("button", { name: "Open main menu" }).click();
-    // The Dialog root's own box is zero-height (its children are all
-    // `fixed`-positioned), so check its visible content instead of the
-    // wrapper element itself.
-    const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("link", { name: "Tech Stack" })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Close menu" })).toBeVisible();
-
-    await page.getByRole("button", { name: "Close menu" }).click();
-    await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 });

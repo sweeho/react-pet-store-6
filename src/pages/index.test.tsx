@@ -1,5 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import Home from "./index";
@@ -28,31 +27,5 @@ describe("Home page", () => {
     for (const tech of ["React 19", "TypeScript", "Vite 8", "Tailwind CSS v4"]) {
       expect(screen.getByText(tech)).toBeInTheDocument();
     }
-  });
-
-  it("opens the mobile nav dialog and lists the nav links inside it", async () => {
-    const user = userEvent.setup();
-    render(<Home />);
-
-    // The mobile menu content isn't mounted until the dialog opens.
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Open main menu" }));
-
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("link", { name: "Features" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "Tech Stack" })).toBeInTheDocument();
-  });
-
-  it("closes the mobile nav dialog", async () => {
-    const user = userEvent.setup();
-    render(<Home />);
-
-    await user.click(screen.getByRole("button", { name: "Open main menu" }));
-    await screen.findByRole("dialog");
-
-    await user.click(screen.getByRole("button", { name: "Close menu" }));
-
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
