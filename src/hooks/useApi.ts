@@ -1,0 +1,11 @@
+export interface UseApiResult<T> {
+  data: T | undefined;
+  error: Error | undefined;
+  loading: boolean;
+  retry: () => void;
+}
+
+export function useApi<T>(url: string): UseApiResult<T> {
+  void url;
+  throw new Error("VortexNotImplemented");
+}
