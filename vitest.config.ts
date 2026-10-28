@@ -25,7 +25,7 @@ export default defineConfig({
     },
   },
   test: {
-    // routes/**, middleware/** and services/** tests (e.g. routes/api/users/*) import db/client.ts,
+    // routes/**/*.test.ts (e.g. routes/api/users/*) import db/client.ts,
     // which imports the Bun builtin bun:sqlite. Vite's jsdom/"client"
     // environment can't externalize a builtin (browsers have no runtime to
     // resolve it against) — only a server-like environment can, so those
@@ -43,16 +43,7 @@ export default defineConfig({
           // red until the Build phase lands; it runs via `bun run
           // test:acceptance` (vitest.acceptance.config.ts) instead. This also
           // keeps its Playwright specs (tests/acceptance/<capability>/e2e/) out.
-          exclude: [
-            "node_modules",
-            "dist",
-            ".output",
-            "e2e",
-            "routes/**",
-            "middleware/**",
-            "services/**",
-            "tests/acceptance/**",
-          ],
+          exclude: ["node_modules", "dist", ".output", "e2e", "routes/**", "tests/acceptance/**"],
         },
       },
       {
@@ -60,7 +51,7 @@ export default defineConfig({
         test: {
           name: "server",
           environment: "node",
-          include: ["routes/**/*.test.ts", "middleware/**/*.test.ts", "services/**/*.test.ts"],
+          include: ["routes/**/*.test.ts"],
         },
       },
     ],
