@@ -7,8 +7,8 @@
 
 ## 2. Landing page
 
-- [ ] 2.1 Add the landing page at the root route (SWHR2-T-0082; SWHR2-R-0288)
-- [ ] 2.2 Link the landing page to every primary area (SWHR2-T-0082; SWHR2-R-0288)
+- [x] 2.1 Add the landing page at the root route (SWHR2-T-0082; SWHR2-R-0288)
+- [x] 2.2 Link the landing page to every primary area (SWHR2-T-0082; SWHR2-R-0288)
 
 ## 3. Site shell
 
