@@ -7,6 +7,4 @@ export interface Area {
   icon: string;
 }
 
-export const areas: Area[] = (() => {
-  throw new Error("VortexNotImplemented");
-})();
+export const areas: Area[] = [];
