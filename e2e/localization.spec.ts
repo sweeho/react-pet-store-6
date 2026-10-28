@@ -11,7 +11,7 @@ async function changeLocale(page: Page, label: string) {
 }
 
 test.describe("localization", () => {
-  test("[SWHR2-C-0027] a shopper who has not chosen a locale sees US English", async ({ page }) => {
+  test("a shopper who has not chosen a locale sees US English", async ({ page }) => {
     await page.goto("/petstore");
     const text = await body(page).innerText();
     expect(text).not.toMatch(KANA);
@@ -22,7 +22,7 @@ test.describe("localization", () => {
     );
   });
 
-  test("[SWHR2-C-0028] activating the Japanese flag in the header switches the storefront to Japanese", async ({
+  test("activating the Japanese flag in the header switches the storefront to Japanese", async ({
     page,
   }) => {
     await page.goto("/petstore");
@@ -33,7 +33,7 @@ test.describe("localization", () => {
     expect((await (await page.request.get("/api/session")).json()).locale).toBe("ja_JP");
   });
 
-  test("[SWHR2-C-0021] selecting Japanese and submitting Change Locale sets ja_JP and confirms it", async ({
+  test("selecting Japanese and submitting Change Locale sets ja_JP and confirms it", async ({
     page,
   }) => {
     await page.goto("/petstore/change-language");
@@ -50,7 +50,7 @@ test.describe("localization", () => {
     expect(await body(page).innerText()).toMatch(KANA);
   });
 
-  test("[SWHR2-C-0022] changing locale to zh_CN re-lists the EST-1 cart line with its zh_CN name and price", async ({
+  test("changing locale to zh_CN re-lists the EST-1 cart line with its zh_CN name and price", async ({
     page,
   }) => {
     expect((await page.request.post("/api/cart/items", { data: { itemId: "EST-1" } })).ok()).toBe(
@@ -65,9 +65,7 @@ test.describe("localization", () => {
     expect(cart.lines[0]).toMatchObject({ name: "大天使鱼", unitPrice: 142 });
   });
 
-  test("[SWHR2-C-0026] storefront screens render localized text in en_US, ja_JP and zh_CN", async ({
-    page,
-  }) => {
+  test("storefront screens render localized text in en_US, ja_JP and zh_CN", async ({ page }) => {
     for (const locale of ["en_US", "ja_JP", "zh_CN"]) {
       expect((await page.request.post("/api/session/locale", { data: { locale } })).ok()).toBe(
         true,
