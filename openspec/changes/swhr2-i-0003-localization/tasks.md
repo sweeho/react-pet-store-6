@@ -7,10 +7,10 @@
 
 ## 2. Changing locale
 
-- [ ] 2.1 Add the English, Japanese and Chinese flag controls to the storefront header (SWHR2-T-0095; SWHR2-R-0078)
-- [ ] 2.2 Apply a locale change to both the session and the shopping cart (SWHR2-T-0095; SWHR2-R-0076)
-- [ ] 2.3 Build the change-language screen with the locale selector and "Change Locale" control (SWHR2-T-0095; SWHR2-R-0020)
-- [ ] 2.4 Show the confirmation stating the new locale after a successful change (SWHR2-T-0095; SWHR2-R-0020)
+- [x] 2.1 Add the English, Japanese and Chinese flag controls to the storefront header (SWHR2-T-0095; SWHR2-R-0078)
+- [x] 2.2 Apply a locale change to both the session and the shopping cart (SWHR2-T-0095; SWHR2-R-0076)
+- [x] 2.3 Build the change-language screen with the locale selector and "Change Locale" control (SWHR2-T-0095; SWHR2-R-0020)
+- [x] 2.4 Show the confirmation stating the new locale after a successful change (SWHR2-T-0095; SWHR2-R-0020)
 
 ## 3. Localized catalog and cart
 
