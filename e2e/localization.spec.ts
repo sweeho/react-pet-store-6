@@ -29,7 +29,7 @@ test.describe("localization", () => {
     await page.getByRole("button", { name: "Japanese" }).click();
     await expect(body(page)).toContainText(KANA);
     await page.goto("/petstore/cart");
-    expect(await body(page).innerText()).toMatch(KANA);
+    await expect(body(page)).toContainText(KANA);
     expect((await (await page.request.get("/api/session")).json()).locale).toBe("ja_JP");
   });
 
@@ -47,7 +47,7 @@ test.describe("localization", () => {
     await page.getByRole("button", { name: "Change Locale" }).click();
     await expect(body(page)).toContainText("ja_JP");
     await page.goto("/petstore");
-    expect(await body(page).innerText()).toMatch(KANA);
+    await expect(body(page)).toContainText(KANA);
   });
 
   test("changing locale to zh_CN re-lists the EST-1 cart line with its zh_CN name and price", async ({
@@ -73,12 +73,12 @@ test.describe("localization", () => {
       for (const path of ["/petstore", "/petstore/cart", "/petstore/signin"]) {
         await page.goto(path);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        const text = await body(page).innerText();
-        if (locale === "en_US") expect(text, `${locale} ${path}`).not.toMatch(/[぀-ヿ一-鿿]/);
-        if (locale === "ja_JP") expect(text, `${locale} ${path}`).toMatch(KANA);
+        const at = `${locale} ${path}`;
+        if (locale === "en_US") await expect(body(page), at).not.toContainText(/[぀-ヿ一-鿿]/);
+        if (locale === "ja_JP") await expect(body(page), at).toContainText(KANA);
         if (locale === "zh_CN") {
-          expect(text, `${locale} ${path}`).toMatch(HAN);
-          expect(text, `${locale} ${path}`).not.toMatch(KANA);
+          await expect(body(page), at).toContainText(HAN);
+          await expect(body(page), at).not.toContainText(KANA);
         }
       }
     }
