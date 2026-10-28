@@ -1,0 +1,19 @@
+import { Link } from "react-router";
+
+import EmptyFrame from "@/components/shell/EmptyFrame";
+
+export default function PetstoreHome() {
+  return (
+    <div>
+      <h1 className="mb-4 text-2xl font-semibold">Catalog</h1>
+      <EmptyFrame
+        message="The catalog is coming soon."
+        action={
+          <Link to="/" className="text-primary text-sm font-medium hover:underline">
+            Back to home
+          </Link>
+        }
+      />
+    </div>
+  );
+}
