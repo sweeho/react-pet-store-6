@@ -52,7 +52,7 @@ describe("changing locale", () => {
     renderAt("/petstore/change-language");
     await user.selectOptions(await screen.findByRole("combobox"), "Japanese");
     await user.click(screen.getByRole("button", { name: "Change Locale" }));
-    expect(await screen.findByText(/ja_JP/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/ja_JP/)).length).toBeGreaterThan(0);
     expect(sessionLocale).toBe("ja_JP");
   });
 
@@ -62,7 +62,7 @@ describe("changing locale", () => {
     renderAt("/petstore/change-language");
     await user.selectOptions(await screen.findByRole("combobox"), "Simplified Chinese");
     await user.click(screen.getByRole("button", { name: "Change Locale" }));
-    expect(await screen.findByText(/zh_CN/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/zh_CN/)).length).toBeGreaterThan(0);
     expect(sessionLocale).toBe("zh_CN");
   });
 

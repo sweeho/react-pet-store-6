@@ -24,7 +24,7 @@ export const areas: Area[] = [
   { label: "Catalog & search", to: "/petstore", group: "Shop", icon: "layout-grid" },
   { label: "Shopping cart", to: "/petstore/cart", group: "Shop", icon: "shopping-cart" },
   { label: "Checkout", to: "/petstore/cart", group: "Shop", icon: "credit-card" },
-  { label: "Language", to: "/petstore", group: "Shop", icon: "globe" },
+  { label: "Language", to: "/petstore/change-language", group: "Shop", icon: "globe" },
   { label: "Sign in", to: "/petstore/signin", group: "Account", icon: "log-in" },
   { label: "Account & profile", to: "/petstore/signin", group: "Account", icon: "user" },
   { label: "Order approval", to: "/admin", group: "Administration", icon: "check-square" },
