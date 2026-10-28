@@ -1,11 +1,37 @@
 import { render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it } from "vitest";
 
-import { areas } from "./areas";
 import GlobalNav from "./GlobalNav";
 
+const areas = [
+  { label: "Catalog & search", to: "/petstore" },
+  { label: "Shopping cart", to: "/petstore/cart" },
+  { label: "Checkout", to: "/petstore/cart" },
+  { label: "Language", to: "/petstore" },
+  { label: "Sign in", to: "/petstore/signin" },
+  { label: "Account & profile", to: "/petstore/signin" },
+  { label: "Order approval", to: "/admin" },
+  { label: "Sales reporting", to: "/admin" },
+  { label: "Supplier inventory", to: "/supplier" },
+];
+
 describe("GlobalNav", () => {
+  it("[SWHR2-C-0274] the home link returns to the landing page", async () => {
+    render(
+      <MemoryRouter initialEntries={["/about"]}>
+        <GlobalNav />
+        <Routes>
+          <Route path="/" element={<h1>Landing</h1>} />
+          <Route path="/about" element={<h1>About</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getByRole("link", { name: "Home" }));
+    expect(screen.getByRole("heading", { name: "Landing" })).toBeInTheDocument();
+  });
+
   it("[SWHR2-C-0273] renders a navigation landmark with a home link", () => {
     render(
       <MemoryRouter>
