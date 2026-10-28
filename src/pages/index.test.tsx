@@ -14,7 +14,7 @@ const renderHome = () =>
   );
 
 describe("Landing page", () => {
-  it("renders the welcome heading inside the shell", () => {
+  it("[SWHR2-C-0270] renders the welcome heading inside the shell", () => {
     renderHome();
     expect(
       screen.getByRole("heading", { level: 1, name: "Welcome to Pet Store" }),
