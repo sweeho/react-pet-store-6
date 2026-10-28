@@ -1,5 +1,5 @@
-import type { H3Event } from "h3";
-import { getQuery } from "h3";
+import type { H3Event } from "nitro/h3";
+import { getQuery } from "nitro/h3";
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, parseLocale } from "../shared/i18n/locale";
 
