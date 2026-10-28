@@ -50,9 +50,9 @@ describe("Users page", () => {
   it("[SWHR2-C-0279] accepts a bare array body", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json([{ id: 2, name: "Bob Smith" }])),
+      vi.fn(async () => Response.json([{ id: 2, name: "Dana Lee" }])),
     );
     renderUsers();
-    expect(await screen.findByText("Bob Smith")).toBeInTheDocument();
+    expect(await screen.findByText("Dana Lee")).toBeInTheDocument();
   });
 });
