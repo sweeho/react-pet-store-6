@@ -19,6 +19,7 @@ test("home page loads with no console errors", async ({ page }) => {
   const response = await page.goto("/");
 
   expect(response?.ok()).toBe(true);
+  await expect(page).toHaveTitle("Pet Store");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });
