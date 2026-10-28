@@ -21,6 +21,8 @@
     "server.ts",
     "routes",
     "middleware",
+    "services",
+    "shared",
     "db",
     "e2e"
   ]

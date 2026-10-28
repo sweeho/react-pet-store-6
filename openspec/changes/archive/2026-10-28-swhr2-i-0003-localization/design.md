@@ -135,3 +135,62 @@ Legacy behaviour described in the sections above but not in `spec.md` (change-lo
 - Per-locale screen definitions as TypeScript modules in the SPA source rather than a translation-file format, so that the fallback rules in SWHR2-R-0133 are plain code.
 - Nitro (H3) middleware for request decoding, as pinned by the PRD constraints. A new top-level `shared/` directory is added to both tsconfig `include` lists.
 - Tests: unit tests for `parseLocale`, the formatters, `splitWords` and `resolveScreen`; a route integration test for `POST /api/session/locale`; a Playwright spec switching the header flag with an item in the cart.
+
+## Sprint SWHR2-S-0007 planning
+
+Added by Planning on SWHR2-T-0092. The sections above are the adopted specification and are unchanged; this section records what the repository looks like today, how the work is split, and where the code contradicts the change.
+
+### Codebase findings (2026-10-28, sprint branch at 562be5e)
+
+- Only the site shell exists (change `swhr2-i-0002-bootstrap-landing-page-and`). `src/pages/petstore/{index,cart,signin}.tsx` are `EmptyFrame` placeholders with English literals. There is no item or category page.
+- `src/components/shell/AppShell.tsx` has a `header` slot; `src/pages/petstore.tsx` is the area parent route that can fill it. `src/components/shell/areas.ts` has a **Language** entry that points at `/petstore`, not at a change-language page.
+- `src/components/shell/ErrorFrame.tsx` takes `title`, `message` and a required `onRetry`; the missing-screen error renders through it.
+- Server side: `middleware/auth.ts` (demo stub) is the only middleware. No session, no sign-on, no cart, no catalog. `db/schema.ts` holds only the demo `users` table. There is no `services/` or `shared/` directory.
+- `tsconfig.json` includes `src` only; `tsconfig.node.json` includes `routes`, `middleware`, `db` but not `shared` or `services`.
+- `vitest.config.ts`: the `server` (node) project includes only `routes/**/*.test.ts`; every other test runs in jsdom, where `bun:sqlite` cannot load. Tests for `middleware/` or `services/` need the server project widened.
+- The acceptance suite is already written: `tests/acceptance/localization/{i18n.test.ts,screens.test.tsx,server.test.ts,e2e/localization.spec.ts}`. It fixes these contracts: `shared/i18n/{locale,format,words}.ts` exports `parseLocale`, `formatMoney`, `formatNumber`, `splitWords`; `src/locales/registry.ts` exports `registry` (`registry[locale][screen]`) and `src/locales/resolveScreen.ts` exports `resolveScreen({ screen, requestLocale?, sessionLocale })`; `src/pages/petstore/change-language.tsx` (default export); `middleware/00.encoding.ts` and `middleware/10.session.ts` (default-export handlers); `services/cart.ts` exports `addItem(cart: Map, itemId)` and `lines(cart, locale | undefined)`; the catalog tables `catalog_categories`, `catalog_category_details`, `catalog_products`, `catalog_product_details`, `catalog_items`, `catalog_item_details` (with `locale`, `description`, `image`, `list_price`, `unit_cost` and attribute columns); `GET /api/catalog/items/[itemId]` with a `locale` query parameter; `POST /api/session/locale`.
+- CI (`.github/workflows/ci.yml`) already triggers on `vortex/**` pushes and pull requests and runs the acceptance suites with `continue-on-error`.
+
+### Decomposition
+
+One TASK per `tasks.md` group, as the adopted change dictates:
+
+| Group                          | Ticket       | Owns                                                                                                                                                 | Depends on   |
+| ------------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 1. Locale model and resolution | SWHR2-T-0093 | `shared/i18n/locale.ts`, `src/locales/**`, `services/locale.ts`, both tsconfig files                                                                 | none         |
+| 4. Character encoding          | SWHR2-T-0094 | `middleware/00.encoding.ts`                                                                                                                          | none         |
+| 2. Changing locale             | SWHR2-T-0095 | `middleware/10.session.ts`, `routes/api/session/**`, header flags, change-language page, petstore pages and area parent, `areas.ts`                  | SWHR2-T-0093 |
+| 5. Formatting utilities        | SWHR2-T-0096 | `shared/i18n/format.ts`, `shared/i18n/words.ts`                                                                                                      | SWHR2-T-0093 |
+| 3. Localized catalog and cart  | SWHR2-T-0097 | `db/schema.ts`, `drizzle/`, `db/client.ts` seed, `services/catalog.ts`, `services/cart.ts`, `routes/api/catalog/**`, `routes/api/cart/**`, cart page | SWHR2-T-0095 |
+| 6. Verification                | SWHR2-T-0098 | every new test file for this change, `vitest.config.ts`, `e2e/localization.spec.ts`                                                                  | all five     |
+
+Per-ticket plans: `artifacts/SWHR2-S-0007/<ticket>/PLAN.md`.
+
+### Phases
+
+1. **Foundations** (parallel): SWHR2-T-0093 locale model, resolver and per-locale screen definitions; SWHR2-T-0094 UTF-8 request middleware.
+2. **Locale change and formatting** (parallel): SWHR2-T-0095 session, locale route, header flags and change-language screen; SWHR2-T-0096 formatters and word splitter.
+3. **Localized data**: SWHR2-T-0097 locale-keyed catalog tables, seed, item read route and cart lines.
+4. **Test harness**: SWHR2-T-0098 widens the Vitest `server` project to `middleware/**` and `services/**` tests, then adds the unit, route-integration and Playwright tests for groups 1 to 5, and makes the localization acceptance cases that do not depend on other capabilities pass.
+5. **CI**: no workflow change is needed; the existing job runs lint, typecheck, unit, build, E2E and both acceptance suites on `vortex/**`. SWHR2-T-0098 confirms the new tests run there and stay green.
+
+### Spec discrepancies
+
+Recorded here and on SWHR2-T-0092; the delta spec is not edited.
+
+- **SD1: the capabilities this change cross-cuts do not exist yet.** The change assumes catalog-browsing, shopping-cart, sign-on, customer-account and checkout are built ("Per-locale catalog details live in the catalog detail tables owned by catalog-browsing… Localization adds no table"). None are in the repository and no sprint is building them. Decision: SWHR2-T-0097 creates the minimal locale-keyed catalog tables, seed, item read and cart line functions that tasks 3.1 to 3.4 require, using the table names the acceptance harness already fixes, so catalog-browsing extends them later rather than replacing them. SWHR2-T-0095 creates a minimal server session that holds the locale. Sign-in, registration, catalog search, the item and category pages and checkout stay out of scope, so acceptance cases SWHR2-C-0031, SWHR2-C-0032, SWHR2-C-0039 and SWHR2-C-0040 (and the item-page and category-page steps of SWHR2-C-0022, SWHR2-C-0026 and SWHR2-C-0028) cannot pass until those capabilities ship. The encoding requirements are proved here with the middleware's own integration tests.
+- **SD2: tasks 3.1 contradicts "Localization adds no table".** tasks.md asks this change to key the catalog detail tables by locale and generate the migration; the Data section says localization adds no table. Followed tasks.md, because no catalog table exists to reuse (SD1).
+- **SD3: money units.** The design names the formatter argument `amountMinor`, but the approved cases call `formatMoney(1234.5, "en_US", 2)` and expect "$1,234.50", i.e. major units. The formatter takes major units. The acceptance seeder stores en_US prices as 1650 (minor) but ja_JP as 1951 (major yen), while the e2e case expects "142" for zh_CN and not "16.50": SWHR2-T-0097 stores `list_price` in the currency's major unit as a real number (16.50, 1951, 142), matching the legacy seed; the seeder's 1650 is only compared as an opaque value.
+- **SD4: cart locale source.** The design says the cart reads the session locale. The acceptance harness calls `lines(cart, locale)` with the locale as an argument, `undefined` meaning en_US. `services/cart.ts` takes the locale as a parameter; the cart route passes the session locale.
+- **SD5: Language navigation target.** `areas.ts` points **Language** at `/petstore`. The brief says the change-language page is reached from **Language** in the navigation, so SWHR2-T-0095 points it at `/petstore/change-language`.
+- **SD6: stories without requirements.** The brief's story "admin tool labels in my language" has no approved requirement and the brief's non-scope keeps admin English; it is not planned. The story "stay on the page after changing language" has no approved requirement (return-to-page is Not specified); the header flag re-renders the current page, which is all the design asks.
+- **SD7: change-language screen reachability and German.** Legacy-only in the WAF sample application (PRD open question 4). Built because the requirement is approved; a de_DE session renders en_US screens and an empty catalog.
+- **SD8: "full screen set".** SWHR2-R-0078.01 asks every storefront screen to exist per locale. Today the storefront screens are the three placeholders, the change-language screen and its confirmation; those are the set SWHR2-T-0093 and SWHR2-T-0095 localize. Screens added by later capabilities follow the registry (ARCHITECTURE.md Key Decisions).
+
+### Design reference
+
+Approved mockups (doc v12), exported by the design tool to `artifacts/SWHR2-S-0007/design/` — see that directory's `MANIFEST.md`:
+
+- SWHR2-MCK-5 Change-language screen: route `/petstore/change-language`, default state, 1440 px.
+- SWHR2-MCK-6 Change-language confirmation: route `/petstore/change-language` after a successful submit, 1440 px.
+- SWHR2-MCK-7 Screen definition not found: any storefront route whose screen resolves nowhere, 1440 px.
