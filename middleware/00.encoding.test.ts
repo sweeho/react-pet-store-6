@@ -70,9 +70,9 @@ describe("00.encoding middleware", () => {
   });
 
   it("[SWHR2-C-0032] runs before the session middleware, so later handlers see decoded values", async () => {
-    const order = readdirSync(__dirname).filter(
-      (f) => /^\d+\..*\.ts$/.test(f) && !f.includes(".test."),
-    );
+    const order = readdirSync(__dirname)
+      .sort()
+      .filter((f) => /^\d+\..*\.ts$/.test(f) && !f.includes(".test."));
     expect(order.indexOf("00.encoding.ts")).toBeGreaterThanOrEqual(0);
     expect(order.indexOf("00.encoding.ts")).toBeLessThan(order.indexOf("10.session.ts"));
     const event = urlencoded({ name: "山田太郎" });
