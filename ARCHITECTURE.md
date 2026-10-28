@@ -63,7 +63,10 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 
 ## Database
 
-`db/schema.ts` defines Drizzle tables; `db/client.ts` opens the SQLite connection, runs pending migrations from `drizzle/`, and seeds two demo users if the table is empty. Routes import `db` and the table objects directly (see `routes/api/users/`) — no repository layer.
+`db/schema.ts` defines Drizzle tables; `db/client.ts` opens the SQLite connection, runs pending migrations from `drizzle/`, and seeds two demo users and a sample catalog if the tables are empty. Routes import `db` and the table objects directly (see `routes/api/users/`), or call a `services/` helper when the query is domain logic (`services/catalog.ts`, `services/cart.ts`).
+
+- Catalog: `catalog_categories` → `catalog_products` → `catalog_items`, each with a `*_details` table keyed by `(id, locale)` that holds the localized name, description, attributes and (for items) price in major units. A lookup reads the details row for exactly the requested locale; there is no cross-locale fallback.
+- Session and cart are in memory, not in SQLite: `middleware/10.session.ts` keys a `{ id, locale }` session by cookie, and the session-only cart lists its lines in the cart's locale (en_US when none is set).
 
 - `bun run db:generate` — after editing `db/schema.ts`, generates a new migration into `drizzle/` (via `drizzle-kit`, config in `drizzle.config.ts`)
 - `bun run db:studio` — browse the db in Drizzle Studio
