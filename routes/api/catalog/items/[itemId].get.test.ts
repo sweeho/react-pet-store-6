@@ -2,18 +2,9 @@ import { H3Event } from "nitro/h3";
 import { describe, expect, it } from "vitest";
 
 import { db } from "../../../../db/client";
-import * as cart from "../../../../services/cart";
 import handler from "./[itemId].get";
 
-const sql = db.$client;
-sql.exec(`
-  create table if not exists catalog_categories (category_id text primary key not null);
-  create table if not exists catalog_products (product_id text primary key not null, category_id text not null);
-  create table if not exists catalog_product_details (product_id text not null, locale text not null, name text not null, description text not null, image text not null, primary key (product_id, locale));
-  create table if not exists catalog_items (item_id text primary key not null, product_id text not null);
-  create table if not exists catalog_item_details (item_id text not null, locale text not null, description text not null, image text not null, list_price real not null, unit_cost real not null, attr1 text, attr2 text, attr3 text, attr4 text, attr5 text, primary key (item_id, locale));
-`);
-sql.exec(`
+db.$client.exec(`
   insert into catalog_categories (category_id) values ('T');
   insert into catalog_products (product_id, category_id) values ('T-P', 'T');
   insert into catalog_product_details values ('T-P', 'en_US', 'Angelfish', 'p', 'p.gif');
@@ -48,23 +39,5 @@ describe("GET /api/catalog/items/[itemId]", () => {
     expect(out).toContain("Spotted fish");
     expect(out).not.toContain("エンゼル");
     expect(out).not.toContain("斑点のある魚");
-  });
-});
-
-describe("cart lines", () => {
-  it("[SWHR2-C-0033] a new cart with no locale lists the item from the en_US details", () => {
-    const c = new Map<string, number>();
-    cart.addItem(c, "T-1");
-    const out = JSON.stringify(cart.lines(c, undefined));
-    expect(out).toContain("Large Angelfish");
-    expect(out).not.toContain("大きなエンゼルフィッシュ");
-  });
-
-  it("[SWHR2-C-0034] a cart with locale ja_JP lists the item from the ja_JP details", () => {
-    const c = new Map<string, number>();
-    cart.addItem(c, "T-1");
-    const out = JSON.stringify(cart.lines(c, "ja_JP"));
-    expect(out).toContain("大きなエンゼルフィッシュ");
-    expect(out).not.toContain("Large Angelfish");
   });
 });

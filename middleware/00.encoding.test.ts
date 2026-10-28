@@ -1,7 +1,8 @@
 import { H3Event } from "nitro/h3";
+import { readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import encoding from "../../middleware/00.encoding";
+import encoding from "./00.encoding";
 
 /**
  * INTEGRATION TEST for middleware/00.encoding.ts in isolation: sign-on,
@@ -66,5 +67,18 @@ describe("00.encoding middleware", () => {
         }),
     )) as Response;
     expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
+  });
+
+  it("[SWHR2-C-0032] runs before the session middleware, so later handlers see decoded values", async () => {
+    const order = readdirSync(__dirname)
+      .sort()
+      .filter((f) => /^\d+\..*\.ts$/.test(f) && !f.includes(".test."));
+    expect(order.indexOf("00.encoding.ts")).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf("00.encoding.ts")).toBeLessThan(order.indexOf("10.session.ts"));
+    const event = urlencoded({ name: "山田太郎" });
+    await encoding(event);
+    const session = (await import("./10.session")).default;
+    await session(event);
+    expect(await readForm(event, "name")).toBe("山田太郎");
   });
 });
