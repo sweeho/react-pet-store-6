@@ -8,6 +8,13 @@
       "when": 1784565349590,
       "tag": "0000_petite_glorian",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793207421516,
+      "tag": "0001_glamorous_steve_rogers",
+      "breakpoints": true
     }
   ]
 }
