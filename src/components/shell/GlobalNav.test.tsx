@@ -9,7 +9,7 @@ const areas = [
   { label: "Catalog & search", to: "/petstore" },
   { label: "Shopping cart", to: "/petstore/cart" },
   { label: "Checkout", to: "/petstore/cart" },
-  { label: "Language", to: "/petstore" },
+  { label: "Language", to: "/petstore/change-language" },
   { label: "Sign in", to: "/petstore/signin" },
   { label: "Account & profile", to: "/petstore/signin" },
   { label: "Order approval", to: "/admin" },

@@ -1,13 +1,20 @@
 import { Link } from "react-router";
 
 import EmptyFrame from "@/components/shell/EmptyFrame";
+import { useLocale } from "@/components/storefront/LocaleProvider";
+import { useScreen } from "@/locales/useScreen";
 
 export default function PetstoreCart() {
+  const { locale } = useLocale();
+  const screen = useScreen("petstore-cart", locale);
+  if ("error" in screen) return screen.error;
+  const { title, message } = screen.definition;
+
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-semibold">Shopping cart</h1>
+      <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
       <EmptyFrame
-        message="Your cart will appear here once the cart ships."
+        message={message}
         action={
           <Link to="/" className="text-primary text-sm font-medium hover:underline">
             Back to home
