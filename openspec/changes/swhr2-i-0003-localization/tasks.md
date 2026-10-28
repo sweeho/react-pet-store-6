@@ -21,8 +21,8 @@
 
 ## 4. Character encoding
 
-- [ ] 4.1 Decode all submitted storefront text as UTF-8 (SWHR2-T-0094; SWHR2-R-0134)
-- [ ] 4.2 Establish the request encoding before sign-on or any other handling reads submitted values (SWHR2-T-0094; SWHR2-R-0080)
+- [x] 4.1 Decode all submitted storefront text as UTF-8 (SWHR2-T-0094; SWHR2-R-0134)
+- [x] 4.2 Establish the request encoding before sign-on or any other handling reads submitted values (SWHR2-T-0094; SWHR2-R-0080)
 
 ## 5. Formatting utilities
 
