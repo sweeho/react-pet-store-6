@@ -31,9 +31,9 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Write tests for locale-code interpretation and the en_US default (SWHR2-T-0098; SWHR2-R-0077, SWHR2-R-0078)
-- [ ] 6.2 Write tests for screen locale resolution, fallback and the missing-screen error (SWHR2-T-0098; SWHR2-R-0133)
-- [ ] 6.3 Write tests for the header switch and change-language screen, including cart relocalisation (SWHR2-T-0098; SWHR2-R-0078, SWHR2-R-0020, SWHR2-R-0076)
-- [ ] 6.4 Write tests for per-locale catalog content and cart line localisation (SWHR2-T-0098; SWHR2-R-0079, SWHR2-R-0081)
-- [ ] 6.5 Write tests for UTF-8 round-trip of Japanese and Chinese input, including sign-on (SWHR2-T-0098; SWHR2-R-0134, SWHR2-R-0080)
-- [ ] 6.6 Write tests for money/number formatting and keyword splitting (SWHR2-T-0098; SWHR2-R-0018, SWHR2-R-0019)
+- [x] 6.1 Write tests for locale-code interpretation and the en_US default (SWHR2-T-0098; SWHR2-R-0077, SWHR2-R-0078)
+- [x] 6.2 Write tests for screen locale resolution, fallback and the missing-screen error (SWHR2-T-0098; SWHR2-R-0133)
+- [x] 6.3 Write tests for the header switch and change-language screen, including cart relocalisation (SWHR2-T-0098; SWHR2-R-0078, SWHR2-R-0020, SWHR2-R-0076)
+- [x] 6.4 Write tests for per-locale catalog content and cart line localisation (SWHR2-T-0098; SWHR2-R-0079, SWHR2-R-0081)
+- [x] 6.5 Write tests for UTF-8 round-trip of Japanese and Chinese input, including sign-on (SWHR2-T-0098; SWHR2-R-0134, SWHR2-R-0080)
+- [x] 6.6 Write tests for money/number formatting and keyword splitting (SWHR2-T-0098; SWHR2-R-0018, SWHR2-R-0019)
