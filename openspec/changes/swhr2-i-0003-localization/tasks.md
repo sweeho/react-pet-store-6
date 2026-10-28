@@ -1,9 +1,9 @@
 ## 1. Locale model and resolution
 
-- [ ] 1.1 Define the supported locale set (en_US, ja_JP, zh_CN) and the en_US default as configuration (SWHR2-T-0093; SWHR2-R-0078)
-- [ ] 1.2 Implement locale-code interpretation (language_COUNTRY, "default", reject codes without an underscore) (SWHR2-T-0093; SWHR2-R-0077)
-- [ ] 1.3 Implement page locale resolution: request locale over session locale (SWHR2-T-0093; SWHR2-R-0133)
-- [ ] 1.4 Implement fallback to the default locale's screen definitions and per-screen fallback, with the "Definition for screen <name> not found" error (SWHR2-T-0093; SWHR2-R-0133)
+- [x] 1.1 Define the supported locale set (en_US, ja_JP, zh_CN) and the en_US default as configuration (SWHR2-T-0093; SWHR2-R-0078)
+- [x] 1.2 Implement locale-code interpretation (language_COUNTRY, "default", reject codes without an underscore) (SWHR2-T-0093; SWHR2-R-0077)
+- [x] 1.3 Implement page locale resolution: request locale over session locale (SWHR2-T-0093; SWHR2-R-0133)
+- [x] 1.4 Implement fallback to the default locale's screen definitions and per-screen fallback, with the "Definition for screen <name> not found" error (SWHR2-T-0093; SWHR2-R-0133)
 
 ## 2. Changing locale
 
