@@ -23,8 +23,9 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 .
 ├── src/
 │   ├── components/ui/   # shadcn/ui-style primitives (+ *.test.tsx)
+│   ├── components/shell/ # AppShell, GlobalNav, Empty/Error/LoadingFrame — the one site frame
 │   ├── pages/            # Frontend routes, file-based (+ *.test.tsx)
-│   ├── hooks/, utils/, types/, constants/, data/, store/
+│   ├── hooks/, utils/, types/, constants/, data/, store/  # hooks/useApi.ts, constants/areas.ts
 │   ├── test/              # Vitest setup
 │   ├── index.css           # Tailwind v4 + design tokens
 │   └── main.tsx
@@ -45,6 +46,10 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 
 **Frontend**: `src/pages/**/*.tsx` → routes (`about.tsx` → `/about`, `[id].tsx` → `/:id`, `[...all].tsx` → catch-all). `*.test.tsx` excluded via `Pages({ exclude })` in `vite.config.ts`.
 
+**Shell**: `src/main.tsx` wraps every generated route in one layout route rendering `AppShell` (header, global navigation, `<main>` outlet, footer), so every page — including not-found — sits in the same frame. Primary areas live under `/petstore/**` (storefront), `/admin/**` (administration) and `/supplier/**` (supplier); `src/constants/areas.ts` is the single list of primary areas that the landing page and the global navigation both render. An area that needs its own header content adds a parent-route file (`src/pages/petstore.tsx` alongside `petstore/`) that fills the shell's header slot — never a second shell.
+
+**Page data**: a page loads JSON through `src/hooks/useApi.ts` (`{ data, error, loading, retry }`) and maps those states onto the shared `LoadingFrame`, `ErrorFrame` (with retry) and `EmptyFrame`.
+
 **Backend**: `routes/api/*.ts` → `/api/*`, `middleware/*.ts` runs first and can set `event.context`. Requires `nitro({ serverDir: "./" })` in `vite.config.ts` — default is `false` (no scanning). `*.test.ts` excluded via `nitro({ ignore })`.
 
 ## Data flow example
@@ -63,6 +68,11 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 ## Testing
 
 Four tiers, one worked example each. Commands and how to extend: [README.md](./README.md#testing), [AGENTS.md](./AGENTS.md).
+
+## Key Decisions
+
+- **One shell, one navigation.** Every page renders inside `AppShell`, and a capability that adds a primary area adds an entry to `src/constants/areas.ts` rather than its own menu or chrome. Rationale: shoppers, administrators and the supplier must see one product, not one per capability. Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md §Decisions, §Sprint planning SD1).
+- **Shared state frames.** Pages show empty, error and loading states only through the shared frames, fed by `useApi`. Rationale: one consistent "nothing here / failed / loading" vocabulary across capabilities. Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md §Decisions).
 
 ## Deployment
 
