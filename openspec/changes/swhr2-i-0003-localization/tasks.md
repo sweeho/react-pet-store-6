@@ -26,8 +26,8 @@
 
 ## 5. Formatting utilities
 
-- [ ] 5.1 Provide locale-aware money and number formatting with a caller-supplied precision (SWHR2-T-0096; SWHR2-R-0018, SWHR2-R-0019)
-- [ ] 5.2 Provide locale-aware keyword splitting that discards blank words (SWHR2-T-0096; SWHR2-R-0019)
+- [x] 5.1 Provide locale-aware money and number formatting with a caller-supplied precision (SWHR2-T-0096; SWHR2-R-0018, SWHR2-R-0019)
+- [x] 5.2 Provide locale-aware keyword splitting that discards blank words (SWHR2-T-0096; SWHR2-R-0019)
 
 ## 6. Verification
 
