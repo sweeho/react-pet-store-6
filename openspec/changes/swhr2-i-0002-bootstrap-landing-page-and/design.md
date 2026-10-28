@@ -51,3 +51,49 @@ None. The shell holds no persisted data. The signed-on state and locale it displ
 - Tailwind CSS (CSS-first) and the shadcn/ui-style primitives in `src/components/ui/` for shell chrome. Icons come from lucide-react.
 - React and react-router APIs are auto-imported by `unplugin-auto-import`.
 - Tests: Testing Library UI tests for `AppShell`, `GlobalNav` and each frame; a Playwright spec asserting that the shell and navigation render on `/`, a storefront page, `/admin` and `/supplier`.
+
+## Planning findings (SWHR2-S-0006)
+
+_Added at sprint planning (SWHR2-T-0080). The sections above are the adopted design and are unchanged._
+
+### Codebase as found
+
+- **Scaffold exists.** A Vite React SPA + Nitro server with `vite-plugin-pages`, `react-router`, CSS-first Tailwind v4 and shadcn-style primitives in `src/components/ui/`. Per "Existing boilerplate wins", nothing is re-scaffolded.
+- **Branding is the template's.** `index.html` title is "Vite + React + TS", `package.json` name is `react-ts-starter`, `configs/fonts.config.ts` loads Space Grotesk, and `src/index.css` carries neutral shadcn OKLCH tokens. The approved mockups use Inter, slate neutrals and a brand indigo (`#4f46e5`).
+- **`/` is a placeholder.** `src/pages/index.tsx` is the Vortex hero with `href="#"` links and its own header and mobile dialog. `src/pages/index.test.tsx` and `e2e/home.spec.ts` assert that hero, so they must be rewritten together with the page.
+- **No shell.** `src/main.tsx` renders `useRoutes(routes)` inside `BrowserRouter` with no layout. `about.tsx`, `users/*`, `NotFound.tsx` each draw their own full-page wrapper and a "Back to Home" link.
+- **`/users` is static.** `src/pages/users/index.tsx` renders a hard-coded array. `GET /api/users` exists and returns `{ users: [...] }`.
+- **Acceptance suite is already written** (`tests/acceptance/site-shell/shell.test.tsx`, `tests/acceptance/site-shell/e2e/shell.spec.ts`). It pins: `AppShell` default export accepting children; landing page links to `/petstore`, `/petstore/cart`, `/petstore/signin`, `/admin`, `/supplier` exactly once each; frames identified by `data-testid` `empty-frame` / `error-frame`; a Retry-named button in the error frame; `/users` loading via `fetch`; `/about` and `/does-not-exist` rendering inside the shell.
+- **Smoke test exists.** `e2e/smoke.spec.ts` already loads `/` and checks for a level-1 heading and no console errors, so task 1.2 keeps and re-points it rather than adding a new one.
+- `tailwind.config.ts` exists at the root and is empty; ARCHITECTURE.md and AGENTS.md say there is none. It is unrelated to this change and is left alone.
+
+### Planning decisions
+
+- **P1 — One `AppShell` at the app root.** `src/main.tsx` wraps `useRoutes(routes)` in a single `AppShell`, so `/`, `/about`, `/users`, the not-found page and every area route share one header, navigation and footer. The area layout files (`petstore.tsx`, `admin.tsx`, `supplier.tsx`) render only `<Outlet />` (plus, later, area content in the header slot). This replaces "each area layout wraps its children in `AppShell`", which would leave `/`, `/about` and the not-found page outside the shell. See Spec discrepancies D2.
+- **P2 — Unshipped areas are empty-frame placeholders.** `/petstore`, `/petstore/cart`, `/petstore/signin`, `/admin` and `/supplier` each get a page that renders `EmptyFrame` naming the area. The owning capability replaces the page file. This gives every nav entry and landing link a real target from day one, as the brief requires.
+- **P3 — Primary areas are one list.** `src/components/shell/areas.ts` exports the primary-area list (label, route, group). `GlobalNav` and the landing page both read it, so a capability adds an area in one place.
+- **P4 — Tokens follow the mockups.** Brand indigo becomes `--primary`/`--ring`, and slate becomes the neutral scale and Inter the sans font, mapped through the existing `@theme inline` block. The shell grid is a 240px left rail, a 56px header and a 40px footer at desktop widths, and the rail collapses behind a menu button below `lg`.
+
+### Phases
+
+1. **Boilerplate (SWHR2-T-0081).** Rename and brand, tokens and font, keep the root smoke spec green.
+2. **Site shell (SWHR2-T-0083).** `AppShell`, `GlobalNav`, `areas.ts`, root wrap in `main.tsx`, strip per-page chrome from `about`, `users/*`, `NotFound`.
+3. **Shared frames (SWHR2-T-0084).** `EmptyFrame`, `ErrorFrame`, `LoadingFrame`, `useApi`, `/users` migrated onto them.
+4. **Landing page (SWHR2-T-0082).** `/` landing content per mockup, area placeholder pages, rewrite of `index.test.tsx` and `e2e/home.spec.ts`.
+
+The tickets run one after another (0081 → 0083 → 0084 → 0082) because the landing placeholders consume the frames and every page relies on the root shell.
+
+### Test harness and CI
+
+- **Unit/UI (Vitest, `client` project).** Each new component and the hook get a co-located `*.test.tsx`/`*.test.ts` (`AppShell`, `GlobalNav`, each frame, `useApi`, landing page). They run in the default unit suite.
+- **E2E (Playwright, `e2e/`).** `e2e/smoke.spec.ts` stays the root-route smoke test; `e2e/home.spec.ts` is rewritten for the landing page (heading, area links, no vertical scrollbar at common sizes).
+- **Acceptance (`tests/acceptance/site-shell/`).** These are the approved cases SWHR2-C-0270 to SWHR2-C-0279, run by the acceptance Vitest and Playwright configs. They are not edited: each ticket makes its linked cases green.
+- **CI.** `.github/workflows/ci.yml` already runs on `vortex/**`, `dev` and `main` pushes and PRs: doc links, typecheck, lint, unit, build, E2E, and the acceptance tiers with `continue-on-error`. The acceptance steps stay soft because the other capabilities' suites are still red, so no CI change is in scope here. The site-shell acceptance cases are verified at integration QA.
+
+### Spec discrepancies
+
+- **D1 — `/api/users` body vs acceptance mock.** `routes/api/users/index.get.ts` returns `{ users: [...] }`, while SWHR2-C-0277/0279 mock `fetch` with a bare array. The `/users` page accepts both shapes. Neither the API nor the tests change.
+- **D2 — Where `AppShell` is mounted.** "Area layouts" above wraps only `/petstore/**`, `/admin/**` and `/supplier/**` in `AppShell`, but SWHR2-R-0289/0290 and SWHR2-C-0273/0274/0276 require the shell on `/`, `/about` and the not-found route too. This is resolved by P1.
+- **D3 — Navigation grouping and labels.** The brief groups the navigation as Shop / Account / Administration / Supplier, with entries such as "Orders and sales" and "Inventory". The approved mockups group it as Shop / You / Store staff, with "Sales reporting" and "Supplier inventory". The build uses the mockups' entries and labels under the brief's four group headings. The spec states no grouping.
+- **D4 — Landing page vs Home screen.** "Components" says `/` renders the same Home component as `/petstore`, with content owned by catalog-browsing. Catalog-browsing has not shipped, and SWHR2-C-0272 requires `/petstore` to be a page of its own. This sprint builds the landing page from the approved Landing page mockup, with a placeholder at `/petstore`. Merging the two is left to catalog-browsing (PRD open question 3).
+- **D5 — Search, Language, Checkout, My account have no route yet.** The brief lists them as navigation entries. They appear in the navigation as entries pointing at the placeholder of the area that will own them (`/petstore` for search and language, `/petstore/cart` for checkout, `/petstore/signin` for account). They are not landing-page links, because SWHR2-C-0271 counts exactly one link per configured area route.
