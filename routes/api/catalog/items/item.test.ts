@@ -7,6 +7,13 @@ import handler from "./[itemId].get";
 
 const sql = db.$client;
 sql.exec(`
+  create table if not exists catalog_categories (category_id text primary key not null);
+  create table if not exists catalog_products (product_id text primary key not null, category_id text not null);
+  create table if not exists catalog_product_details (product_id text not null, locale text not null, name text not null, description text not null, image text not null, primary key (product_id, locale));
+  create table if not exists catalog_items (item_id text primary key not null, product_id text not null);
+  create table if not exists catalog_item_details (item_id text not null, locale text not null, description text not null, image text not null, list_price real not null, unit_cost real not null, attr1 text, attr2 text, attr3 text, attr4 text, attr5 text, primary key (item_id, locale));
+`);
+sql.exec(`
   insert into catalog_categories (category_id) values ('T');
   insert into catalog_products (product_id, category_id) values ('T-P', 'T');
   insert into catalog_product_details values ('T-P', 'en_US', 'Angelfish', 'p', 'p.gif');
