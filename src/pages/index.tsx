@@ -1,182 +1,84 @@
-import { Dialog, DialogPanel } from "@headlessui/react";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronRight, LayoutGrid, PawPrint } from "lucide-react";
+import { Link } from "react-router";
 
-const navigation = [
-  { name: "Features", href: "#" },
-  { name: "Tech Stack", href: "#" },
-  { name: "Docs", href: "#" },
-  { name: "GitHub", href: "#" },
+import { primaryAreas } from "@/components/shell/areas";
+
+const categories = [
+  { name: "Birds", products: ["Amazon Parrot", "Finch"], count: 2 },
+  { name: "Fish", products: ["Angelfish", "Tiger Shark", "Koi", "Goldfish"], count: 4 },
+  { name: "Dogs", products: ["Bulldog", "Poodle", "Dalmation", "Golden Retriever …"], count: 6 },
+  { name: "Reptiles", products: ["Rattlesnake", "Iguana"], count: 2 },
+  { name: "Cats", products: ["Manx", "Persian"], count: 2 },
 ];
 
-const techStack = [
-  "React 19",
-  "TypeScript",
-  "Vite 8",
-  "Tailwind CSS v4",
-  "React Router 8",
-  "Nitro",
-  "SQLite",
-  "Drizzle ORM",
-  "ESLint 9",
-];
+const card = "rounded-lg border border-slate-200 bg-white";
 
-const Home = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  return (
-    <div className="h-screen overflow-hidden bg-gray-900">
-      <header className="absolute inset-x-0 top-0 z-50">
-        <nav aria-label="Global" className="flex items-center justify-between p-6 lg:px-8">
-          <div className="flex lg:flex-1">
-            <a href="#" className="-m-1.5 p-1.5">
-              <span className="sr-only">Vortex</span>
-              <img
-                alt=""
-                src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
-                className="h-8 w-auto"
-              />
-            </a>
-          </div>
-          <div className="flex lg:hidden">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-200"
-            >
-              <span className="sr-only">Open main menu</span>
-              <Bars3Icon aria-hidden="true" className="size-6" />
-            </button>
-          </div>
-          <div className="hidden lg:flex lg:gap-x-12">
-            {navigation.map((item) => (
-              <a key={item.name} href={item.href} className="text-sm/6 font-semibold text-white">
-                {item.name}
-              </a>
-            ))}
-          </div>
-          <div className="hidden lg:flex lg:flex-1 lg:justify-end">
-            <a href="#" className="text-sm/6 font-semibold text-white">
-              Log in <span aria-hidden="true">&rarr;</span>
-            </a>
-          </div>
-        </nav>
-        <Dialog open={mobileMenuOpen} onClose={setMobileMenuOpen} className="lg:hidden">
-          <div className="fixed inset-0 z-50" />
-          <DialogPanel className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-gray-900 p-6 sm:max-w-sm sm:ring-1 sm:ring-gray-100/10">
-            <div className="flex items-center justify-between">
-              <a href="#" className="-m-1.5 p-1.5">
-                <span className="sr-only">Vortex</span>
-                <img
-                  alt=""
-                  src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
-                  className="h-8 w-auto"
-                />
-              </a>
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="-m-2.5 rounded-md p-2.5 text-gray-200"
-              >
-                <span className="sr-only">Close menu</span>
-                <XMarkIcon aria-hidden="true" className="size-6" />
-              </button>
-            </div>
-            <div className="mt-6 flow-root">
-              <div className="-my-6 divide-y divide-white/10">
-                <div className="space-y-2 py-6">
-                  {navigation.map((item) => (
-                    <a
-                      key={item.name}
-                      href={item.href}
-                      className="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5"
-                    >
-                      {item.name}
-                    </a>
-                  ))}
-                </div>
-                <div className="py-6">
-                  <a
-                    href="#"
-                    className="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-white hover:bg-white/5"
-                  >
-                    Log in
-                  </a>
-                </div>
-              </div>
-            </div>
-          </DialogPanel>
-        </Dialog>
-      </header>
-
-      <div className="relative isolate flex h-full flex-col justify-center px-6 pt-14 lg:px-8">
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
-        >
-          <div
-            style={{
-              clipPath:
-                "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
-            }}
-            className="relative left-[calc(50%-11rem)] aspect-1155/678 w-144.5 -translate-x-1/2 rotate-30 bg-linear-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-288.75"
-          />
-        </div>
-        <div className="mx-auto max-w-2xl">
-          <div className="hidden sm:mb-8 sm:flex sm:justify-center">
-            <div className="relative rounded-full px-3 py-1 text-sm/6 text-gray-400 ring-1 ring-white/10 hover:ring-white/20">
-              The boilerplate behind Vortex.{" "}
-              <a href="#" className="font-semibold text-indigo-400">
-                <span aria-hidden="true" className="absolute inset-0" />
-                See how it works <span aria-hidden="true">&rarr;</span>
-              </a>
-            </div>
-          </div>
-          <div className="text-center">
-            <h1 className="text-5xl font-semibold tracking-tight text-balance text-white sm:text-7xl">
-              Vortex: the AI-driven autonomous software factory
-            </h1>
-            <p className="mt-8 text-lg font-medium text-pretty text-gray-400 sm:text-xl/8">
-              This is the production-ready boilerplate powering Vortex &mdash; fully typed, blazing
-              fast, and pre-wired with everything a modern web app needs to ship on day one.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <a
-                href="#"
-                className="rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
-              >
-                Get started
-              </a>
-              <a href="#" className="text-sm/6 font-semibold text-white">
-                View on GitHub <span aria-hidden="true">→</span>
-              </a>
-            </div>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-              {techStack.map((tech) => (
-                <span
-                  key={tech}
-                  className="rounded-full bg-white/5 px-3 py-1 text-xs font-medium text-gray-300 ring-1 ring-white/10"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]"
-        >
-          <div
-            style={{
-              clipPath:
-                "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
-            }}
-            className="relative left-[calc(50%+3rem)] aspect-1155/678 w-144.5 -translate-x-1/2 bg-linear-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%+36rem)] sm:w-288.75"
-          />
-        </div>
+const Home = () => (
+  <>
+    <div className="mb-6 flex items-end justify-between">
+      <div>
+        <h1 className="text-2xl font-semibold">Welcome to Pet Store</h1>
+        <p className="mt-1 text-slate-500">
+          Pick a pet to browse, or search the whole catalog from the bar above.
+        </p>
       </div>
+      <Link
+        to="/petstore"
+        className="inline-flex h-9 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white"
+      >
+        <LayoutGrid className="size-4" aria-hidden="true" />
+        Browse the catalog
+      </Link>
     </div>
-  );
-};
+
+    <h2 className="mb-3 flex justify-between text-xs font-semibold text-slate-500">
+      <span>CHOOSE A PET</span>
+      <span className="font-normal">5 categories · 16 products</span>
+    </h2>
+    <div className="mb-8 grid grid-cols-5 gap-4">
+      {categories.map((c) => (
+        <Link
+          key={c.name}
+          to={`/petstore/category/${c.name.toLowerCase()}`}
+          className={`${card} overflow-hidden`}
+        >
+          <div className="grid h-[120px] place-items-center border-b border-slate-200 bg-slate-50 text-indigo-600">
+            <PawPrint className="size-10" strokeWidth={1.5} aria-hidden="true" />
+          </div>
+          <div className="flex items-center justify-between px-4 pt-3 text-base font-semibold">
+            {c.name}
+            <ChevronRight className="size-4 text-slate-500" aria-hidden="true" />
+          </div>
+          <div className="px-4 pt-0.5 text-xs text-slate-500">{c.count} products</div>
+          <div className="truncate px-4 pt-2 pb-4 text-xs">{c.products.join(" · ")}</div>
+        </Link>
+      ))}
+    </div>
+
+    <h2 className="mb-3 text-xs font-semibold text-slate-500">EVERYTHING IN THE STORE</h2>
+    <div className="grid grid-cols-3 gap-3">
+      {primaryAreas
+        .filter((a) => a.key !== "catalog-browsing")
+        .map((a) => (
+          <Link key={a.key} to={a.href} className={`${card} flex items-start gap-3 p-4`}>
+            <span className="grid size-8 flex-none place-items-center rounded-lg border border-slate-200 bg-slate-50 text-indigo-600">
+              <a.icon className="size-4" aria-hidden="true" />
+            </span>
+            <span>
+              <span className="flex items-center gap-2 font-semibold">
+                {a.name}
+                {a.staff && (
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-500">
+                    Staff sign-in
+                  </span>
+                )}
+              </span>
+              <span className="mt-0.5 block text-xs/[18px] text-slate-500">{a.description}</span>
+            </span>
+          </Link>
+        ))}
+    </div>
+  </>
+);
 
 export default Home;
