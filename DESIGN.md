@@ -4,7 +4,7 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [ARCHITECTURE.md](./ARCHITECTUR
 
 ## Tokens
 
-OKLCH custom properties in `src/index.css` (`:root` light, `.dark` dark), mapped to Tailwind utilities via `@theme inline`. Add a token in both places + the theme block, or Tailwind won't generate a class for it.
+Custom properties in `src/index.css` (`:root` light in hex, taken from the Pet Store mockups; `.dark` dark in OKLCH), mapped to Tailwind utilities via `@theme inline`. Add a token in both places + the theme block, or Tailwind won't generate a class for it.
 
 | Token                                        | Tailwind class                                    | Pet Store value (light)                          |
 | -------------------------------------------- | ------------------------------------------------- | ------------------------------------------------ |
