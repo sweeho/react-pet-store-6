@@ -17,6 +17,6 @@
 
 ## 4. Shared frames
 
-- [ ] 4.1 Add the shared empty frame (SWHR2-T-0084; SWHR2-R-0291)
-- [ ] 4.2 Add the shared error frame with a retry action (SWHR2-T-0084; SWHR2-R-0291)
-- [ ] 4.3 Add the shared loading frame (SWHR2-T-0084; SWHR2-R-0291)
+- [x] 4.1 Add the shared empty frame (SWHR2-T-0084; SWHR2-R-0291)
+- [x] 4.2 Add the shared error frame with a retry action (SWHR2-T-0084; SWHR2-R-0291)
+- [x] 4.3 Add the shared loading frame (SWHR2-T-0084; SWHR2-R-0291)
