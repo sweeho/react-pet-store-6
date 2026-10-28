@@ -14,10 +14,10 @@
 
 ## 3. Localized catalog and cart
 
-- [ ] 3.1 Key category, product and item display details by locale in the db/ schema and generate the drizzle/ migration (SWHR2-T-0097; SWHR2-R-0079)
-- [ ] 3.2 Seed per-locale catalog display details for en_US, ja_JP and zh_CN (SWHR2-T-0097; SWHR2-R-0079, SWHR2-R-0081)
-- [ ] 3.3 Show catalog display details in the shopper's current locale (SWHR2-T-0097; SWHR2-R-0079)
-- [ ] 3.4 Show cart line name, attribute and price in the cart's locale, defaulting to en_US (SWHR2-T-0097; SWHR2-R-0081)
+- [x] 3.1 Key category, product and item display details by locale in the db/ schema and generate the drizzle/ migration (SWHR2-T-0097; SWHR2-R-0079)
+- [x] 3.2 Seed per-locale catalog display details for en_US, ja_JP and zh_CN (SWHR2-T-0097; SWHR2-R-0079, SWHR2-R-0081)
+- [x] 3.3 Show catalog display details in the shopper's current locale (SWHR2-T-0097; SWHR2-R-0079)
+- [x] 3.4 Show cart line name, attribute and price in the cart's locale, defaulting to en_US (SWHR2-T-0097; SWHR2-R-0081)
 
 ## 4. Character encoding
 
