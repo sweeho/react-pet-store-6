@@ -25,20 +25,23 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 │   ├── components/ui/   # shadcn/ui-style primitives (+ *.test.tsx)
 │   ├── components/shell/ # AppShell, GlobalNav, primary-area list, Empty/Error/Loading frames
 │   ├── pages/            # Frontend routes, file-based (+ *.test.tsx)
+│   ├── locales/          # Per-locale screen text definitions + registry + resolveScreen
 │   ├── hooks/, utils/, types/, constants/, data/, store/
 │   ├── test/              # Vitest setup
 │   ├── index.css           # Tailwind v4 + design tokens
 │   └── main.tsx
+├── shared/                # Code imported by BOTH the SPA and the server (e.g. shared/i18n/)
 ├── routes/api/            # Backend routes, file-based (+ *.test.ts)
-├── middleware/             # Runs before every route handler
+├── middleware/             # Runs before every route handler, in file-name order
+├── services/               # Server-side domain helpers called by routes (e.g. services/locale.ts)
 ├── db/                      # Drizzle schema.ts + client.ts (sqlite connection, migrate, seed)
 ├── drizzle/                  # Generated SQL migrations (drizzle-kit generate), committed
 ├── e2e/                     # Playwright specs + global-setup.ts
 ├── configs/, scripts/
 ├── server.ts                # Nitro server entry
 ├── vite.config.ts, vitest.config.ts, playwright.config.ts, drizzle.config.ts
-├── tsconfig.json             # src
-├── tsconfig.node.json          # server/config/test files
+├── tsconfig.json             # src + shared
+├── tsconfig.node.json          # server/config/test files + shared
 └── package.json
 ```
 
@@ -46,9 +49,11 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 
 **Frontend**: `src/pages/**/*.tsx` → routes (`about.tsx` → `/about`, `[id].tsx` → `/:id`, `[...all].tsx` → catch-all). `*.test.tsx` excluded via `Pages({ exclude })` in `vite.config.ts`.
 
-**Backend**: `routes/api/*.ts` → `/api/*`, `middleware/*.ts` runs first and can set `event.context`. Requires `nitro({ serverDir: "./" })` in `vite.config.ts` — default is `false` (no scanning). `*.test.ts` excluded via `nitro({ ignore })`.
+**Backend**: `routes/api/*.ts` → `/api/*`, `middleware/*.ts` runs first and can set `event.context`. Requires `nitro({ serverDir: "./" })` in `vite.config.ts` — default is `false` (no scanning). `*.test.ts` excluded via `nitro({ ignore })`. Nitro runs `middleware/` files in file-name order, so a numeric prefix fixes the order: `00.encoding.ts` (UTF-8 request decoding) runs before `10.session.ts` (server-owned session, including the shopper's locale) and before any sign-on or route handler.
 
 **Site shell**: `src/main.tsx` mounts one `AppShell` (header, global navigation rail, main, footer) around every route, so a page renders only its own content. Area routes (`/petstore/**`, `/admin/**`, `/supplier/**`) are `vite-plugin-pages` parent-route files that render `<Outlet />` and may fill the shell's header slot. The global navigation and the landing page both read the primary-area list in `src/components/shell/areas.ts`. Spec: `openspec/specs/site-shell/` once change `swhr2-i-0002-bootstrap-landing-page-and` archives.
+
+**Localization**: a storefront screen takes its text and layout from a per-locale definition in `src/locales/<locale>/`, looked up through `src/locales/resolveScreen.ts` (request `locale` parameter over the session locale, then en_US fallback, then a "Definition for screen <name> not found" error). Locale codes, number/money formatting and word splitting live once in `shared/i18n/` for both sides; server routes pick localized catalog rows through `services/locale.ts`. Spec: `openspec/specs/localization/` once change `swhr2-i-0003-localization` archives.
 
 **Page data states**: a data-driven page loads through `src/hooks/useApi.ts` (`{ data, error, loading, retry }`) and maps the three states onto the shared `LoadingFrame`, `ErrorFrame` (with retry) and `EmptyFrame`.
 
@@ -79,3 +84,6 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 - **One shell, mounted once at the app root.** Every page renders inside the single `AppShell` in `src/main.tsx`. A capability adds content or fills the header slot, and never draws its own header, navigation or footer. Rationale: `/`, `/about` and the not-found route must carry the same frame as the area routes. Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md, Planning decision P1).
 - **One global navigation fed by one area list.** A new primary area is one entry in `src/components/shell/areas.ts`, which both the navigation and the landing page read, never a second menu. Rationale: the navigation and landing links stay in step. Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md, P3).
 - **Shared state frames for every data page.** Pages load through `useApi` and render `LoadingFrame` / `ErrorFrame` / `EmptyFrame` instead of bespoke loading, error or empty markup. Capability-specific wording is passed in as the frame's message. Rationale: every screen fails and empties the same way. Authored in change `swhr2-i-0002-bootstrap-landing-page-and` (design.md, Decisions).
+- **Screen text comes from per-locale definitions, never page literals.** A new storefront screen adds one definition per supported locale under `src/locales/` and renders through `resolveScreen`; missing locales fall back to en_US. Rationale: the page-locale fallback rules stay in one resolver. Authored in change `swhr2-i-0003-localization` (design.md, Target design).
+- **Code needed on both sides lives in `shared/`.** Both tsconfig projects include it; neither `src/` nor the server keeps a second copy. Rationale: the legacy store had four diverging copies of its locale parser. Authored in change `swhr2-i-0003-localization` (design.md, Components).
+- **Request decoding runs first.** `middleware/00.encoding.ts` decodes every request as UTF-8 before the session middleware, sign-on or any handler reads a value; new middleware takes a prefix after it. Rationale: non-ASCII credentials must arrive decoded at sign-on. Authored in change `swhr2-i-0003-localization` (design.md, Components).
