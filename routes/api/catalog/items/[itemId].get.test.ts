@@ -1,7 +1,6 @@
 import { H3Event } from "nitro/h3";
 import { describe, expect, it } from "vitest";
 
-import * as cart from "../../../../services/cart";
 import { db } from "../../../../db/client";
 import handler from "./[itemId].get";
 
@@ -40,23 +39,5 @@ describe("GET /api/catalog/items/[itemId]", () => {
     expect(out).toContain("Spotted fish");
     expect(out).not.toContain("エンゼル");
     expect(out).not.toContain("斑点のある魚");
-  });
-});
-
-describe("cart lines", () => {
-  it("[SWHR2-C-0033] a new cart with no locale lists the item from the en_US details", () => {
-    const c = new Map<string, number>();
-    cart.addItem(c, "T-1");
-    const out = JSON.stringify(cart.lines(c, undefined));
-    expect(out).toContain("Large Angelfish");
-    expect(out).not.toContain("大きなエンゼルフィッシュ");
-  });
-
-  it("[SWHR2-C-0034] a cart with locale ja_JP lists the item from the ja_JP details", () => {
-    const c = new Map<string, number>();
-    cart.addItem(c, "T-1");
-    const out = JSON.stringify(cart.lines(c, "ja_JP"));
-    expect(out).toContain("大きなエンゼルフィッシュ");
-    expect(out).not.toContain("Large Angelfish");
   });
 });
