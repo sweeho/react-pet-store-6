@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Landing page", () => {
-  test("shows the landing page with the shell and a link to every primary area", async ({
+  test("[SWHR2-C-0270] shows the landing page with the shell and a link to every primary area", async ({
     page,
   }) => {
     await page.goto("/");
