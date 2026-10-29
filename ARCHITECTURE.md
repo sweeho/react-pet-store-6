@@ -55,11 +55,13 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 
 **Localization**: a storefront screen takes its text and layout from a per-locale definition in `src/locales/<locale>/`, looked up through `src/locales/resolveScreen.ts` (request `locale` parameter over the session locale, then en_US fallback, then a "Definition for screen <name> not found" error). Locale codes, number/money formatting and word splitting live once in `shared/i18n/` for both sides; server routes pick localized catalog rows through `services/locale.ts`. Spec: `openspec/specs/localization/` once change `swhr2-i-0003-localization` archives.
 
+**Access control**: `middleware/10.session.ts` keeps three separate server-owned sessions, one per area, chosen by request path: `ps_sid` (storefront, 15 minutes idle), `admin_sid` (`/api/admin/**`, 54 minutes idle) and `supplier_sid` (`/api/supplier/**`). An expired session is dropped together with its cart. The guards in `services/session/guards.ts` (`requireCustomer`, `requireAdmin`, `requireSupplier`) are the only authorisation decision: a protected route calls one at its top, and the SPA answers the storefront's 401 `SignOnRequired` by sending the visitor to `/petstore/signin` and back. Internal services (message hand-off, order lines) have no HTTP route and apply no role check of their own. Spec: `openspec/specs/sign-on/` once change `swhr2-i-0005-sign-on-and-access-control` archives.
+
 **Page data states**: a data-driven page loads through `src/hooks/useApi.ts` (`{ data, error, loading, retry }`) and maps the three states onto the shared `LoadingFrame`, `ErrorFrame` (with retry) and `EmptyFrame`.
 
 ## Data flow example
 
-`GET /api/hello`: `middleware/auth.ts` sets `event.context.user` → `routes/api/hello.ts` reads it and responds. `routes/api/users/[id].ts` shows the dynamic-route + `createError()` 404 pattern, backed by a real query against `db/client.ts`'s Drizzle instance.
+`GET /api/session`: `middleware/00.encoding.ts` decodes the request → `middleware/10.session.ts` attaches the storefront session as `event.context.session` → `routes/api/session.get.ts` reads it and responds. `routes/api/users/[id].ts` shows the dynamic-route + `createError()` 404 pattern, backed by a real query against `db/client.ts`'s Drizzle instance.
 
 ## Database
 
@@ -68,7 +70,8 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 - Catalog: `catalog_categories` → `catalog_products` → `catalog_items`, each with a `*_details` table keyed by `(id, locale)` that holds the localized name, description, attributes and (for items) list price and unit cost. Parent references are foreign keys. `services/catalog/` is the only reader of these tables: an item is visible in a locale only where both it and its product have details there, there is no cross-locale fallback, and a store failure surfaces as `CatalogError` (500), never as an empty list. Spec: `openspec/specs/catalog-browsing/` once change `swhr2-i-0004-catalog-browsing-and-search` archives.
 - Money is stored as integers in hundredths of the displayed unit in every locale (16.50 → 1650, ¥1951 → 195100); code divides by 100 only when it hands a value to `shared/i18n/format.ts#formatMoney`.
 - Catalog list reads (categories, a category's products, a product's items) are served through an in-process 5-minute cache shared by all shoppers; item detail and search are always read live.
-- Session and cart are in memory, not in SQLite: `middleware/10.session.ts` keys a `{ id, locale }` session by cookie, and the session-only cart lists its lines in the cart's locale (en_US when none is set).
+- Session and cart are in memory, not in SQLite: `services/session/store.ts` keys each area session (`area`, `locale`, `userId` when signed on, `lastSeen`) by an opaque random id, and the session-only cart, keyed by that id, lists its lines in the cart's locale (en_US when none is set). Signing out or idling out starts a new session id, so the old cart is unreachable and dropped.
+- Storefront credentials: `signon_users` (`user_id`, `password_hash`), hashed with `Bun.password` (argon2id) and never stored in clear. Administration and supplier credentials are not in the database (see Deployment).
 
 - `bun run db:generate` — after editing `db/schema.ts`, generates a new migration into `drizzle/` (via `drizzle-kit`, config in `drizzle.config.ts`)
 - `bun run db:studio` — browse the db in Drizzle Studio
@@ -83,6 +86,7 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 
 - `ecosystem.config.js` (PM2) runs the real build: `.output/server/index.mjs`, under Bun (`interpreter: "bun"`) — required by `db/client.ts`'s `bun:sqlite` import. `nitro.service` (systemd) is the non-PM2 equivalent, same requirement.
 - The server runs as exactly one process (`instances: 1`): the session store, the cart and the catalog page cache live in that process's memory. Scaling out needs a shared store for all three first.
+- Administration and supplier credentials come from the environment: `ADMIN_USERS` and `SUPPLIER_USERS`, each a comma-separated list of `userId:passwordHash`. With a variable unset, nobody can sign in to that area; there is no built-in account.
 - `Dockerfile`/`docker-compose.yml` build a static `dist/` served by nginx — don't rely on them for the Nitro/DB-backed API without fixing first (they never run `.output/server/index.mjs`)
 
 ## Key Decisions
@@ -96,3 +100,6 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 - **Money is integer hundredths.** Every stored price is an integer number of hundredths of the displayed unit, in every locale; formatting converts at the edge. Rationale: exact decimal amounts for cart and checkout totals, and one unit across locales. Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Data; Planning P1), superseding localization's SD3.
 - **Foreign keys are enforced.** `db/client.ts` turns on SQLite foreign keys, so every new table's references are real constraints. Rationale: the catalog hierarchy must refuse orphans (SWHR2-R-0037). Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Data).
 - **In-process caches assume one server process.** The catalog page cache is a module-level map, valid only while the server runs single-process. Rationale: no external cache for a single-node deployment. Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Stack choices).
+- **Every administration and supplier route decides access explicitly.** A route under `routes/api/admin/**` or `routes/api/supplier/**` calls `requireAdmin` or `requireSupplier` first; only the area's own sign-in route is exempt. Rationale: the legacy staff tools left endpoints unprotected, and the PRD forbids copying that. Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Target design → Guards).
+- **One session per area, never shared.** Storefront, administration and supplier sessions use separate cookies and separate credentials, and supplier sign-in is refused while a live administration session is present. Rationale: SWHR2-R-0029 / SWHR2-R-0030 require the areas kept apart. Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Target design → Area separation).
+- **Internal services have no HTTP route and no role check.** Message hand-off and order-line data are in-process modules that run under the identity their caller passes in; the API route that calls them owns the access decision. Rationale: SWHR2-R-0121 / SWHR2-R-0124, and an unrouted module cannot be reached from outside. Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Target design → In-process hand-off).
