@@ -65,11 +65,35 @@ const categories: [string, L3][] = [
   ["FISH", ["Fish", "魚", "鱼"]],
   ["REPTILES", ["Reptiles", "爬虫類", "爬行动物"]],
 ];
-const products: [string, string, string, L3][] = [
-  ["FI-SW-01", "FISH", "fish1.gif", ["Angelfish", "エンゼルフィッシュ", "天使鱼"]],
-  ["K9-BD-01", "DOGS", "dog2.gif", ["Bulldog", "ブルドッグ", "斗牛犬"]],
-  ["K9-DL-01", "DOGS", "dog4.gif", ["Dalmation", "ダルメシアン", "斑点狗"]],
-  ["K9-PO-02", "DOGS", "dog6.gif", ["Poodle", "プードル", "贵宾犬"]],
+const products: [string, string, string, L3, L3][] = [
+  [
+    "FI-SW-01",
+    "FISH",
+    "fish1.gif",
+    ["Angelfish", "エンゼルフィッシュ", "天使鱼"],
+    ["Salt Water fish from Australia", "オーストラリア産の海水魚", "来自澳大利亚的海水鱼"],
+  ],
+  [
+    "K9-BD-01",
+    "DOGS",
+    "dog2.gif",
+    ["Bulldog", "ブルドッグ", "斗牛犬"],
+    ["Friendly dog from England", "イギリス原産の友好的な犬", "来自英国的友好犬"],
+  ],
+  [
+    "K9-DL-01",
+    "DOGS",
+    "dog4.gif",
+    ["Dalmation", "ダルメシアン", "斑点狗"],
+    ["Great dog for a Fire Station", "消防署に最適な犬", "适合消防站的好犬"],
+  ],
+  [
+    "K9-PO-02",
+    "DOGS",
+    "dog6.gif",
+    ["Poodle", "プードル", "贵宾犬"],
+    ["Cute dog from France", "フランス原産のかわいい犬", "来自法国的可爱犬"],
+  ],
 ];
 // [itemId, productId, image, descriptions, attr1, [listPrice, unitCost] per locale]
 const items: [string, string, string, L3, L3, readonly [number, number][]][] = [
@@ -134,12 +158,12 @@ if (!process.env.VITEST && db.select().from(catalogCategories).all().length === 
       .run();
     tx.insert(catalogProductDetails)
       .values(
-        products.flatMap(([productId, , image, names]) =>
+        products.flatMap(([productId, , image, names, descriptions]) =>
           LOCALES.map((locale, i) => ({
             productId,
             locale,
             name: names[i],
-            description: names[i],
+            description: descriptions[i],
             image,
           })),
         ),

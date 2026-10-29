@@ -3,6 +3,8 @@ import { Menu, PawPrint, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, Outlet } from "react-router";
 
+import SearchBox from "@/components/storefront/SearchBox";
+
 import GlobalNav from "./GlobalNav";
 
 export interface AppShellProps {
@@ -14,7 +16,7 @@ export default function AppShell({ children, header }: AppShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="grid min-h-screen grid-cols-1 grid-rows-[56px_1fr_40px] lg:grid-cols-[240px_1fr]">
+    <div className="grid h-screen grid-cols-1 grid-rows-[56px_1fr_40px] lg:grid-cols-[240px_1fr]">
       <header className="bg-background flex items-center gap-4 border-b px-4 lg:col-span-2 lg:pr-6">
         <button
           type="button"
@@ -33,11 +35,11 @@ export default function AppShell({ children, header }: AppShellProps) {
           </span>
           Pet Store
         </Link>
-        {header}
+        {header ?? <SearchBox />}
       </header>
-      <aside className="bg-muted/40 row-span-2 hidden border-r lg:block">
+      <div className="bg-muted/40 row-span-2 hidden border-r lg:block">
         <GlobalNav />
-      </aside>
+      </div>
       <Dialog open={menuOpen} onClose={setMenuOpen} className="lg:hidden">
         <div className="fixed inset-0 z-40 bg-black/30" aria-hidden="true" />
         <DialogPanel className="bg-background fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto shadow-lg">

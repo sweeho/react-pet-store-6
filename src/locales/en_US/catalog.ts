@@ -1,0 +1,35 @@
+import type { ScreenDefinition } from "../types";
+
+const definition: ScreenDefinition = {
+  title: "Catalog",
+  home: "Home",
+  panelLabel: "Categories",
+  mapLabel: "Pet selection map",
+  choosePet: "Choose a pet",
+  products: "Products",
+  items: "Items",
+  viewItems: "View items",
+  previous: "Previous",
+  next: "Next",
+  item: "Item",
+  itemId: "Item ID",
+  product: "Product",
+  category: "Category",
+  listPrice: "List Price",
+  yourPrice: "Your Price",
+  addToCart: "Add to Cart",
+  added: "Added to your cart",
+  addFailed: "Could not add to cart",
+  allOf: "All",
+  searchLabel: "Search",
+  searchPlaceholder: "Search pets by keyword, e.g. angelfish",
+  searchTitle: "Search results",
+  noResults: "No items match your search.",
+  loading: "Loading…",
+  errorTitle: "The catalog could not be loaded",
+  errorMessage: "Something went wrong while loading the catalog.",
+  emptyCategory: "This category has no products.",
+  emptyProduct: "This product has no items.",
+};
+
+export default definition;
