@@ -21,7 +21,7 @@ This group was built once as SWHR2-T-0143 (now cancelled) on `origin/vortex/feat
 
 ## File/module ownership
 
-`services/catalog.ts` (deleted), `services/catalog/index.ts`, `services/catalog/data-access.ts` (new), `services/catalog/errors.ts` (new), `services/catalog/*.test.ts` (new; absorbs `services/catalog.test.ts`).
+`services/catalog.ts` (deleted), `services/catalog/index.ts`, `services/catalog/data-access.ts`, `services/catalog/errors.ts`, `services/catalog/*.test.ts` (absorbs `services/catalog.test.ts`), `services/cart.ts`, `services/cart.test.ts`, `routes/api/cart/index.get.ts`, `routes/api/catalog/items/[itemId].get.ts` (importer updates only).
 
 ## Definition of Done
 
