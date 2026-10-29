@@ -30,12 +30,12 @@
 
 ## 5. Catalog API
 
-- [ ] 5.1 Expose category listing and category lookup endpoints (SWHR2-T-0157; SWHR2-R-0038)
-- [ ] 5.2 Expose product listing and product lookup endpoints (SWHR2-T-0157; SWHR2-R-0039, SWHR2-R-0035, SWHR2-R-0002)
-- [ ] 5.3 Expose item listing and item lookup endpoints (SWHR2-T-0157; SWHR2-R-0040, SWHR2-R-0047)
-- [ ] 5.4 Expose the search endpoint (SWHR2-T-0157; SWHR2-R-0001)
-- [ ] 5.5 Serve all catalog endpoints without authentication (SWHR2-T-0157; SWHR2-R-0002)
-- [ ] 5.6 Add a shared cache of at most 5 minutes for category listing, product listing and category panel responses (SWHR2-T-0157; SWHR2-R-0036)
+- [x] 5.1 Expose category listing and category lookup endpoints (SWHR2-T-0157; SWHR2-R-0038)
+- [x] 5.2 Expose product listing and product lookup endpoints (SWHR2-T-0157; SWHR2-R-0039, SWHR2-R-0035, SWHR2-R-0002)
+- [x] 5.3 Expose item listing and item lookup endpoints (SWHR2-T-0157; SWHR2-R-0040, SWHR2-R-0047)
+- [x] 5.4 Expose the search endpoint (SWHR2-T-0157; SWHR2-R-0001)
+- [x] 5.5 Serve all catalog endpoints without authentication (SWHR2-T-0157; SWHR2-R-0002)
+- [x] 5.6 Add a shared cache of at most 5 minutes for category listing, product listing and category panel responses (SWHR2-T-0157; SWHR2-R-0036)
 
 ## 6. Storefront screens
 
