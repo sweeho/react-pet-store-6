@@ -39,14 +39,14 @@
 
 ## 6. Storefront screens
 
-- [ ] 6.1 Build the home screen with the pet selection picture linking to the five categories (SWHR2-T-0158; SWHR2-R-0041, SWHR2-R-0042)
-- [ ] 6.2 Build the category navigation panel shown on every storefront page (SWHR2-T-0158; SWHR2-R-0042)
-- [ ] 6.3 Build the category page with product rows and Previous/Next controls (SWHR2-T-0158; SWHR2-R-0039)
-- [ ] 6.4 Build the product page with item rows, list price and Add to Cart (SWHR2-T-0158; SWHR2-R-0047)
-- [ ] 6.5 Build the item detail screen with image, List Price, Your Price and Add to Cart (SWHR2-T-0158; SWHR2-R-0040)
-- [ ] 6.6 Build the search box and the search results page with its no-results message (SWHR2-T-0158; SWHR2-R-0001)
-- [ ] 6.7 Wire Add to Cart controls to the shopping cart (SWHR2-T-0158; SWHR2-R-0040, SWHR2-R-0047)
-- [ ] 6.8 Return the shopper to the referring page after a language change (SWHR2-T-0158)
+- [x] 6.1 Build the home screen with the pet selection picture linking to the five categories (SWHR2-T-0158; SWHR2-R-0041, SWHR2-R-0042)
+- [x] 6.2 Build the category navigation panel shown on every storefront page (SWHR2-T-0158; SWHR2-R-0042)
+- [x] 6.3 Build the category page with product rows and Previous/Next controls (SWHR2-T-0158; SWHR2-R-0039)
+- [x] 6.4 Build the product page with item rows, list price and Add to Cart (SWHR2-T-0158; SWHR2-R-0047)
+- [x] 6.5 Build the item detail screen with image, List Price, Your Price and Add to Cart (SWHR2-T-0158; SWHR2-R-0040)
+- [x] 6.6 Build the search box and the search results page with its no-results message (SWHR2-T-0158; SWHR2-R-0001)
+- [x] 6.7 Wire Add to Cart controls to the shopping cart (SWHR2-T-0158; SWHR2-R-0040, SWHR2-R-0047)
+- [x] 6.8 Return the shopper to the referring page after a language change (SWHR2-T-0158)
 
 ## 7. Verification
 
