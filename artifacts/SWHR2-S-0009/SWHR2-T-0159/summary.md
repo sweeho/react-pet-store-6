@@ -12,3 +12,5 @@ ticket: SWHR2-T-0159
 Verification: `bun run verify` passes (lint, typecheck, Vitest). `bun run test:e2e` not run (browser missing). The acceptance suites were not run locally; CI reports them.
 
 CODE-REVIEW: self-review — test-only change; selectors checked against the page sources and the locked acceptance spec.
+
+Defect fixed in place: `e2e/localization.spec.ts` still expected the zh_CN cart `unitPrice` in major units (142); the API returns hundredths (14200) since T-0153. The fixture was missed then, and the test had been failing CI on the sprint branch. Changed the expectation to 14200.
