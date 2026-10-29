@@ -45,7 +45,7 @@ const renderAt = (path: string) => {
 };
 
 describe("category page", () => {
-  it("first page shows two products and Next only", async () => {
+  it("[SWHR2-C-0197] first page shows two products and Next only", async () => {
     stubCatalog();
     renderAt("/petstore/category/DOGS");
     expect(await screen.findByText("Bulldog")).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe("category page", () => {
     expect(screen.queryByRole("link", { name: /previous/i })).toBeNull();
   });
 
-  it("Next shows the last product with Previous and no Next", async () => {
+  it("[SWHR2-C-0198] Next shows the last product with Previous and no Next", async () => {
     stubCatalog();
     renderAt("/petstore/category/DOGS");
     await userEvent.click(await screen.findByRole("link", { name: /next/i }));

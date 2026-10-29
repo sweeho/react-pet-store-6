@@ -15,7 +15,7 @@ const page = (names: [string, string][]) => ({
 });
 
 describe("CategoryPanel", () => {
-  it("lists the categories in API order as links to their category pages inside one complementary landmark", async () => {
+  it("[SWHR2-C-0201] [SWHR2-C-0202] lists the categories in API order as links to their category pages inside one complementary landmark", async () => {
     const fetchMock = vi.fn<(url: string) => Promise<Response>>(async () =>
       Response.json(
         page([
@@ -37,6 +37,8 @@ describe("CategoryPanel", () => {
       "/petstore/category/BIRDS",
       "/petstore/category/FISH",
     ]);
+    // [SWHR2-C-0202] selecting an entry opens that category page
+    expect(links[1]?.getAttribute("href")).toBe("/petstore/category/FISH");
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/^\/api\/catalog\/categories\?/);
   });
 
