@@ -38,7 +38,7 @@ export default function PetstoreCart() {
                 {l.attribute && <span className="text-muted-foreground"> · {l.attribute}</span>}
               </span>
               <span>
-                {l.quantity} × {formatMoney(l.unitPrice, locale, locale === "ja_JP" ? 0 : 2)}
+                {l.quantity} × {formatMoney(l.unitPrice / 100, locale, locale === "ja_JP" ? 0 : 2)}
               </span>
             </li>
           ))}
