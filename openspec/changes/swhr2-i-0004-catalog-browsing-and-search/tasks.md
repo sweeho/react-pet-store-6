@@ -1,11 +1,11 @@
 ## 1. Catalog data model
 
-- [ ] 1.1 Define the category entity with its id and per-locale name and description (SWHR2-T-0153; SWHR2-R-0037, SWHR2-R-0044, SWHR2-R-0046)
-- [ ] 1.2 Define the product entity with its category reference and per-locale name and description (SWHR2-T-0153; SWHR2-R-0037)
-- [ ] 1.3 Define the item entity with its product reference and per-locale list price, unit price, image, description and five attributes (SWHR2-T-0153; SWHR2-R-0037)
-- [ ] 1.4 Enforce field lengths, required fields, uniqueness per locale and parent references in the schema (SWHR2-T-0153; SWHR2-R-0037, SWHR2-R-0044, SWHR2-R-0045)
-- [ ] 1.5 Generate and commit the migration for the catalog tables (SWHR2-T-0153; SWHR2-R-0037)
-- [ ] 1.6 Seed the five storefront categories with products and items for the supported locales (SWHR2-T-0153; SWHR2-R-0039, SWHR2-R-0042, SWHR2-R-0047)
+- [x] 1.1 Define the category entity with its id and per-locale name and description (SWHR2-T-0153; SWHR2-R-0037, SWHR2-R-0044, SWHR2-R-0046)
+- [x] 1.2 Define the product entity with its category reference and per-locale name and description (SWHR2-T-0153; SWHR2-R-0037)
+- [x] 1.3 Define the item entity with its product reference and per-locale list price, unit price, image, description and five attributes (SWHR2-T-0153; SWHR2-R-0037)
+- [x] 1.4 Enforce field lengths, required fields, uniqueness per locale and parent references in the schema (SWHR2-T-0153; SWHR2-R-0037, SWHR2-R-0044, SWHR2-R-0045)
+- [x] 1.5 Generate and commit the migration for the catalog tables (SWHR2-T-0153; SWHR2-R-0037)
+- [x] 1.6 Seed the five storefront categories with products and items for the supported locales (SWHR2-T-0153; SWHR2-R-0039, SWHR2-R-0042, SWHR2-R-0047)
 
 ## 2. Catalog queries
 
