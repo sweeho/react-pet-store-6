@@ -33,7 +33,7 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 ├── shared/                # Code imported by BOTH the SPA and the server (e.g. shared/i18n/)
 ├── routes/api/            # Backend routes, file-based (+ *.test.ts)
 ├── middleware/             # Runs before every route handler, in file-name order
-├── services/               # Server-side domain helpers called by routes (e.g. services/locale.ts)
+├── services/               # Server-side domain helpers called by routes (e.g. services/locale.ts, services/session/)
 ├── db/                      # Drizzle schema.ts + client.ts (sqlite connection, migrate, seed)
 ├── drizzle/                  # Generated SQL migrations (drizzle-kit generate), committed
 ├── e2e/                     # Playwright specs + global-setup.ts
@@ -49,7 +49,7 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 
 **Frontend**: `src/pages/**/*.tsx` → routes (`about.tsx` → `/about`, `[id].tsx` → `/:id`, `[...all].tsx` → catch-all). `*.test.tsx` excluded via `Pages({ exclude })` in `vite.config.ts`.
 
-**Backend**: `routes/api/*.ts` → `/api/*`, `middleware/*.ts` runs first and can set `event.context`. Requires `nitro({ serverDir: "./" })` in `vite.config.ts` — default is `false` (no scanning). `*.test.ts` excluded via `nitro({ ignore })`. Nitro runs `middleware/` files in file-name order, so a numeric prefix fixes the order: `00.encoding.ts` (UTF-8 request decoding) runs before `10.session.ts` (server-owned session, including the shopper's locale) and before any sign-on or route handler.
+**Backend**: `routes/api/*.ts` → `/api/*`, `middleware/*.ts` runs first and can set `event.context`. Requires `nitro({ serverDir: "./" })` in `vite.config.ts` — default is `false` (no scanning). `*.test.ts` excluded via `nitro({ ignore })`. Nitro runs `middleware/` files in file-name order, so a numeric prefix fixes the order: `00.encoding.ts` (UTF-8 request decoding) runs before `10.session.ts` (server-owned session, including the shopper's locale and sign-on state) and before any route handler.
 
 **Site shell**: `src/main.tsx` mounts one `AppShell` (header, global navigation rail, main, footer) around every route, so a page renders only its own content. Area routes (`/petstore/**`, `/admin/**`, `/supplier/**`) are `vite-plugin-pages` parent-route files that render `<Outlet />` and may fill the shell's header slot. The global navigation and the landing page both read the primary-area list in `src/components/shell/areas.ts`. Spec: `openspec/specs/site-shell/` once change `swhr2-i-0002-bootstrap-landing-page-and` archives.
 
@@ -68,7 +68,8 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 - Catalog: `catalog_categories` → `catalog_products` → `catalog_items`, each with a `*_details` table keyed by `(id, locale)` that holds the localized name, description, attributes and (for items) list price and unit cost. Parent references are foreign keys. `services/catalog/` is the only reader of these tables: an item is visible in a locale only where both it and its product have details there, there is no cross-locale fallback, and a store failure surfaces as `CatalogError` (500), never as an empty list. Spec: `openspec/specs/catalog-browsing/` once change `swhr2-i-0004-catalog-browsing-and-search` archives.
 - Money is stored as integers in hundredths of the displayed unit in every locale (16.50 → 1650, ¥1951 → 195100); code divides by 100 only when it hands a value to `shared/i18n/format.ts#formatMoney`.
 - Catalog list reads (categories, a category's products, a product's items) are served through an in-process 5-minute cache shared by all shoppers; item detail and search are always read live.
-- Session and cart are in memory, not in SQLite: `middleware/10.session.ts` keys a `{ id, locale }` session by cookie, and the session-only cart lists its lines in the cart's locale (en_US when none is set).
+- Session and cart are in memory, not in SQLite. `services/session/store.ts` holds one session per area — storefront (`ps_sid`), administration (`admin_sid`), supplier (`supplier_sid`) — and `middleware/10.session.ts` attaches the one matching the request path as `event.context.session`, ending it once its area's idle limit has passed. A session's cart is discarded with it; the session-only cart lists its lines in the cart's locale (en_US when none is set).
+- Credentials: storefront users are `signon_users` (`user_id`, `password_hash`), passwords hashed with `Bun.password`. Administration and supplier credentials are not in the database; the operator supplies them as `ADMIN_USERS` / `SUPPLIER_USERS` (`userId:passwordHash` lists). Spec: `openspec/specs/sign-on/` once change `swhr2-i-0005-sign-on-and-access-control` archives.
 
 - `bun run db:generate` — after editing `db/schema.ts`, generates a new migration into `drizzle/` (via `drizzle-kit`, config in `drizzle.config.ts`)
 - `bun run db:studio` — browse the db in Drizzle Studio
@@ -83,6 +84,7 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 
 - `ecosystem.config.js` (PM2) runs the real build: `.output/server/index.mjs`, under Bun (`interpreter: "bun"`) — required by `db/client.ts`'s `bun:sqlite` import. `nitro.service` (systemd) is the non-PM2 equivalent, same requirement.
 - The server runs as exactly one process (`instances: 1`): the session store, the cart and the catalog page cache live in that process's memory. Scaling out needs a shared store for all three first.
+- The administration and supplier areas cannot be signed in to until `ADMIN_USERS` and `SUPPLIER_USERS` are set in the server's environment; no default staff account exists.
 - `Dockerfile`/`docker-compose.yml` build a static `dist/` served by nginx — don't rely on them for the Nitro/DB-backed API without fixing first (they never run `.output/server/index.mjs`)
 
 ## Key Decisions
@@ -96,3 +98,5 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 - **Money is integer hundredths.** Every stored price is an integer number of hundredths of the displayed unit, in every locale; formatting converts at the edge. Rationale: exact decimal amounts for cart and checkout totals, and one unit across locales. Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Data; Planning P1), superseding localization's SD3.
 - **Foreign keys are enforced.** `db/client.ts` turns on SQLite foreign keys, so every new table's references are real constraints. Rationale: the catalog hierarchy must refuse orphans (SWHR2-R-0037). Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Data).
 - **In-process caches assume one server process.** The catalog page cache is a module-level map, valid only while the server runs single-process. Rationale: no external cache for a single-node deployment. Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Stack choices).
+- **Access is decided at the route, by one guard per area.** Every route under `/api/admin/**` and `/api/supplier/**`, and every storefront route that needs a signed-on customer, calls `requireAdmin` / `requireSupplier` / `requireCustomer` from `services/session/guards.ts`. Internal services (message hand-off, order lines) have no HTTP route, apply no role check and act under the identity their caller passes. Rationale: the PRD requires an explicit access decision on every staff page, in one place. Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Target design › Guards and In-process hand-off).
+- **Sessions are server-owned and separated by area.** Storefront, administration and supplier each have their own cookie and session; the supplier area refuses sign-in while an administration session is live. No session state is written to SQLite or to a browser-side sealed cookie. Rationale: a session-only cart, per-area idle limits and the administrator-before-supplier rule. Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Target design › Session store, Area separation).
