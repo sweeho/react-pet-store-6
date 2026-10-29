@@ -35,10 +35,11 @@ export default function PetstoreCart() {
             <li key={l.itemId} className="flex items-center justify-between gap-4 p-3 text-sm">
               <span>
                 <span className="font-medium">{l.name}</span>
+                <span className="text-muted-foreground font-mono text-xs"> {l.itemId}</span>
                 {l.attribute && <span className="text-muted-foreground"> · {l.attribute}</span>}
               </span>
               <span>
-                {l.quantity} × {formatMoney(l.unitPrice, locale, locale === "ja_JP" ? 0 : 2)}
+                {l.quantity} × {formatMoney(l.unitPrice / 100, locale, locale === "ja_JP" ? 0 : 2)}
               </span>
             </li>
           ))}

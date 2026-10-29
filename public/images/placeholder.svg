@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Pet picture">
+  <rect width="120" height="120" fill="#f8fafc"/>
+  <g fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="55" cy="30" r="8"/><circle cx="85" cy="44" r="8"/><circle cx="92" cy="76" r="8"/>
+    <path d="M48 52a20 20 0 0 1 20 20v14a14 14 0 0 1-27.4 4.2Q36 86 28 83.5A14 14 0 0 1 32 52Z"/>
+  </g>
+</svg>

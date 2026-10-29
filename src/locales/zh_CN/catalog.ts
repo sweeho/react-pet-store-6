@@ -1,0 +1,35 @@
+import type { ScreenDefinition } from "../types";
+
+const definition: ScreenDefinition = {
+  title: "商品目录",
+  home: "首页",
+  panelLabel: "分类",
+  mapLabel: "宠物选择图",
+  choosePet: "选择宠物",
+  products: "商品",
+  items: "单品",
+  viewItems: "查看单品",
+  previous: "上一页",
+  next: "下一页",
+  item: "单品",
+  itemId: "单品编号",
+  product: "商品",
+  category: "分类",
+  listPrice: "标价",
+  yourPrice: "您的价格",
+  addToCart: "加入购物车",
+  added: "已加入购物车",
+  addFailed: "无法加入购物车",
+  allOf: "全部",
+  searchLabel: "搜索",
+  searchPlaceholder: "按关键词搜索宠物，例如天使鱼",
+  searchTitle: "搜索结果",
+  noResults: "没有符合搜索条件的单品。",
+  loading: "加载中…",
+  errorTitle: "无法加载商品目录",
+  errorMessage: "加载商品目录时出错。",
+  emptyCategory: "此分类下没有商品。",
+  emptyProduct: "此商品下没有单品。",
+};
+
+export default definition;
