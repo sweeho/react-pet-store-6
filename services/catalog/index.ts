@@ -6,20 +6,14 @@ import {
   resolveDataAccess,
 } from "./data-access";
 import { CatalogError } from "./errors";
+import { type CatalogPage, pageOf } from "./paging";
 
 export { CatalogError } from "./errors";
 export { registerDataAccess } from "./data-access";
+export type { CatalogPage } from "./paging";
 
 export interface CatalogItem extends ItemRow {
   locale: string;
-}
-
-export interface CatalogPage<T> {
-  items: T[];
-  start: number;
-  size: number;
-  hasPrevious: boolean;
-  hasNext: boolean;
 }
 
 /** Runs a store read, reporting any failure as a CatalogError. */
@@ -38,20 +32,14 @@ async function page<T>(
   size: number,
   read: (offset: number, limit: number) => Promise<T[]>,
 ): Promise<CatalogPage<T>> {
-  const rows = await guarded(() => read(start, size + 1));
-  return {
-    items: rows.slice(0, size),
-    start,
-    size,
-    hasPrevious: start > 0,
-    hasNext: rows.length > size,
-  };
+  if (start < 0) return pageOf<T>([], start, size);
+  return pageOf(await guarded(() => read(start, size + 1)), start, size);
 }
 
 export function listCategories(
   locale: string,
-  start: number,
-  size: number,
+  start = 0,
+  size = 2,
 ): Promise<CatalogPage<CategoryRow>> {
   return page(start, size, (o, l) => resolveDataAccess().listCategories(locale, o, l));
 }
@@ -67,7 +55,7 @@ export function listProducts(
 
 export async function listItems(productId: string, locale: string): Promise<CatalogPage<ItemRow>> {
   const items = await guarded(() => resolveDataAccess().listItems(productId, locale));
-  return { items, start: 0, size: items.length, hasPrevious: false, hasNext: false };
+  return pageOf(items, 0, items.length);
 }
 
 export function getCategory(categoryId: string, locale: string): Promise<CategoryRow | undefined> {
