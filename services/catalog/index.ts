@@ -5,6 +5,7 @@ import {
   type ProductRow,
   resolveDataAccess,
 } from "./data-access";
+import { cached } from "./cache";
 import { CatalogError } from "./errors";
 import { type CatalogPage, pageOf } from "./paging";
 
@@ -37,12 +38,17 @@ async function page<T>(
   return pageOf(await guarded(() => read(start, size + 1)), start, size);
 }
 
+/** Cache keys include the configured implementation, so switching it never serves the other's copy. */
+const impl = (): string => process.env.CATALOG_DATA_ACCESS ?? "";
+
 export function listCategories(
   locale: string,
   start = 0,
   size = 2,
 ): Promise<CatalogPage<CategoryRow>> {
-  return page(start, size, (o, l) => resolveDataAccess().listCategories(locale, o, l));
+  return cached([impl(), "listCategories", locale, "", start, size], () =>
+    page(start, size, (o, l) => resolveDataAccess().listCategories(locale, o, l)),
+  );
 }
 
 export function listProducts(
@@ -51,12 +57,16 @@ export function listProducts(
   start = 0,
   size = 2,
 ): Promise<CatalogPage<ProductRow>> {
-  return page(start, size, (o, l) => resolveDataAccess().listProducts(categoryId, locale, o, l));
+  return cached([impl(), "listProducts", locale, categoryId, start, size], () =>
+    page(start, size, (o, l) => resolveDataAccess().listProducts(categoryId, locale, o, l)),
+  );
 }
 
 export async function listItems(productId: string, locale: string): Promise<CatalogPage<ItemRow>> {
-  const items = await guarded(() => resolveDataAccess().listItems(productId, locale));
-  return pageOf(items, 0, items.length);
+  return cached([impl(), "listItems", locale, productId, 0, 0], async () => {
+    const items = await guarded(() => resolveDataAccess().listItems(productId, locale));
+    return pageOf(items, 0, items.length);
+  });
 }
 
 export function getCategory(categoryId: string, locale: string): Promise<CategoryRow | undefined> {
