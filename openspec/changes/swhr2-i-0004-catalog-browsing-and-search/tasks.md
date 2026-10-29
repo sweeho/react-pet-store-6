@@ -18,9 +18,9 @@
 
 ## 3. Paging
 
-- [ ] 3.1 Implement the page result with entries, next-page and previous-page indicators and their start positions (SWHR2-T-0155; SWHR2-R-0039)
-- [ ] 3.2 Return an empty page for a negative start or a start beyond the last entry (SWHR2-T-0155; SWHR2-R-0035, SWHR2-R-0038)
-- [ ] 3.3 Apply the default page size of 2 and start of 0 when no paging values are supplied (SWHR2-T-0155; SWHR2-R-0035)
+- [x] 3.1 Implement the page result with entries, next-page and previous-page indicators and their start positions (SWHR2-T-0155; SWHR2-R-0039)
+- [x] 3.2 Return an empty page for a negative start or a start beyond the last entry (SWHR2-T-0155; SWHR2-R-0035, SWHR2-R-0038)
+- [x] 3.3 Apply the default page size of 2 and start of 0 when no paging values are supplied (SWHR2-T-0155; SWHR2-R-0035)
 
 ## 4. Search
 
