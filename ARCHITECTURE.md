@@ -63,9 +63,11 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 
 ## Database
 
-`db/schema.ts` defines Drizzle tables; `db/client.ts` opens the SQLite connection, runs pending migrations from `drizzle/`, and seeds two demo users and a sample catalog if the tables are empty. Routes import `db` and the table objects directly (see `routes/api/users/`), or call a `services/` helper when the query is domain logic (`services/catalog.ts`, `services/cart.ts`).
+`db/schema.ts` defines Drizzle tables; `db/client.ts` opens the SQLite connection with foreign keys enforced (`PRAGMA foreign_keys = ON`), runs pending migrations from `drizzle/`, and seeds two demo users and a sample catalog if the tables are empty. Routes import `db` and the table objects directly (see `routes/api/users/`), or call a `services/` helper when the query is domain logic (`services/catalog/`, `services/cart.ts`).
 
-- Catalog: `catalog_categories` → `catalog_products` → `catalog_items`, each with a `*_details` table keyed by `(id, locale)` that holds the localized name, description, attributes and (for items) price in major units. A lookup reads the details row for exactly the requested locale; there is no cross-locale fallback.
+- Catalog: `catalog_categories` → `catalog_products` → `catalog_items`, each with a `*_details` table keyed by `(id, locale)` that holds the localized name, description, attributes and (for items) list price and unit cost. Parent references are foreign keys. `services/catalog/` is the only reader of these tables: an item is visible in a locale only where both it and its product have details there, there is no cross-locale fallback, and a store failure surfaces as `CatalogError` (500), never as an empty list. Spec: `openspec/specs/catalog-browsing/` once change `swhr2-i-0004-catalog-browsing-and-search` archives.
+- Money is stored as integers in hundredths of the displayed unit in every locale (16.50 → 1650, ¥1951 → 195100); code divides by 100 only when it hands a value to `shared/i18n/format.ts#formatMoney`.
+- Catalog list reads (categories, a category's products, a product's items) are served through an in-process 5-minute cache shared by all shoppers; item detail and search are always read live.
 - Session and cart are in memory, not in SQLite: `middleware/10.session.ts` keys a `{ id, locale }` session by cookie, and the session-only cart lists its lines in the cart's locale (en_US when none is set).
 
 - `bun run db:generate` — after editing `db/schema.ts`, generates a new migration into `drizzle/` (via `drizzle-kit`, config in `drizzle.config.ts`)
@@ -80,6 +82,7 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 ## Deployment
 
 - `ecosystem.config.js` (PM2) runs the real build: `.output/server/index.mjs`, under Bun (`interpreter: "bun"`) — required by `db/client.ts`'s `bun:sqlite` import. `nitro.service` (systemd) is the non-PM2 equivalent, same requirement.
+- The server runs as exactly one process (`instances: 1`): the session store, the cart and the catalog page cache live in that process's memory. Scaling out needs a shared store for all three first.
 - `Dockerfile`/`docker-compose.yml` build a static `dist/` served by nginx — don't rely on them for the Nitro/DB-backed API without fixing first (they never run `.output/server/index.mjs`)
 
 ## Key Decisions
@@ -90,3 +93,6 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 - **Screen text comes from per-locale definitions, never page literals.** A new storefront screen adds one definition per supported locale under `src/locales/` and renders through `resolveScreen`; missing locales fall back to en_US. Rationale: the page-locale fallback rules stay in one resolver. Authored in change `swhr2-i-0003-localization` (design.md, Target design).
 - **Code needed on both sides lives in `shared/`.** Both tsconfig projects include it; neither `src/` nor the server keeps a second copy. Rationale: the legacy store had four diverging copies of its locale parser. Authored in change `swhr2-i-0003-localization` (design.md, Components).
 - **Request decoding runs first.** `middleware/00.encoding.ts` decodes every request as UTF-8 before the session middleware, sign-on or any handler reads a value; new middleware takes a prefix after it. Rationale: non-ASCII credentials must arrive decoded at sign-on. Authored in change `swhr2-i-0003-localization` (design.md, Components).
+- **Money is integer hundredths.** Every stored price is an integer number of hundredths of the displayed unit, in every locale; formatting converts at the edge. Rationale: exact decimal amounts for cart and checkout totals, and one unit across locales. Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Data; Planning P1), superseding localization's SD3.
+- **Foreign keys are enforced.** `db/client.ts` turns on SQLite foreign keys, so every new table's references are real constraints. Rationale: the catalog hierarchy must refuse orphans (SWHR2-R-0037). Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Data).
+- **In-process caches assume one server process.** The catalog page cache is a module-level map, valid only while the server runs single-process. Rationale: no external cache for a single-node deployment. Authored in change `swhr2-i-0004-catalog-browsing-and-search` (design.md, Stack choices).

@@ -136,3 +136,51 @@ All routes take an optional `locale` query parameter (localization) and need no 
 - An in-process `Map` cache, valid because the server runs as a single process (`ecosystem.config.js`, `instances: 1`). No external cache is added.
 - Vite React SPA pages under `src/pages/petstore/`. The pet map is a `<map>`/`<area>` image map in the page component.
 - Tests: `routes/api/catalog/*.test.ts` integration tests against the in-memory database, UI tests for the four pages and the side panel, and a Playwright browse-to-item spec.
+
+## Planning (sprint SWHR2-S-0008)
+
+Added at sprint planning. The sections above are the adopted specification and are unchanged; this section records what the repository already holds, the decisions that resolve conflicts between it and the target design, and the delivery phases.
+
+### Codebase findings
+
+- **Already built by localization (change `swhr2-i-0003-localization`)**: the six catalog tables in `db/schema.ts` (migration `drizzle/0001_glamorous_steve_rogers.sql`), `services/catalog.ts#getItem` (inner-joins item and product details on one locale, so SWHR2-R-0127 already holds for look-ups), `GET /api/catalog/items/[itemId]` (404 when not visible), and a one-item seed (FISH / FI-SW-01 / EST-1, three locales) in `db/client.ts`. Locale resolution is `services/locale.ts#requestLocale`; money formatting is `shared/i18n/format.ts#formatMoney` (major units in).
+- **Not yet built**: category/product listing, item listing, paging, search, the page cache, every list route, every storefront catalog screen, the category panel, the search box.
+- **Schema gaps against SWHR2-R-0037 / R-0044 / R-0045**: no foreign keys and no `PRAGMA foreign_keys = ON` (SQLite ignores references without it); no `CHECK(length(category_id) <= 10)`. `category_id` is already `PRIMARY KEY NOT NULL`, so duplicate and missing codes are already refused.
+- **Cart**: `services/cart.ts` (session-keyed in-memory map, `addItem`, `lines`) and `POST /api/cart/items` `{ itemId }` exist; `src/pages/petstore/cart.tsx` lists the lines. Add to Cart wires to that route.
+- **Shell**: `src/components/shell/AppShell.tsx` renders the global navigation rail inside an `<aside>`; `src/pages/petstore.tsx` is the storefront layout (`LocaleProvider`, `LanguageFlags`, `<Outlet/>`); `src/pages/index.tsx` is the site-shell landing at `/`; `src/pages/petstore/index.tsx` is a placeholder screen.
+- **Acceptance suite** (`tests/acceptance/catalog-browsing/`, red until built) fixes the interfaces: `services/catalog` exports `listCategories`, `listProducts(categoryId, locale, start?, size?)`, `listItems`, `getItem`, `search` and a `CatalogError` (`name === "CatalogError"`); route modules `routes/api/catalog/categories/[categoryId]/products.get.ts` etc.; page module `src/pages/petstore/item/[itemId].tsx`; seeds raw SQL into the target table and column names; prices in hundredths (1650 → "16.50"); the e2e specs expect URLs `/petstore/category/<ID>`, `/petstore/product/<ID>`, `/petstore/item/<ID>`, one `complementary` landmark holding exactly the category links, and the category panel on `/`.
+- **CI**: `.github/workflows/ci.yml` already runs `test:acceptance` and `test:acceptance:e2e` (with `continue-on-error`, because other capabilities' suites are still red) and triggers on `vortex/**`. No workflow change is needed for this capability.
+
+### Planning decisions
+
+- **P1. Money in hundredths, as this change's Data section says.** `list_price` / `unit_cost` become not-null integers holding hundredths of the displayed unit (16.50 → 1650, ¥1951 → 195100, ¥142 → 14200). This supersedes localization's SD3 (major-unit reals): the acceptance suites of this capability and of shopping-cart both seed 1650 and expect 16.50. Consumers divide by 100 before calling `formatMoney`, which keeps taking major units. The column type change is one new drizzle-kit migration; existing fixtures in `services/*.test.ts` and `routes/api/catalog/items/[itemId].get.test.ts` move to hundredths in the same ticket.
+- **P2. `services/catalog.ts` becomes `services/catalog/index.ts`.** A file and a directory of the same name cannot coexist, and every importer (`services/cart.ts`, the item route, the harness) resolves either form, so no importer changes.
+- **P3. Data access selected by configuration (SWHR2-R-0002.02) is built as a thin seam, not as multiple back-ends.** The approved cases SWHR2-C-0280/0281/0282 require that the configured implementation serves reads and that the dialect in use is the configured one. The catalog service resolves its data-access implementation from a registry by a configured name (default the Drizzle implementation) and reports the dialect `sqlite`; tests register a recording double. No second real implementation or dialect is built (see Spec discrepancies SD1).
+- **P4. Category panel and shell landmark.** The panel is the page's only `complementary` landmark (`<aside aria-label=…>`). The shell's navigation rail stops being an `<aside>` (a `div` around its existing `<nav>`), so `getByRole("complementary")` resolves to the panel alone. Visual layout of the rail is unchanged.
+- **P5. `/` keeps the site-shell landing and gains the pet map and category panel.** The pet selection map component lives in `src/components/storefront/PetMap.tsx`; `src/pages/petstore/index.tsx` and `src/pages/index.tsx` both render it with `CategoryPanel`. The landing's area cards and catalog call to action stay, so the site-shell tests keep passing.
+- **P6. Seed fixture.** `db/client.ts` seeds (outside Vitest, when empty) the spec's fixture: five categories BIRDS, CATS, DOGS, FISH, REPTILES in en_US/ja_JP/zh_CN; DOGS with exactly Bulldog, Dalmation, Poodle; Bulldog items including "Male Adult Bulldog"; FISH with FI-SW-01 Angelfish and EST-1 at 16.50 / 10.00. The legacy full sample (16 products, 28 items) stays with sample data population (SWHR2-I-0014), which replaces this seed.
+- **P7. Cache placement.** The 5-minute TTL map sits inside the service functions `listCategories`, `listProducts` and `listItems` (the cache acceptance cases call the service, not the route), keyed `(fn, locale, id, start, size)`, reading `Date.now()` so fake timers drive it. `getItem` and `search` bypass it.
+- **P8. Add to Cart** posts `{ itemId }` to `POST /api/cart/items` and then shows the cart count change; the cart page must show the item id beside its name (SWHR2-C-0200 looks for "EST-1" on the cart page).
+
+### Spec discrepancies
+
+- **SD1. SWHR2-R-0002 (configurable implementation and dialect) vs Target design "Read paths".** The requirement and its approved cases C-0280..C-0282 require deployment-configured selection; the target design says it is not built. Resolved by P3 (a seam with one real implementation). Business Owner to confirm the seam is sufficient.
+- **SD2. Money units.** The target design's hundredths contradicts localization's shipped SD3 (major-unit reals). Resolved by P1 in favour of this change.
+- **SD3. Seed vs Out of Scope.** The brief puts loading the sample catalog out of scope, yet task 1.6 seeds categories, products and items, and the e2e cases need DOGS with exactly 3 products. The legacy sample has 6 dogs, so when SWHR2-I-0014 loads it, SWHR2-C-0197/0198 (which assume 3) will no longer hold against the seeded store. Resolved for this sprint by P6; flagged for SWHR2-I-0014 planning.
+- **SD4. Task 6.8 (return to the referring page after a language change) has no requirement in this change.** Return-to-page was recorded as Not specified in localization (its SD6). The line is tagged with its ticket but no requirement; built as the minimum (the language switch preserves the current storefront URL).
+- **SD5. SWHR2-R-0041 / R-0042 say "main page"**; the repository's `/` is the site-shell landing and the storefront home is `/petstore`. The e2e cases open the panel from `/`. Resolved by P5.
+- **SD6. No test cases** exist for SWHR2-R-0041 (home pet selection), SWHR2-R-0045 (category id length) and SWHR2-R-0046 (localized category names). Their acceptance criteria are still carried by the owning tickets and covered by the tickets' own tests.
+- **SD7. Shell landmark.** The shell's `<aside>` rail contradicts the e2e's single-`complementary` assumption. Resolved by P4.
+
+### Phases
+
+Each phase is one ticket, in this order; each depends on the one before, because every phase extends `services/catalog/` or builds on its routes.
+
+1. **Catalog data model**: schema constraints, foreign keys, hundredths, migration, seed fixture (tasks 1.x).
+2. **Catalog queries**: service module move, list/look-up functions, locale scoping, `CatalogError`, data-access seam (tasks 2.x).
+3. **Paging**: page result and defaults (tasks 3.x).
+4. **Search**: tokenizer and keyword match (tasks 4.x).
+5. **Catalog API**: the five routes, unauthenticated, plus the 5-minute cache (tasks 5.x).
+6. **Storefront screens**: home pet map, category panel, category / product / item / search pages, Add to Cart, header search box (tasks 6.x).
+7. **Verification (test harness)**: the browse-to-cart end-to-end flow and the remaining unit, integration and UI coverage; the catalog-browsing acceptance suite (Vitest and Playwright) is green (tasks 7.x).
+8. **CI**: no workflow change. The existing CI runs the catalog-browsing acceptance suites on every `vortex/**` push; they stay under `continue-on-error` until every capability's suite is green, so phase 7's ticket shows them green in its CI run rather than flipping the flag.
