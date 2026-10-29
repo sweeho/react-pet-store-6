@@ -10,9 +10,9 @@ db.$client.exec(`
   insert into catalog_product_details values ('T-P', 'ja_JP', 'エンゼル', 'p', 'p.gif');
   insert into catalog_items (item_id, product_id) values ('T-1', 'T-P');
   insert into catalog_item_details (item_id, locale, description, image, list_price, unit_cost, attr1)
-    values ('T-1', 'en_US', 'Large Angelfish', 'i.gif', 16.5, 10, 'Spotted fish');
+    values ('T-1', 'en_US', 'Large Angelfish', 'i.gif', 1650, 1000, 'Spotted fish');
   insert into catalog_item_details (item_id, locale, description, image, list_price, unit_cost, attr1)
-    values ('T-1', 'ja_JP', '大きなエンゼルフィッシュ', 'i.gif', 1951, 1551, '斑点のある魚');
+    values ('T-1', 'ja_JP', '大きなエンゼルフィッシュ', 'i.gif', 195100, 155100, '斑点のある魚');
 `);
 
 const cartWithItem = () => {
@@ -29,7 +29,7 @@ describe("cart lines", () => {
         quantity: 1,
         name: "Large Angelfish",
         attribute: "Spotted fish",
-        unitPrice: 16.5,
+        unitPrice: 1650,
       },
     ]);
   });
@@ -41,7 +41,7 @@ describe("cart lines", () => {
         quantity: 1,
         name: "大きなエンゼルフィッシュ",
         attribute: "斑点のある魚",
-        unitPrice: 1951,
+        unitPrice: 195100,
       },
     ]);
   });
