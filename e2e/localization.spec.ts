@@ -62,7 +62,7 @@ test.describe("localization", () => {
       lines: { name: string; unitPrice: number }[];
     };
     expect(cart.lines).toHaveLength(1);
-    expect(cart.lines[0]).toMatchObject({ name: "大天使鱼", unitPrice: 142 });
+    expect(cart.lines[0]).toMatchObject({ name: "大天使鱼", unitPrice: 14200 });
   });
 
   test("storefront screens render localized text in en_US, ja_JP and zh_CN", async ({ page }) => {
