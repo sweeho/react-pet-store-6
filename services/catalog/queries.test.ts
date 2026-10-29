@@ -93,7 +93,7 @@ describe("catalog queries", () => {
     });
     expect((await listItems("FI-SW-01", "ja_JP")).items).toEqual([]);
     expect(await getItem("EST-1", "ja_JP")).toBeUndefined();
-    expect(await search("大きな", "ja_JP")).toEqual([]);
+    expect((await search("大きな", "ja_JP")).items).toEqual([]);
   });
 
   it("[SWHR2-C-0211] EST-1 in en_US returns its en_US details when item and product are both localized", async () => {
