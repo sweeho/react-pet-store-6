@@ -13,15 +13,15 @@ describe("PetMap", () => {
     );
     const picture = screen.getByRole("img", { name: /pet/i });
     expect(picture.getAttribute("usemap")).toBe("#petmap");
-    const regions = ["Birds", "Fish", "Dogs", "Reptiles", "Cats"].map((n) =>
-      screen.getByRole("link", { name: n }),
-    );
-    expect(regions.map((a) => a.getAttribute("href"))).toEqual([
-      "/petstore/category/BIRDS",
-      "/petstore/category/FISH",
-      "/petstore/category/DOGS",
-      "/petstore/category/REPTILES",
-      "/petstore/category/CATS",
+    const hrefs = ["Birds", "Fish", "Dogs", "Reptiles", "Cats"].map((n) => [
+      ...new Set(screen.getAllByRole("link", { name: n }).map((a) => a.getAttribute("href"))),
+    ]);
+    expect(hrefs).toEqual([
+      ["/petstore/category/BIRDS"],
+      ["/petstore/category/FISH"],
+      ["/petstore/category/DOGS"],
+      ["/petstore/category/REPTILES"],
+      ["/petstore/category/CATS"],
     ]);
   });
 });

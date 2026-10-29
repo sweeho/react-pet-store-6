@@ -4,18 +4,21 @@ import en_US_petstore_signin from "./en_US/petstore-signin";
 import en_US_change_language from "./en_US/change-language";
 import en_US_change_language_success from "./en_US/change-language-success";
 import en_US_header from "./en_US/header";
+import en_US_catalog from "./en_US/catalog";
 import ja_JP_petstore_home from "./ja_JP/petstore-home";
 import ja_JP_petstore_cart from "./ja_JP/petstore-cart";
 import ja_JP_petstore_signin from "./ja_JP/petstore-signin";
 import ja_JP_change_language from "./ja_JP/change-language";
 import ja_JP_change_language_success from "./ja_JP/change-language-success";
 import ja_JP_header from "./ja_JP/header";
+import ja_JP_catalog from "./ja_JP/catalog";
 import zh_CN_petstore_home from "./zh_CN/petstore-home";
 import zh_CN_petstore_cart from "./zh_CN/petstore-cart";
 import zh_CN_petstore_signin from "./zh_CN/petstore-signin";
 import zh_CN_change_language from "./zh_CN/change-language";
 import zh_CN_change_language_success from "./zh_CN/change-language-success";
 import zh_CN_header from "./zh_CN/header";
+import zh_CN_catalog from "./zh_CN/catalog";
 import type { LocaleRegistry } from "./types";
 
 export const registry: LocaleRegistry = {
@@ -26,6 +29,7 @@ export const registry: LocaleRegistry = {
     "change-language": en_US_change_language,
     "change-language-success": en_US_change_language_success,
     header: en_US_header,
+    catalog: en_US_catalog,
   },
   ja_JP: {
     "petstore-home": ja_JP_petstore_home,
@@ -34,6 +38,7 @@ export const registry: LocaleRegistry = {
     "change-language": ja_JP_change_language,
     "change-language-success": ja_JP_change_language_success,
     header: ja_JP_header,
+    catalog: ja_JP_catalog,
   },
   zh_CN: {
     "petstore-home": zh_CN_petstore_home,
@@ -42,6 +47,7 @@ export const registry: LocaleRegistry = {
     "change-language": zh_CN_change_language,
     "change-language-success": zh_CN_change_language_success,
     header: zh_CN_header,
+    catalog: zh_CN_catalog,
   },
 };
 

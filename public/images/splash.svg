@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-label="Pet selection map">
+  <rect width="1000" height="300" fill="#f8fafc"/>
+  <g transform="translate(100 150)" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="-4" cy="-48" r="9"/><circle cx="30" cy="-30" r="9"/><circle cx="38" cy="8" r="9"/><path d="M-14 -20a22 22 0 0 1 22 22v18a16 16 0 0 1-31.4 4.8Q-27 20 -36 17A16 16 0 0 1 -30 -20Z"/></g>
+  <g transform="translate(300 150)" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="-4" cy="-48" r="9"/><circle cx="30" cy="-30" r="9"/><circle cx="38" cy="8" r="9"/><path d="M-14 -20a22 22 0 0 1 22 22v18a16 16 0 0 1-31.4 4.8Q-27 20 -36 17A16 16 0 0 1 -30 -20Z"/></g>
+  <line x1="200" y1="0" x2="200" y2="300" stroke="#e2e8f0"/>
+  <g transform="translate(500 150)" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="-4" cy="-48" r="9"/><circle cx="30" cy="-30" r="9"/><circle cx="38" cy="8" r="9"/><path d="M-14 -20a22 22 0 0 1 22 22v18a16 16 0 0 1-31.4 4.8Q-27 20 -36 17A16 16 0 0 1 -30 -20Z"/></g>
+  <line x1="400" y1="0" x2="400" y2="300" stroke="#e2e8f0"/>
+  <g transform="translate(700 150)" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="-4" cy="-48" r="9"/><circle cx="30" cy="-30" r="9"/><circle cx="38" cy="8" r="9"/><path d="M-14 -20a22 22 0 0 1 22 22v18a16 16 0 0 1-31.4 4.8Q-27 20 -36 17A16 16 0 0 1 -30 -20Z"/></g>
+  <line x1="600" y1="0" x2="600" y2="300" stroke="#e2e8f0"/>
+  <g transform="translate(900 150)" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="-4" cy="-48" r="9"/><circle cx="30" cy="-30" r="9"/><circle cx="38" cy="8" r="9"/><path d="M-14 -20a22 22 0 0 1 22 22v18a16 16 0 0 1-31.4 4.8Q-27 20 -36 17A16 16 0 0 1 -30 -20Z"/></g>
+  <line x1="800" y1="0" x2="800" y2="300" stroke="#e2e8f0"/>
+</svg>

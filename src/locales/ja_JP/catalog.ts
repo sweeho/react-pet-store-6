@@ -1,0 +1,35 @@
+import type { ScreenDefinition } from "../types";
+
+const definition: ScreenDefinition = {
+  title: "カタログ",
+  home: "ホーム",
+  panelLabel: "カテゴリ",
+  mapLabel: "ペット選択マップ",
+  choosePet: "ペットを選ぶ",
+  products: "商品",
+  items: "アイテム",
+  viewItems: "アイテムを見る",
+  previous: "前へ",
+  next: "次へ",
+  item: "アイテム",
+  itemId: "アイテムID",
+  product: "商品",
+  category: "カテゴリ",
+  listPrice: "定価",
+  yourPrice: "販売価格",
+  addToCart: "カートに入れる",
+  added: "カートに追加しました",
+  addFailed: "カートに追加できませんでした",
+  allOf: "すべての",
+  searchLabel: "検索",
+  searchPlaceholder: "キーワードでペットを検索（例：エンゼルフィッシュ）",
+  searchTitle: "検索結果",
+  noResults: "検索に一致するアイテムはありません。",
+  loading: "読み込み中…",
+  errorTitle: "カタログを読み込めませんでした",
+  errorMessage: "カタログの読み込み中に問題が発生しました。",
+  emptyCategory: "このカテゴリには商品がありません。",
+  emptyProduct: "この商品にはアイテムがありません。",
+};
+
+export default definition;
