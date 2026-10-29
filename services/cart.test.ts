@@ -22,8 +22,8 @@ const cartWithItem = () => {
 };
 
 describe("cart lines", () => {
-  it("[SWHR2-C-0033] a new cart with no locale lists the item from the en_US details", () => {
-    expect(lines(cartWithItem(), undefined)).toEqual([
+  it("[SWHR2-C-0033] a new cart with no locale lists the item from the en_US details", async () => {
+    expect(await lines(cartWithItem(), undefined)).toEqual([
       {
         itemId: "T-1",
         quantity: 1,
@@ -34,8 +34,8 @@ describe("cart lines", () => {
     ]);
   });
 
-  it("[SWHR2-C-0034] a cart with locale ja_JP lists the item from the ja_JP details", () => {
-    expect(lines(cartWithItem(), "ja_JP")).toEqual([
+  it("[SWHR2-C-0034] a cart with locale ja_JP lists the item from the ja_JP details", async () => {
+    expect(await lines(cartWithItem(), "ja_JP")).toEqual([
       {
         itemId: "T-1",
         quantity: 1,
