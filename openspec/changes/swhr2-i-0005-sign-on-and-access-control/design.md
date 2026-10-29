@@ -138,3 +138,58 @@ The session cookies are `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` when 
 - An in-process `Map` session store, valid for the single-process deployment (`ecosystem.config.js`, `instances: 1`). Sessions do not survive a restart, which the session-only cart allows.
 - `Bun.password` (argon2id), built into the Bun runtime, for password hashing. No auth library is added.
 - Tests: route integration tests for the sign-in and sign-out routes, the guards, the idle expiry (with a fake clock) and the admin-before-supplier refusal; UI tests for the sign-in, signed-out and admin screens.
+
+## Planning (sprint SWHR2-S-0013)
+
+Added at sprint planning. The sections above are the adopted specification and are unchanged; this section records what the repository already holds, the decisions that resolve conflicts between it and the target design, the spec discrepancies, and the delivery phases. One FEATURE, SWHR2-T-0182, owns every task group.
+
+### Codebase findings
+
+- **Session**: `middleware/10.session.ts` already keeps an in-memory `{ id, locale }` session in a module-level `Map`, keyed by one cookie `sid` for every path. There is no idle expiry, no area split, no sign-on state. `routes/api/session/locale.post.ts` writes the locale into it; its test (`routes/api/session/locale.post.test.ts`) sends `sid=`.
+- **Session read route**: `routes/api/session/index.get.ts` returns `{ locale }` only. The sign-on acceptance suite imports `routes/api/session.get` (a file beside the `session/` directory, not inside it).
+- **Cart**: `services/cart.ts` keys a module-level `Map` by session id (`cartFor(sessionId)`); `routes/api/cart/items.post.ts` and `index.get.ts` read `event.context.session.id`. A new session id therefore already means an empty cart; nothing deletes the old one.
+- **Credentials**: no `signon_users` table exists. `db/schema.ts` has the boilerplate `users` table and the catalog tables. customer-account's change (`swhr2-i-0006-customer-account-and-profil`, design.md Data) defines `signon_users(user_id text primary key, password_hash text not null)`, and the sign-on, checkout and shopping-cart acceptance harnesses seed into exactly that shape.
+- **Seed**: `db/client.ts` seeds catalog items EST-1, EST-6, EST-7 only. The sign-on e2e (SWHR2-C-0269) adds EST-1 and EST-2 to the cart, and every e2e signs in as `j2ee` / `j2ee`; neither EST-2 nor any storefront user is seeded.
+- **Screens**: `src/pages/petstore/signin.tsx`, `src/pages/admin/index.tsx` and `src/pages/supplier/index.tsx` are `EmptyFrame` placeholders. `src/locales/<locale>/petstore-signin.ts` holds a placeholder title and message; `header.ts` holds only the language-flag labels. No signed-out screen, no account route.
+- **Header**: `src/components/shell/AppShell.tsx` draws the "Pet Store" brand link and, in its `header` slot, defaults to `SearchBox`. No Account, Cart, Sign in or Sign out link exists. The acceptance UI test renders `src/components/storefront/StorefrontHeader` on its own and expects a main-page link, a search box, Account, Cart and Sign in / Sign out from a stubbed `GET /api/session`.
+- **Internal services**: no message hand-off (`services/messaging`), no purchase-order document and no order-line table exist. checkout (SWHR2-I-0008) and order fulfilment (SWHR2-I-0011) build them.
+- **Boilerplate**: `middleware/auth.ts` sets a fixed `event.context.user` read by `routes/api/hello.ts`. It is the template's example, not access control, and this change leaves it alone.
+- **Acceptance suite** (`tests/acceptance/sign-on/`, red until built) fixes the interfaces: cookies `ps_sid`, `admin_sid`, `remembered_username` (`Max-Age=2678400`, or expired); routes `routes/api/session.get.ts`, `routes/api/session/sign-in.post.ts`, `routes/api/admin/sign-in.post.ts`, `routes/api/admin/session.get.ts`; harness env `ADMIN_USERS` / `SUPPLIER_USERS` as `userId:<Bun.password hash>`; the e2e finds every sign-in field by the label "User ID" (storefront included), the supplier refusal by the text "sign out of (the) admin…", and the signed-out screen at a URL containing `signed-out`.
+- **CI**: `.github/workflows/ci.yml` runs `test:acceptance` and `test:acceptance:e2e` under `continue-on-error` and triggers on `vortex/**`. Neither Playwright config passes any environment to its dev server, so the e2e server would start with no administration or supplier credentials.
+
+### Planning decisions
+
+- **P1. Area sessions in one store.** `services/session/store.ts` replaces the module-level map in `middleware/10.session.ts`. A session carries `area` (`storefront`, `admin`, `supplier`), `locale`, `userId?` and `lastSeen`. The middleware picks the cookie by path as the Target design says (`/api/admin/**` → `admin_sid`, `/api/supplier/**` → `supplier_sid`, every other path → `ps_sid`), and the cookie `sid` is retired; `locale.post.test.ts` moves to `ps_sid`.
+- **P2. Idle limits are one table in the store**, read through `Date.now()` so fake timers drive it: storefront 15 minutes, admin 54, a `sample` area 30 (P7), supplier none. An expired session is dropped together with its cart (`services/cart.ts` gains a drop by session id) and a fresh session is issued in its place.
+- **P3. `signon_users` is created here.** Sign-on cannot verify a customer without it, and customer-account plans after this sprint. The table is exactly customer-account's shape, with a drizzle-kit migration; customer-account adds `customers` and the sign-up flow on top. `db/client.ts` seeds `j2ee` (hashed `j2ee`) and catalog item EST-2 when empty, outside Vitest. The full four-user sample stays with sample data population (SWHR2-I-0014).
+- **P4. Operator credentials, no built-in accounts.** `ADMIN_USERS` and `SUPPLIER_USERS` are read at request time (the harness sets them after module load). When unset, administration and supplier sign-in reject every attempt; product code never falls back to a default account (avoids legacy D1). Both Playwright configs pass both variables to their dev server, with precomputed argon2id hashes of the e2e defaults (`admin` / `admin-pw`, `supplier` / `supplier-pw`).
+- **P5. `GET /api/session` moves to `routes/api/session.get.ts`** and returns `{ locale, signedOn, userId?, rememberedUserName? }`. The old `session/index.get.ts` is deleted, since two files for one route conflict.
+- **P6. Header in the shell slot.** `StorefrontHeader` holds the main-page link, `SearchBox`, Account (`/petstore/account`), Cart (`/petstore/cart`) and Sign in (`/petstore/signin`) or Sign out. `AppShell` renders it by default in place of its brand link and `SearchBox`, so every page carries one header (ARCHITECTURE.md Key Decision "One shell"). Header words come from `src/locales/<locale>/header.ts`.
+- **P7. Framework sample application.** There is no framework sample application in this repository (Target design). Task 3.1 is met in the session store: the `sample` area's 30-minute limit, covered by a store unit test that a sample session idle 31 minutes is replaced and its state is gone. No route or screen is added for it. See SD1.
+- **P8. Protected pages this sprint.** `requireCustomer` is built and unit-tested now. The only protected storefront screen that exists this sprint is `/petstore/account`, a guarded placeholder that sends a visitor to sign in and returns them after sign-on; customer-account fills it. checkout applies `requireCustomer` to its order, billing and shipping routes when it builds them. The SPA sends a visitor to `/petstore/signin?return=<path>` and returns there after sign-on.
+- **P9. Internal services (tasks 6.1, 6.2) are a constraint, not code, this sprint.** No route added by this change imports a hand-off or order-line function, and the guards sit on routes only. The modules themselves, and the cases that exercise them, belong to SWHR2-I-0008 / SWHR2-I-0011.
+- **P10. Supplier home after sign-in** is the existing placeholder content behind the supplier sign-in; supplier-inventory (SWHR2-I-0010) replaces it. "Launch the administration tool" links to `/admin/tool`, which order-approval (SWHR2-I-0009) builds.
+- **P11. Test cases deferred.** SWHR2-C-0252 and SWHR2-C-0254 (Check Out control, shipping form) are deferred to SWHR2-I-0008; SWHR2-C-0263, SWHR2-C-0264 and SWHR2-C-0268 (messages, order lines, fulfilment harness) to SWHR2-I-0011. SWHR2-C-0251 (sample app) is retired. The 13 remaining approved cases are linked to SWHR2-T-0182.
+
+### Spec discrepancies
+
+- **SD1. SWHR2-R-0027 names a framework sample application the target does not have.** Resolved for this sprint by P7; the requirement still needs a Business Owner disposition (keep, or retire with the sample).
+- **SD2. `signon_users` ownership.** The Target design places the table in customer-account (`db/schema/storefront.ts`); the repository has a single `db/schema.ts` and customer-account has not been built. Resolved by P3: the table is created here, in `db/schema.ts`, in customer-account's shape.
+- **SD3. Storefront field label.** The spec and the brief say "user name"; the approved e2e finds the storefront field by the label "User ID". The storefront sign-in field is labelled "User ID" in en_US, which satisfies the test; the Japanese and Chinese definitions use their own words for it.
+- **SD4. R-0028 vs the screens that exist.** The requirement protects order placement and shipping entry, which checkout builds later. Built as P8 (guard now, applied by checkout); C-0252 and C-0254 deferred (P11).
+- **SD5. R-0121 / R-0124 describe services that do not exist yet.** Resolved by P9; C-0263, C-0264, C-0268 deferred.
+- **SD6. Supplier idle limit.** The legacy supplier web module declares 54 minutes (design.md "Ambiguous approved keys", SIGN-REQ-0003 in `src/apps/supplier/a.yaml`), but no approved requirement states it, so the supplier session has no idle limit (Target design). Business Owner to confirm.
+- **SD7. The admin landing's "launch" target** (`/admin/tool`) has no screen until order-approval ships; the link is present and leads to the not-found screen until then (P10).
+
+### Phases
+
+One ticket, SWHR2-T-0182, works the phases in this order.
+
+1. **Storefront sign-on** (tasks 1.x): session store and middleware areas, idle limits, `signon_users` table and migration, seed, credential check, `requireCustomer`, sign-in, sign-out and session routes, remembered-name cookie, sign-in, signed-out and account screens.
+2. **Storefront header** (tasks 2.x): `StorefrontHeader`, header words in three locales, `AppShell` slot.
+3. **Framework sample application** (task 3.1): the `sample` idle limit in the store (P7).
+4. **Administration area** (tasks 4.x): admin credential check, `requireAdmin`, admin routes, sign-in / Login Error / landing screen.
+5. **Administrator and supplier separation** (tasks 5.x): supplier routes, `requireSupplier`, the `AdminSignedIn` refusal and its message on the supplier sign-in screen.
+6. **Internal service access control** (tasks 6.x): confirm no route exposes an internal service (P9).
+7. **Verification (test harness)** (tasks 7.x): route integration tests with a fake clock, UI tests for the header, sign-in, signed-out, admin and supplier screens, a Playwright admin-then-supplier spec, and the Playwright configs' credential environment (P4); the 13 linked sign-on acceptance cases pass.
+8. **CI**: no workflow change. CI already runs the acceptance suites on every `vortex/**` push under `continue-on-error`; the credential environment lives in the Playwright configs, so CI picks it up with no workflow edit.
