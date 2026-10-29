@@ -1,5 +1,12 @@
+import { getQuery } from "h3";
 import { defineHandler } from "nitro/h3";
 
-export default defineHandler(() => {
-  throw new Error("VortexNotImplemented");
+import { search } from "../../../services/catalog";
+import { catalogResponse } from "../../../services/catalog/http";
+import { requestLocale } from "../../../services/locale";
+
+export default defineHandler((event) => {
+  const query = getQuery(event);
+  const text = [query.q, query.keyword].find((v): v is string => typeof v === "string");
+  return catalogResponse(() => search(text ?? "", requestLocale(event)));
 });
