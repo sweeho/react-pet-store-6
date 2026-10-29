@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { db } from "../db/client";
-import { getItem } from "./catalog";
+import { db } from "../../db/client";
+import { getItem } from "./index";
 
 db.$client.exec(`
   insert into catalog_categories (category_id) values ('T');
@@ -16,8 +16,8 @@ db.$client.exec(`
 `);
 
 describe("catalog service", () => {
-  it("[SWHR2-C-0029] a ja_JP shopper gets the Japanese name, description and attributes", () => {
-    const item = getItem("T-1", "ja_JP");
+  it("[SWHR2-C-0029] a ja_JP shopper gets the Japanese name, description and attributes", async () => {
+    const item = await getItem("T-1", "ja_JP");
     expect(item).toMatchObject({
       name: "エンゼル",
       description: "大きなエンゼルフィッシュ",
@@ -26,8 +26,8 @@ describe("catalog service", () => {
     expect(JSON.stringify(item)).not.toMatch(/Angelfish|Spotted/);
   });
 
-  it("[SWHR2-C-0030] an en_US shopper gets the English name, description and attributes", () => {
-    const item = getItem("T-1", "en_US");
+  it("[SWHR2-C-0030] an en_US shopper gets the English name, description and attributes", async () => {
+    const item = await getItem("T-1", "en_US");
     expect(item).toMatchObject({
       name: "Angelfish",
       description: "Large Angelfish",
@@ -36,7 +36,7 @@ describe("catalog service", () => {
     expect(JSON.stringify(item)).not.toMatch(/エンゼル|斑点/);
   });
 
-  it("returns nothing for a locale without detail rows", () => {
-    expect(getItem("T-1", "zh_CN")).toBeUndefined();
+  it("returns nothing for a locale without detail rows", async () => {
+    expect(await getItem("T-1", "zh_CN")).toBeUndefined();
   });
 });
