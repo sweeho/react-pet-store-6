@@ -24,9 +24,9 @@
 
 ## 4. Search
 
-- [ ] 4.1 Split search text on whitespace into distinct keywords and short-circuit blank text (SWHR2-T-0156; SWHR2-R-0048, SWHR2-R-0001)
-- [ ] 4.2 Match any keyword as a case-insensitive substring of product name, category id or item description (SWHR2-T-0156; SWHR2-R-0001)
-- [ ] 4.3 Apply locale scoping and paging to search results (SWHR2-T-0156; SWHR2-R-0001, SWHR2-R-0127)
+- [x] 4.1 Split search text on whitespace into distinct keywords and short-circuit blank text (SWHR2-T-0156; SWHR2-R-0048, SWHR2-R-0001)
+- [x] 4.2 Match any keyword as a case-insensitive substring of product name, category id or item description (SWHR2-T-0156; SWHR2-R-0001)
+- [x] 4.3 Apply locale scoping and paging to search results (SWHR2-T-0156; SWHR2-R-0001, SWHR2-R-0127)
 
 ## 5. Catalog API
 
