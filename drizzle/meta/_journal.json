@@ -15,6 +15,13 @@
       "when": 1793207421516,
       "tag": "0001_glamorous_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793246762115,
+      "tag": "0002_married_otto_octavius",
+      "breakpoints": true
     }
   ]
 }
