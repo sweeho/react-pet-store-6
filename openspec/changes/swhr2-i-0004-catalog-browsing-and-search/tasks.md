@@ -50,7 +50,7 @@
 
 ## 7. Verification
 
-- [ ] 7.1 Unit-test paging arithmetic, keyword parsing and keyword matching (SWHR2-T-0159; SWHR2-R-0035, SWHR2-R-0048, SWHR2-R-0001)
-- [ ] 7.2 Integration-test the catalog endpoints against seeded data, including locale gaps and unknown ids (SWHR2-T-0159; SWHR2-R-0002, SWHR2-R-0038, SWHR2-R-0127)
-- [ ] 7.3 UI-test the home, category, product, item detail and search results screens (SWHR2-T-0159; SWHR2-R-0040, SWHR2-R-0041, SWHR2-R-0042)
-- [ ] 7.4 End-to-end test browsing from home to item detail and adding to cart (SWHR2-T-0159; SWHR2-R-0047, SWHR2-R-0040)
+- [x] 7.1 Unit-test paging arithmetic, keyword parsing and keyword matching (SWHR2-T-0159; SWHR2-R-0035, SWHR2-R-0048, SWHR2-R-0001)
+- [x] 7.2 Integration-test the catalog endpoints against seeded data, including locale gaps and unknown ids (SWHR2-T-0159; SWHR2-R-0002, SWHR2-R-0038, SWHR2-R-0127)
+- [x] 7.3 UI-test the home, category, product, item detail and search results screens (SWHR2-T-0159; SWHR2-R-0040, SWHR2-R-0041, SWHR2-R-0042)
+- [x] 7.4 End-to-end test browsing from home to item detail and adding to cart (SWHR2-T-0159; SWHR2-R-0047, SWHR2-R-0040)
