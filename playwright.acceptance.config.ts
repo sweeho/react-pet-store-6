@@ -17,9 +17,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   // No retries and a short per-test timeout: the suite is red until Build, so a retry cannot turn
   // a test green, it only makes the run slower, and the design gate waits for the whole run.
-  // Restore the template's retries once the Build phase has made the suite green.
+  // A test for a feature that does not exist yet fails by WAITING for its first element, so the
+  // timeout is what each such test costs: 60 of 66 tests at 15 s was a 7 minute step on every push.
+  // Restore the template's retries and a longer timeout once the Build phase has made the suite
+  // green (the longest passing test took 1.2 s).
   retries: 0,
-  timeout: 15_000,
+  timeout: 4_000,
   expect: { timeout: 3_000 },
   reporter: process.env.CI
     ? [["list"], ["junit", { outputFile: ".vortex-results/acceptance/e2e-junit.xml" }]]
