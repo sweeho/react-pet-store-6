@@ -23,11 +23,11 @@ export function addItem(cart: Map<string, number>, itemId: string): void {
 }
 
 /** Cart lines with name, attribute and price from the cart locale's catalog details (en_US when none). */
-export function lines(cart: Map<string, number>, locale?: string): CartLine[] {
+export async function lines(cart: Map<string, number>, locale?: string): Promise<CartLine[]> {
   const loc = locale ?? DEFAULT_LOCALE;
   const out: CartLine[] = [];
   for (const [itemId, quantity] of cart) {
-    const item = getItem(itemId, loc);
+    const item = await getItem(itemId, loc);
     if (item)
       out.push({
         itemId,
