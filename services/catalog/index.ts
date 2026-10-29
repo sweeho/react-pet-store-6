@@ -11,6 +11,7 @@ import { type CatalogPage, pageOf } from "./paging";
 export { CatalogError } from "./errors";
 export { registerDataAccess } from "./data-access";
 export type { CatalogPage } from "./paging";
+export { search } from "./search";
 
 export interface CatalogItem extends ItemRow {
   locale: string;
@@ -70,12 +71,6 @@ export function getProduct(productId: string, locale: string): Promise<ProductRo
 export async function getItem(itemId: string, locale: string): Promise<CatalogItem | undefined> {
   const row = await guarded(() => resolveDataAccess().getItem(itemId, locale));
   return row && { ...row, locale };
-}
-
-/** Placeholder until the search task (SWHR2-T-0145) lands: returns no matches. */
-export async function search(text: string, locale: string): Promise<CatalogItem[]> {
-  void [text, locale];
-  return [];
 }
 
 /** The dialect of the configured data-access implementation. */

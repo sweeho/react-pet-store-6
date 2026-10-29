@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { db } from "../../db/client";
-import { search } from "./search";
+import { search } from "./index";
 
 const client = db.$client;
 

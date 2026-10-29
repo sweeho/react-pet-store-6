@@ -85,7 +85,7 @@ type ItemJoined = {
   d: typeof catalogItemDetails.$inferSelect;
 };
 
-function toItemRow({ itemId, productId, name, d }: ItemJoined): ItemRow {
+export function toItemRow({ itemId, productId, name, d }: ItemJoined): ItemRow {
   return {
     itemId,
     productId,
@@ -99,7 +99,7 @@ function toItemRow({ itemId, productId, name, d }: ItemJoined): ItemRow {
 }
 
 /** Items joined to their item details and product details on the same locale. */
-function itemsQuery(locale: string) {
+export function itemsQuery(locale: string) {
   return db
     .select(itemColumns)
     .from(catalogItems)
