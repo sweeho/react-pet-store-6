@@ -9,12 +9,12 @@
 
 ## 2. Catalog queries
 
-- [ ] 2.1 List categories for a locale ordered by localized name (SWHR2-T-0154; SWHR2-R-0038, SWHR2-R-0046)
-- [ ] 2.2 List products of a category for a locale ordered by localized name (SWHR2-T-0154; SWHR2-R-0039, SWHR2-R-0002)
-- [ ] 2.3 List items of a product for a locale, requiring the product's localization in the same locale (SWHR2-T-0154; SWHR2-R-0127)
-- [ ] 2.4 Look up a single category, product or item by id for a locale, returning nothing when absent (SWHR2-T-0154; SWHR2-R-0127, SWHR2-R-0043)
-- [ ] 2.5 Ensure no query falls back to another locale (SWHR2-T-0154; SWHR2-R-0043)
-- [ ] 2.6 Report store failures as errors rather than empty results (SWHR2-T-0154; SWHR2-R-0002)
+- [x] 2.1 List categories for a locale ordered by localized name (SWHR2-T-0154; SWHR2-R-0038, SWHR2-R-0046)
+- [x] 2.2 List products of a category for a locale ordered by localized name (SWHR2-T-0154; SWHR2-R-0039, SWHR2-R-0002)
+- [x] 2.3 List items of a product for a locale, requiring the product's localization in the same locale (SWHR2-T-0154; SWHR2-R-0127)
+- [x] 2.4 Look up a single category, product or item by id for a locale, returning nothing when absent (SWHR2-T-0154; SWHR2-R-0127, SWHR2-R-0043)
+- [x] 2.5 Ensure no query falls back to another locale (SWHR2-T-0154; SWHR2-R-0043)
+- [x] 2.6 Report store failures as errors rather than empty results (SWHR2-T-0154; SWHR2-R-0002)
 
 ## 3. Paging
 
