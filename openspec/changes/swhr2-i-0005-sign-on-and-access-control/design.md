@@ -138,3 +138,54 @@ The session cookies are `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` when 
 - An in-process `Map` session store, valid for the single-process deployment (`ecosystem.config.js`, `instances: 1`). Sessions do not survive a restart, which the session-only cart allows.
 - `Bun.password` (argon2id), built into the Bun runtime, for password hashing. No auth library is added.
 - Tests: route integration tests for the sign-in and sign-out routes, the guards, the idle expiry (with a fake clock) and the admin-before-supplier refusal; UI tests for the sign-in, signed-out and admin screens.
+
+## Planning (sprint SWHR2-S-0010)
+
+All the work is one FEATURE, **SWHR2-T-0169**, which owns every line of `tasks.md`. Its plan is `artifacts/SWHR2-S-0010/SWHR2-T-0169/PLAN.md`. The approved mockups are listed in `artifacts/SWHR2-S-0010/design/MANIFEST.md`.
+
+### Codebase findings
+
+- `middleware/10.session.ts` already keeps a server-owned, in-memory `{ id, locale }` session under cookie `sid`. There is one session for every path, with no expiry and no sign-on state. `routes/api/session/locale.post.test.ts` builds requests with `sid=`.
+- `GET /api/session` is `routes/api/session/index.get.ts` and returns `{ locale }` only. The acceptance suite imports `routes/api/session.get`.
+- The cart (`services/cart.ts`) is a module-level `Map` keyed by session id. `routes/api/cart/*.ts` fall back to the id `"anonymous"` when there is no session.
+- There is no `signon_users` table, no password hashing, no `services/session/` and no admin or supplier API route. `db/schema.ts` holds `users` (the template demo) and the catalog tables. The latest migration is `drizzle/0002_*`.
+- `middleware/auth.ts` is template residue. It sets `event.context.user = { name: "Yeasin" }` on every request, and only `routes/api/hello.ts` reads it.
+- `src/pages/petstore/signin.tsx`, `src/pages/admin/index.tsx` and `src/pages/supplier/index.tsx` are `EmptyFrame` placeholders. The per-locale `petstore-signin` screen definitions already exist in `src/locales/{en_US,ja_JP,zh_CN}/`.
+- `AppShell` draws the header and fills its slot with `<SearchBox />` by default. `src/pages/petstore.tsx` renders `LanguageFlags` and `CategoryPanel`. `src/components/storefront/StorefrontHeader.tsx` does not exist; `tests/acceptance/sign-on/header.test.tsx` imports it as a default export that fetches the session.
+- The cart page (`src/pages/petstore/cart.tsx`) has no Checkout control. No account or checkout page exists. Those belong to customer-account (SWHR2-I-0006) and checkout (SWHR2-I-0008).
+- There is no message hand-off service (`services/messaging`), purchase-order document or order-line table. Those belong to order-fulfillment (SWHR2-I-0011) and checkout.
+- The acceptance suite for this change is already on the branch under `tests/acceptance/sign-on/`. Its contracts are the cookies `ps_sid`, `admin_sid`, `supplier_sid` and `remembered_username`; the env `ADMIN_USERS` / `SUPPLIER_USERS` (`userId:hash`, hashed with `Bun.password`); and the routes `session/sign-in.post`, `session/sign-out.post`, `session.get`, `admin/sign-in.post`, `admin/session.get` and `supplier/sign-in.post`. In CI the acceptance unit and E2E steps run with `continue-on-error`.
+- `tests/acceptance/localization/server.test.ts` signs in as `张伟` / `山田太郎` with a **form-encoded** body to `session/sign-in.post`, so that route must accept form-encoded as well as JSON bodies.
+
+### Decisions
+
+- **P1 Session store.** `services/session/store.ts` owns the sessions (`create`, `get`, `touch`, `drop`), with an idle limit for each area. `lastSeen` is read from `Date.now()`, because the acceptance tests fake only `Date`. `middleware/10.session.ts` picks the area from the path (`/api/admin/**` → `admin_sid`, `/api/supplier/**` → `supplier_sid`, else `ps_sid`) and sets `event.context.session`. The cookie `sid` is renamed `ps_sid`, and `routes/api/session/locale.post.test.ts` follows.
+- **P2 Session read.** Move `routes/api/session/index.get.ts` to `routes/api/session.get.ts`. It returns `{ locale, signedOn, userId?, rememberedUserName? }`, where `rememberedUserName` is read from the `remembered_username` cookie.
+- **P3 Cart follows the session id.** When a session expires or is signed out, its cart is dropped (`services/cart.ts` gains `dropCart(id)`). The new session id starts with an empty cart. The cart is still not stored in the session object.
+- **P4 Minimal `signon_users`.** This change adds `signon_users (user_id text primary key, password_hash text not null)` and its migration `drizzle/0003_*`. customer-account later extends it and adds `customers`. `db/client.ts` seeds `j2ee` / `j2ee` (hashed) into an empty `signon_users` outside Vitest, the same way it seeds the catalog, so the E2E sign-in has an account. data-population (SWHR2-I-0014) later replaces this seed with its four users.
+- **P5 Sign-in route.** `POST /api/session/sign-in` accepts JSON or form-encoded `{ userId, password, remember }`. Only after a successful credential check does it set `remembered_username=<userId>; Max-Age=2678400` or expire that cookie. This deliberately does not reproduce legacy defect D8. A rejected sign-in returns 401 and changes neither cookie.
+- **P6 Customer guard and return.** `requireCustomer(event)` throws 401 `{ kind: "SignOnRequired" }`. On the SPA side, a `RequireSignOn` wrapper sends a visitor to `/petstore/signin?next=<path>`, and a successful sign-in navigates to `next` (D7: with no `next`, it goes to `/petstore`). This change adds guarded placeholder pages `/petstore/account` and `/petstore/checkout` and a Checkout control on the cart page. customer-account and checkout fill those pages later and put `requireCustomer` on their own API routes.
+- **P7 Header.** `StorefrontHeader` reads `GET /api/session`. It draws the main-page link, `SearchBox`, an `Account` link (`/petstore/account`), a `Cart` link (`/petstore/cart`), and **Sign in** (`/petstore/signin`) or **Sign out** (`POST /api/session/sign-out`, then `/petstore/signed-out`). It is the shell's header on `/` and every `/petstore/**` page, because C-0253 starts at `/`. The admin and supplier areas keep their own header content. Its labels come from the existing `header` screen definitions in each locale.
+- **P8 Staff areas.** The admin and supplier sign-in routes check credentials against `ADMIN_USERS` / `SUPPLIER_USERS` with `Bun.password.verify`. With a variable unset, every sign-in to that area is refused, so the store has no built-in account and no pre-filled credentials (D1). `POST /api/supplier/sign-in` returns 409 `{ kind: "AdminSignedIn" }` while the request carries a **live** `admin_sid`. Admin `GET /api/admin/session` is guarded by `requireAdmin`. Supplier gets `GET /api/supplier/session` (guarded by `requireSupplier`) and sign-out. The admin landing's "Launch the administration tool" links to `/admin/tool`, which order-approval builds. The E2E web servers get test-only `ADMIN_USERS` / `SUPPLIER_USERS` for `admin`/`admin-pw` and `supplier`/`supplier-pw` as precomputed hash literals in the Playwright configs' `webServer.env`, because the config is not loaded under Bun.
+- **P9 Template residue.** `middleware/auth.ts` is deleted, and `routes/api/hello.ts` and its test stop reading `event.context.user`, so no middleware fakes an identity beside the real session.
+
+### Phases
+
+1. **Session core** (tasks 1.5, 3.1, 4.4): store, middleware, per-area idle limits, cart drop, cookie rename (P1–P3).
+2. **Storefront sign-on** (tasks 1.1–1.4): `signon_users` and the seed, the sign-in, sign-out and session routes, `requireCustomer`, the sign-in and signed-out screens, the guarded placeholders (P4–P6).
+3. **Header** (tasks 2.1–2.2), per P7.
+4. **Staff areas** (tasks 4.1–4.3, 5.1–5.2): admin and supplier routes, guards, screens (P8).
+5. **Internal services** (tasks 6.1–6.2): no route this change adds may import a hand-off or order-line module. See SD4.
+6. **Test harness**: route integration tests beside each new route (real `H3Event`, fake `Date`), a store unit test covering 15, 30 and 54 minutes, UI tests for the header and the sign-in, signed-out, admin and supplier screens, and one product E2E spec under `e2e/` for sign in → sign out and admin → supplier. The approved acceptance cases in `tests/acceptance/sign-on/` are the oracle and stay unedited.
+7. **CI**: no workflow change is needed. `.github/workflows/ci.yml` already runs the unit, E2E and acceptance tiers on `vortex/**` pushes and PRs. The only CI-visible change is the `webServer.env` credentials (P8). Acceptance steps stay `continue-on-error` until every capability has shipped.
+
+## Spec discrepancies
+
+Each item was found while planning and is recorded on SWHR2-T-0169 as well. None of them edits the delta spec.
+
+- **SD1 Framework sample application (SWHR2-R-0027).** This repository has no framework sample application, and its only test case (SWHR2-C-0251) is retired. The FEATURE gives the session store a per-area idle limit and covers a 30-minute limit in a store unit test. It builds no sample application. The requirement still needs the Business Owner disposition this design asks for.
+- **SD2 Checkout and account pages do not exist.** SWHR2-R-0028's scenarios are about placing an order, editing the account and entering shipping information, and those screens belong to SWHR2-I-0006 and SWHR2-I-0008. This change delivers the guard and guarded placeholders (P6), so C-0252 and C-0253 can pass now. C-0254 asserts a "first name" field on the shipping form, so it stays red until checkout ships.
+- **SD3 `signon_users` is customer-account's table.** The design names customer-account as the owner, but sign-on is built first and cannot verify a customer without it. The FEATURE creates the minimal table (P4), and customer-account extends it rather than recreating it.
+- **SD4 The hand-off service and order lines do not exist.** C-0263, C-0264 and C-0268 import `tests/acceptance/checkout/harness.ts`, `tests/acceptance/order-fulfillment/harness.ts`, `services/documents/purchase-order` and the `messages` / `op_po_line_items` tables. All of these belong to SWHR2-I-0008 and SWHR2-I-0011. In this sprint, SWHR2-R-0121 and SWHR2-R-0124 constrain only what the FEATURE adds (no route that reaches them, no role check placed in them). The three cases are expected red until those capabilities ship.
+- **SD5 Remembered name written before the check (D8).** The legacy store sets or clears the cookie before checking credentials. The approved scenarios only cover a successful sign-on, and the FEATURE writes the cookie only after success (P5).
+- **SD6 The supplier area has no idle limit.** No approved requirement gives one (the 54-minute supplier record, SIGN-REQ-0003 in `src/apps/supplier/a.yaml`, was not approved). A supplier session ends at sign-out or server restart.
