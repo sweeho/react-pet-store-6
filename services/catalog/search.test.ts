@@ -32,7 +32,10 @@ async function spy<T>(fn: () => Promise<T>): Promise<{ result: T; calls: Call[] 
   const realPrepare = client.prepare.bind(client);
   // @ts-expect-error spy replaces the overloaded prepare
   client.prepare = (sql: string, ...rest: unknown[]) => {
-    const stmt = (realPrepare as (...a: unknown[]) => Record<string, unknown>)(sql, ...rest);
+    const stmt = (realPrepare as unknown as (...a: unknown[]) => Record<string, unknown>)(
+      sql,
+      ...rest,
+    );
     for (const m of ["all", "get", "values", "run"]) {
       const orig = stmt[m] as (...a: unknown[]) => unknown;
       stmt[m] = (...args: unknown[]) => {
