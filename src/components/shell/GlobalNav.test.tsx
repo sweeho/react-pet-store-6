@@ -11,7 +11,7 @@ const areas = [
   { label: "Checkout", to: "/petstore/cart" },
   { label: "Language", to: "/petstore/change-language" },
   { label: "Sign in", to: "/petstore/signin" },
-  { label: "Account & profile", to: "/petstore/signin" },
+  { label: "Account & profile", to: "/petstore/account" },
   { label: "Order approval", to: "/admin" },
   { label: "Sales reporting", to: "/admin" },
   { label: "Supplier inventory", to: "/supplier" },

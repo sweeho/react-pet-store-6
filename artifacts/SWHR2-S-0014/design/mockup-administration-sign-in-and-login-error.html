@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Administration sign-in</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
+:root{--bg:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--brand:#4f46e5;--on-brand:#ffffff;--danger:#dc2626;--sans:Inter,system-ui,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--bg);display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr 40px;overflow:hidden}
+a{color:inherit;text-decoration:none}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+header{grid-column:1/3;display:flex;align-items:center;gap:16px;padding:0 24px 0 16px;border-bottom:1px solid var(--border);background:var(--bg);height:56px}
+.brandmark{display:flex;align-items:center;gap:8px;width:208px;font-weight:600;font-size:16px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center}
+.search{flex:1;max-width:520px;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lang{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px;font-weight:500}
+.lang a{padding:0 12px;height:32px;display:flex;align-items:center;color:var(--muted);border-right:1px solid var(--border)}
+.lang a:last-child{border-right:0}
+.lang a.on{background:var(--brand);color:var(--on-brand)}
+.ghost{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;font-weight:500}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;font-weight:500;font-size:14px;border:1px solid transparent}
+.btn.primary{background:var(--brand);color:var(--on-brand)}
+.btn.secondary{background:var(--bg);border-color:var(--border);color:var(--text)}
+.btn.sm{height:32px;padding:0 12px}
+.btn.full{width:100%}
+nav.rail{grid-row:2/4;border-right:1px solid var(--border);background:var(--surface);padding:16px 12px;display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.grp h6{font-size:12px;font-weight:600;color:var(--muted);padding:0 8px 4px;letter-spacing:.02em}
+.item{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:8px;font-weight:500}
+.item.on{background:var(--brand);color:var(--on-brand)}
+.sub{margin:2px 0 2px 24px;border-left:1px solid var(--border);padding-left:8px}
+.sub .item{height:28px;font-weight:400;color:var(--muted)}
+.lock{margin-left:auto;color:var(--muted)}.item.on .lock{color:var(--on-brand)}.lock svg{width:12px;height:12px}
+main{overflow:hidden;padding:24px 32px}
+.card{border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:16px}
+footer{grid-column:2;display:flex;align-items:center;gap:16px;padding:0 32px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+footer .sp{flex:1}
+.ptitle{margin-bottom:24px}.ptitle h1{font-size:24px;font-weight:600}.ptitle p{color:var(--muted);margin-top:4px}
+.crumb{font-size:12px;color:var(--muted);margin-bottom:8px;display:flex;gap:6px;align-items:center}.crumb svg{width:12px;height:12px}
+label.f{display:block;font-size:12px;font-weight:500;margin-bottom:6px}
+.inp{display:flex;align-items:center;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:16px}
+.inp.focus{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand)}
+.ch{font-size:16px;font-weight:600}.cs{color:var(--muted);font-size:14px;margin:4px 0 20px;line-height:20px}
+.tag{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em;margin-bottom:8px}
+</style></head><body><header><a class="brandmark" href="#"><span class="logo"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span>Pet Store</a>
+<div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search pets by keyword — e.g. “angelfish”</span></div>
+<div class="hdr-right"><div class="lang" aria-label="Language"><a class="on" href="#">English</a><a href="#">日本語</a><a href="#">中文</a></div>
+<a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Cart</a><a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account</a><a class="btn secondary sm" href="#"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>Sign in</a></div></header><nav class="rail" aria-label="Global">
+<div class="grp"><h6>Shop</h6><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a><a class="item" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Catalog</a><div class="sub"><a class="item" href="#">Birds</a><a class="item" href="#">Fish</a><a class="item" href="#">Dogs</a><a class="item" href="#">Reptiles</a><a class="item" href="#">Cats</a></div><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Shopping cart</a><a class="item" href="#"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Checkout</a></div>
+<div class="grp"><h6>You</h6><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>Sign in</a><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account &amp; profile</a><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg>Language</a></div>
+<div class="grp"><h6>Store staff</h6><a class="item on" href="#"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Order approval<span class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17V10"/><path d="M13 17V6"/><path d="M18 17v-4"/></svg>Sales reporting<span class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>Supplier inventory<span class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a></div></nav><main>
+<div class="crumb"><a href="#">Home</a><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><span>Administration</span></div>
+<div class="ptitle"><h1>Administration sign-in</h1><p>For store administrators. This is a separate sign-in from your customer account.</p></div>
+<div style="display:grid;grid-template-columns:420px 420px;gap:32px;align-items:start">
+<div><div class="tag">SIGN-IN</div><div class="card" style="padding:24px">
+<div class="ch">Sign in to Administration</div><div class="cs">Approve or deny orders and review sales.</div>
+<label class="f">User ID</label><div class="inp">jps_admin</div>
+<label class="f">Password</label><div class="inp focus">••••••••••</div>
+<a class="btn primary full" href="#" style="margin-top:4px"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>Sign in</a>
+<div style="margin-top:16px;display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)"><svg style="width:12px;height:12px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Signed out automatically after 54 minutes without activity.</div>
+</div></div>
+<div><div class="tag">AFTER REJECTED CREDENTIALS</div><div class="card" style="padding:24px;border-color:var(--danger)">
+<div style="display:flex;gap:12px;align-items:flex-start"><span style="color:var(--danger);margin-top:2px"><svg style="width:20px;height:20px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>
+<div><div class="ch">Login Error</div><p class="cs" style="margin:6px 0 20px">You could not be authenticated with the information provided. Please check your Username and Password.</p>
+<a class="btn secondary" href="#"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>Back to sign-in</a></div></div>
+</div></div></div></main><footer><span>Pet Store</span><span>·</span><a href="#">Home</a><a href="#">Change language</a><span class="sp"></span><span>English (US)</span></footer></body></html>

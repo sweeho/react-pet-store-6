@@ -41,5 +41,13 @@ export default defineConfig({
     // return in about a second.
     timeout: 120_000,
     stdout: "pipe",
+    // Operator credentials for the browser tests (userId:argon2id hash; entries joined by ";").
+    // Precomputed because this file runs under Node, which has no Bun.password.
+    env: {
+      ADMIN_USERS:
+        "admin:$argon2id$v=19$m=65536,t=2,p=1$PoyCjTXbe0xFebegBw1WzK4plVGYksanvx9UFVn5PqU$MAVlWVXK0dK6B8rBBi4cAQFe2uL/tLVt5Yp9Rfra6uA",
+      SUPPLIER_USERS:
+        "supplier:$argon2id$v=19$m=65536,t=2,p=1$wYWWH+JipcnZuelxAfMywWci1gCLFGtG+3AnmNJ1M64$u3qmvY/iCY8QCvCoFeswt0DXHJgxyr+2EyTUTXPmnik",
+    },
   },
 });
