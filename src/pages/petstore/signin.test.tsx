@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -55,5 +55,66 @@ describe("storefront sign-in", () => {
     await user.type(await screen.findByLabelText(/^password$/i), "bad");
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+});
+
+describe("sign-up form", () => {
+  function signUp(status: number) {
+    const posted: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (String(url) === "/api/account/register") {
+          posted.push(String(init?.body));
+          return Response.json(status === 200 ? { userId: "newuser" } : { kind: "UserExists" }, {
+            status,
+          });
+        }
+        return Response.json({ locale: "en_US", signedOn: false });
+      }),
+    );
+    render(
+      <MemoryRouter initialEntries={["/petstore/signin"]}>
+        <Routes>
+          <Route path="/petstore/signin" element={<Signin />} />
+          <Route path="/petstore/account" element={<p>account form</p>} />
+          <Route path="/petstore/user-creation-error" element={<p>user creation error</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const form = screen.getByRole("form", { name: /new customer/i });
+    return { posted, form };
+  }
+
+  it("[SWHR2-C-0147] the three sign-up fields are required, so an empty repeat is refused in the browser", () => {
+    const { form } = signUp(200);
+    const fields = within(form).getAllByLabelText(/user name|password/i);
+    expect(fields).toHaveLength(3);
+    for (const f of fields) expect(f).toBeRequired();
+  });
+
+  it("[SWHR2-C-0164] signing up as newuser registers the name and continues to account creation", async () => {
+    const { posted, form } = signUp(200);
+    const user = userEvent.setup();
+    await user.type(within(form).getByLabelText(/user name/i), "newuser");
+    await user.type(within(form).getByLabelText(/^password$/i), "secret1");
+    await user.type(within(form).getByLabelText(/repeat password/i), "other");
+    await user.click(within(form).getByRole("button"));
+    await screen.findByText("account form");
+    expect(JSON.parse(posted[0])).toEqual({
+      userId: "newuser",
+      password: "secret1",
+      passwordRepeat: "other",
+    });
+  });
+
+  it("[SWHR2-C-0165] signing up as an existing name shows the User Creation Error screen", async () => {
+    const { form } = signUp(409);
+    const user = userEvent.setup();
+    await user.type(within(form).getByLabelText(/user name/i), "j2ee");
+    await user.type(within(form).getByLabelText(/^password$/i), "secret1");
+    await user.type(within(form).getByLabelText(/repeat password/i), "secret1");
+    await user.click(within(form).getByRole("button"));
+    await screen.findByText("user creation error");
   });
 });
