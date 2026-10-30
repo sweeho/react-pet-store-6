@@ -60,6 +60,30 @@ test.describe("shopping cart", () => {
     await expect(page.getByText("EST-2").first()).toBeVisible();
   });
 
+  // Regression for SWHR2-T-0248 (SWHR2-R-0115): the served cart screen, not a stubbed fetch,
+  // must carry the row controls and the Update Cart / total / Check Out block.
+  // case: SWHR2-C-0086@v1
+  test("[SWHR2-C-0086] the served cart screen shows Large Angelfish with Remove, quantity, $16.50, Update Cart, total and Check Out", async ({
+    page,
+  }) => {
+    await addItem(page, "EST-1");
+    await page.goto("/petstore/cart");
+    const line = row(page, /Large Angelfish/);
+    await expect(line.getByRole("link", { name: /Large Angelfish/ })).toHaveAttribute(
+      "href",
+      /item\/EST-1/,
+    );
+    await expect(
+      line.getByRole("button", { name: /remove/i }).or(line.getByRole("link", { name: /remove/i })),
+    ).toBeVisible();
+    await expect(line.getByRole("textbox").or(line.getByRole("spinbutton"))).toHaveValue("1");
+    await expect(line.getByText(/\$16\.50/).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /update cart/i })).toBeVisible();
+    // One unit, so the total equals the unit price: the row price plus the total.
+    expect(await page.getByText(/\$16\.50/).count()).toBeGreaterThanOrEqual(2);
+    await expect(page.getByRole("link", { name: /check ?out/i })).toBeVisible();
+  });
+
   // case: SWHR2-C-0089@v1
   test("SWHR2-C-0089: Check Out from a non-empty cart opens order information entry", async ({
     page,
