@@ -45,9 +45,9 @@ export default defineConfig({
     // Precomputed because this file runs under Node, which has no Bun.password.
     env: {
       ADMIN_USERS:
-        "admin:$argon2id$v=19$m=65536,t=2,p=1$PoyCjTXbe0xFebegBw1WzK4plVGYksanvx9UFVn5PqU$MAVlWVXK0dK6B8rBBi4cAQFe2uL/tLVt5Yp9Rfra6uA",
+        "admin:$argon2id$v=19$m=8,t=1,p=1$G8TGhWZU6qATZrDg8QfPXNh/HBdmSNMdfOC6IendcUI$+IYalX+fc3nTt9vfn42t1fQ9Deks9Pj78cWjrc9nsyE",
       SUPPLIER_USERS:
-        "supplier:$argon2id$v=19$m=65536,t=2,p=1$wYWWH+JipcnZuelxAfMywWci1gCLFGtG+3AnmNJ1M64$u3qmvY/iCY8QCvCoFeswt0DXHJgxyr+2EyTUTXPmnik",
+        "supplier:$argon2id$v=19$m=8,t=1,p=1$k3wQdUiE8cLlHrUKJL/+o7Vk8wCPvEuukMSkjR9QFzE$a+4Zsl3vz3MSAxbGk+knMfH1fSLCMv3syvMoeoJMPC8",
     },
   },
 });
