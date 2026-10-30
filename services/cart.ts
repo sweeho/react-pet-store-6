@@ -52,3 +52,21 @@ export function moveCart(from: string, to: string): void {
   carts.delete(from);
   carts.set(to, cart);
 }
+
+export function addItemWithQuantity(): void {
+  throw new Error("VortexNotImplemented");
+}
+
+export function removeItem(): void {
+  throw new Error("VortexNotImplemented");
+}
+
+export function updateQuantities(): void {
+  throw new Error("VortexNotImplemented");
+}
+export function clear(): void {
+  throw new Error("VortexNotImplemented");
+}
+export async function cartTotal(): Promise<number> {
+  throw new Error("VortexNotImplemented");
+}
