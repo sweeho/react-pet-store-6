@@ -18,4 +18,16 @@ No product defect was found, so no fix rounds were run and no DEFECT ticket was 
 | ------ | -------- | ------ | ---------- |
 | none   |          | 0      |            |
 
+## QA rework round 1 (SWHR2-T-0234, head ed6215a)
+
+Cases red in the official run: SWHR2-C-0256, C-0258, C-0269 (all `sign-on/e2e/sign-on.spec.ts`). Three separate causes, each in the locked test, not in the app. No commit changes the app or the suite; all three cases are disputed with `a2a_dispute_test_case`.
+
+| Case   | Cause                                                                                                                                                                                                                                                                                           | Evidence                                                                                                                                                                             | Action   |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| C-0256 | The test calls `page.goto("/supplier")` straight after clicking admin sign-in; the sign-in response is cancelled, so no admin session exists and the supplier sign-in succeeds.                                                                                                                 | With a 500 ms wait the supplier answers 409 and shows "Sign out of Administration first, then sign in to the supplier area."                                                         | Disputed |
+| C-0258 | `getByRole("link", {name: /sign ?in\|log ?in\|try again\|back/i})` matches the header "Sign in", the sidebar "Sign in" and "Back to sign-in" (strict-mode violation). The required link is present. Making it unique would remove the header link the Storefront page header scenario requires. | Playwright: "resolved to 3 elements"                                                                                                                                                 | Disputed |
+| C-0269 | Sets Japanese with `/?locale=ja_JP`, which the app does not read; the locale API is `POST /api/session/locale`.                                                                                                                                                                                 | After that call, sign-in and sign-out, `/api/session` returns `{"locale":"ja_JP","signedOn":false}` and `/petstore/signed-out` renders "サインアウトしました" with the cart emptied. | Disputed |
+
+Result: the cases stay red in the official run until the approver edits or retires them; the sprint verdict cannot fire before then.
+
 INTEGRATION_DEFECTS_RESOLUTION: COMPLETE
