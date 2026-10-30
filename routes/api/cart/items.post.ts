@@ -1,13 +1,15 @@
 import { HTTPError, defineHandler, readBody } from "nitro/h3";
 
-import { addItem, cartFor } from "../../../services/cart";
+import { addItem, addItemWithQuantity, cartFor, cartView } from "../../../services/cart";
+import { requestLocale } from "../../../services/locale";
 
 export default defineHandler(async (event) => {
   const { session } = event.context as { session?: { id: string } };
-  const body = (await readBody(event)) as { itemId?: unknown } | undefined;
+  const body = (await readBody(event)) as { itemId?: unknown; quantity?: unknown } | undefined;
   if (typeof body?.itemId !== "string" || !body.itemId)
     throw new HTTPError({ status: 400, message: "itemId required" });
   const cart = cartFor(session?.id ?? "anonymous");
-  addItem(cart, body.itemId);
-  return { count: cart.size };
+  if (typeof body.quantity === "number") addItemWithQuantity(cart, body.itemId, body.quantity);
+  else addItem(cart, body.itemId);
+  return cartView(cart, requestLocale(event));
 });
