@@ -8,11 +8,13 @@ import Signin from "./signin";
 afterEach(() => vi.unstubAllGlobals());
 
 function setup(signInStatus = 200) {
-  const fetchMock = vi.fn(async (url: string) =>
-    String(url) === "/api/session/sign-in"
-      ? Response.json({}, { status: signInStatus })
-      : Response.json({ locale: "en_US", signedOn: false, rememberedUserName: "ann" }),
-  );
+  const sent: string[] = [];
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (String(url) !== "/api/session/sign-in")
+      return Response.json({ locale: "en_US", signedOn: false, rememberedUserName: "ann" });
+    sent.push(String(init?.body));
+    return Response.json({}, { status: signInStatus });
+  });
   vi.stubGlobal("fetch", fetchMock);
   render(
     <MemoryRouter initialEntries={["/petstore/signin?return=/petstore/account"]}>
@@ -22,7 +24,7 @@ function setup(signInStatus = 200) {
       </Routes>
     </MemoryRouter>,
   );
-  return fetchMock;
+  return sent;
 }
 
 describe("storefront sign-in", () => {
@@ -34,15 +36,13 @@ describe("storefront sign-in", () => {
   });
 
   it("submits user id, password and remember, then returns to the requested page", async () => {
-    const fetchMock = setup();
+    const sent = setup();
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/user id/i), "x");
     await user.type(screen.getByLabelText(/^password$/i), "pw");
-    await user.click(screen.getByLabelText(/remember my user name/i));
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
     await screen.findByText("account page");
-    const post = fetchMock.mock.calls.find((c) => c[0] === "/api/session/sign-in")!;
-    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({
+    expect(JSON.parse(sent[0])).toEqual({
       userId: "annx",
       password: "pw",
       remember: true,

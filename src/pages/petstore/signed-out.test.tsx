@@ -35,6 +35,6 @@ describe("signed-out screen", () => {
   it("[SWHR2-C-0269] is shown in Japanese when the session locale is ja_JP", async () => {
     await renderSignedOut("ja_JP");
     expect(await screen.findByRole("heading")).toHaveTextContent(/[぀-ヿ一-鿿]/);
-    expect(screen.getByRole("link", { name: /[぀-ヿ一-鿿]/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /[぀-ヿ一-鿿]/ }).length).toBeGreaterThan(0);
   });
 });

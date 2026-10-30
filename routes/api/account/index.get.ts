@@ -1,5 +1,5 @@
 import { defineHandler } from "nitro/h3";
 
-export default defineHandler(() => {
-  throw new Error("VortexNotImplemented");
-});
+import { requireCustomer } from "../../../services/session/guards";
+
+export default defineHandler((event) => ({ userId: requireCustomer(event) }));

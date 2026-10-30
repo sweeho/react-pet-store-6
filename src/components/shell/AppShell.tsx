@@ -1,9 +1,9 @@
 import { Dialog, DialogPanel } from "@headlessui/react";
-import { Menu, PawPrint, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, Outlet } from "react-router";
 
-import SearchBox from "@/components/storefront/SearchBox";
+import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 
 import GlobalNav from "./GlobalNav";
 
@@ -26,16 +26,7 @@ export default function AppShell({ children, header }: AppShellProps) {
         >
           <Menu className="size-5" aria-hidden="true" />
         </button>
-        <Link
-          to="/"
-          className="focus-visible:outline-ring flex items-center gap-2 text-base font-semibold outline-none focus-visible:outline-2 lg:w-52"
-        >
-          <span className="bg-primary text-primary-foreground grid size-7 place-items-center rounded-lg">
-            <PawPrint className="size-4" aria-hidden="true" />
-          </span>
-          Pet Store
-        </Link>
-        {header ?? <SearchBox />}
+        {header ?? <StorefrontHeader />}
       </header>
       <div className="bg-muted/40 row-span-2 hidden border-r lg:block">
         <GlobalNav />
