@@ -1,7 +1,7 @@
 ---
 artifact: design-check
 spec: 1
-status: partial
+status: complete
 author_role: implementation
 sprint: SWHR2-S-0016
 ticket: SWHR2-T-0247
@@ -9,11 +9,24 @@ ticket: SWHR2-T-0247
 
 # Design check — SWHR2-T-0247
 
-Playwright's Chromium is not installed in this container (`ensure-playwright-browser` fails), so no screenshots were taken. The check below is by reading `mockup-shopping-cart.html` and `mockup-shopping-cart-empty.html` against the built markup.
+Rendered with Playwright Chromium at 1440×900, mockup HTML beside the built screen at `/petstore/cart`. Screenshots are in `design-check/`.
 
-| Mockup                                       | Route / state / viewport          | Result                                                                                                                                                                                                                                                                                                                                                                                              |
-| -------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SWHR2-MCK-22 mockup-shopping-cart.html       | /petstore/cart, three lines, 1440 | Item / Quantity / Unit price / Actions columns, 72px right-aligned quantity input, Remove ghost button, Update Cart left of footer, Total + Check Out right. Differences: item id shown once beside the name (locked case C-0200/C-0088); mockup's per-row remove icon and the "Kept for this visit only" intro line are omitted; hint line sits inside the form; colours use design-system tokens. |
-| SWHR2-MCK-23 mockup-shopping-cart-empty.html | /petstore/cart, empty, 1440       | Shared `EmptyFrame` with "Your Shopping Cart is Empty."; no table, total, Update Cart or Check Out.                                                                                                                                                                                                                                                                                                 |
+## SWHR2-MCK-22 mockup-shopping-cart.html (/petstore/cart, lines in cart, 1440)
 
-Screenshots: not captured (no browser).
+Mockup: `design-check/cart-mockup.png`. Built: `design-check/cart-built.png`.
+
+Matches: Item / Quantity / Unit price columns, right-aligned 72px quantity inputs, Remove per row, Update Cart at left of the footer, Total and Check Out at right, hint line below.
+
+Differences left:
+
+- Item id and attribute shown beside the link name: locked cases C-0200/C-0088 need the id once as text.
+- Built page has two lines, not three: the seed data has no EST-3 line to show; mockup rows are sample data.
+- No Remove trash icon, no refresh/arrow icons, no breadcrumb or "Kept for this visit only" intro, hint has no info icon: not specified by the plan.
+- Header, rail and footer differ (language flags, catalog sub-list, Checkout rail item highlighted): they belong to the existing shell, not this ticket.
+- Colours and spacing use design-system tokens.
+
+## SWHR2-MCK-23 mockup-shopping-cart-empty.html (/petstore/cart, empty, 1440)
+
+Mockup: `design-check/cart-empty-mockup.png`. Built: `design-check/cart-empty-built.png`.
+
+Matches: only the empty message "Your Shopping Cart is Empty." with no table, total, Update Cart or Check Out. Differences: the shared `EmptyFrame` (icon, "Nothing here yet" heading, Back to home link) is used, as the design's target says; shell differences as above.
