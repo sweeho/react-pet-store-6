@@ -17,10 +17,15 @@ export default function MyListPanel() {
 
   useEffect(() => {
     let live = true;
-    fetch(`/api/account/my-list?locale=${encodeURIComponent(locale)}`)
-      .then((r) => (r.ok ? (r.json() as Promise<{ items: MyListItem[] }>) : { items: [] }))
-      .then((d) => live && setItems(d.items.filter((p) => typeof p.productId === "string")))
-      .catch(() => undefined);
+    const load = async () => {
+      const session = (await (await fetch("/api/session")).json()) as { signedOn?: boolean };
+      if (!session.signedOn) return;
+      const res = await fetch(`/api/account/my-list?locale=${encodeURIComponent(locale)}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { items: MyListItem[] };
+      if (live) setItems(data.items.filter((p) => typeof p.productId === "string"));
+    };
+    load().catch(() => undefined);
     return () => {
       live = false;
     };
