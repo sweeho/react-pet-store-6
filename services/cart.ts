@@ -52,3 +52,18 @@ export function moveCart(from: string, to: string): void {
   carts.delete(from);
   carts.set(to, cart);
 }
+
+/* eslint-disable @typescript-eslint/no-unused-vars -- red-phase stubs */
+const NOT_IMPLEMENTED = "VortexNotImplemented";
+
+export function addItemWithQuantity(
+  _cart: Map<string, number>,
+  _itemId: string,
+  _qty: number,
+): void {
+  throw new Error(NOT_IMPLEMENTED);
+}
+
+export function removeItem(_cart: Map<string, number>, _itemId: string): void {
+  throw new Error(NOT_IMPLEMENTED);
+}
