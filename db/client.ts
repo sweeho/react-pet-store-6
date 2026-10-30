@@ -11,6 +11,7 @@ import {
   catalogItems,
   catalogProductDetails,
   catalogProducts,
+  signonUsers,
   users,
 } from "./schema";
 
@@ -28,6 +29,7 @@ const sqlite = new Database(
 export const db = drizzle(sqlite, {
   schema: {
     users,
+    signonUsers,
     catalogCategories,
     catalogCategoryDetails,
     catalogProducts,
@@ -51,6 +53,13 @@ if (db.select().from(users).all().length === 0) {
       { name: "John Doe", email: "john@example.com" },
       { name: "Jane Smith", email: "jane@example.com" },
     ])
+    .run();
+}
+
+// Dev/e2e demo customer (sign-on design P3); data-population replaces it. Never under Vitest.
+if (!process.env.VITEST && db.select().from(signonUsers).all().length === 0) {
+  db.insert(signonUsers)
+    .values({ userId: "j2ee", passwordHash: Bun.password.hashSync("j2ee") })
     .run();
 }
 
@@ -103,6 +112,18 @@ const items: [string, string, string, L3, L3, readonly [number, number][]][] = [
     "fish1.jpg",
     ["Large Angelfish", "大きなエンゼルフィッシュ", "大天使鱼"],
     ["Spotted", "斑点あり", "有斑点"],
+    [
+      [1650, 1000],
+      [195100, 155100],
+      [14200, 8600],
+    ],
+  ],
+  [
+    "EST-2",
+    "FI-SW-01",
+    "fish1.jpg",
+    ["Thin Angelfish", "細身のエンゼルフィッシュ", "细长天使鱼"],
+    ["Pale", "淡色", "浅色"],
     [
       [1650, 1000],
       [195100, 155100],

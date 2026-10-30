@@ -1,23 +1,18 @@
-import { defineHandler, getCookie, setCookie } from "nitro/h3";
+import { defineHandler } from "nitro/h3";
 
-import { DEFAULT_LOCALE } from "../shared/i18n/locale";
+import { SUPPORTED_LOCALES, type SupportedLocale } from "../shared/i18n/locale";
+import { attachSession } from "../services/session/store";
 
-export interface Session {
-  id: string;
-  locale: string;
-}
-
-// In-memory and server-owned: the session is not persisted to SQLite (design.md, Data).
-const sessions = new Map<string, Session>();
-const COOKIE = "sid";
+export type { Session } from "../services/session/store";
 
 export default defineHandler((event) => {
-  const existing = getCookie(event, COOKIE);
-  let session = existing ? sessions.get(existing) : undefined;
-  if (!session) {
-    session = { id: crypto.randomUUID(), locale: DEFAULT_LOCALE };
-    sessions.set(session.id, session);
-    setCookie(event, COOKIE, session.id, { httpOnly: true, sameSite: "lax", path: "/" });
+  const session = attachSession(event);
+  // A page link may choose the language (`/?locale=ja_JP`), the same choice the language flags make.
+  const requested = event.url.searchParams.get("locale");
+  if (
+    !event.url.pathname.startsWith("/api/") &&
+    SUPPORTED_LOCALES.includes(requested as SupportedLocale)
+  ) {
+    session.locale = requested as string;
   }
-  event.context.session = session;
 });

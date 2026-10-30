@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Storefront header</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>
+:root{--bg:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--brand:#4f46e5;--on-brand:#ffffff;--success:#16a34a;--sans:Inter,system-ui,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--bg);overflow:hidden}
+a{color:inherit;text-decoration:none}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.hdr{display:flex;align-items:center;gap:16px;padding:0 24px 0 16px;background:var(--bg);height:56px}
+.brandmark{display:flex;align-items:center;gap:8px;width:208px;font-weight:600;font-size:16px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center}
+.search{flex:1;max-width:520px;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted)}
+.search span{flex:1}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lang{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px;font-weight:500}
+.lang a{padding:0 12px;height:32px;display:flex;align-items:center;color:var(--muted);border-right:1px solid var(--border)}
+.lang a:last-child{border-right:0}
+.lang a.on{background:var(--brand);color:var(--on-brand)}
+.ghost{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;font-weight:500;color:var(--text)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;font-weight:500;font-size:14px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.card{border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:16px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500}
+.pill .dot{width:6px;height:6px;border-radius:999px;background:currentColor}
+.ptitle h1{font-size:24px;font-weight:600}.ptitle p{color:var(--muted);margin-top:4px}
+.cs{color:var(--muted);font-size:12px;margin-top:6px}
+.wrap{padding:32px 40px;background:var(--surface);height:900px}
+.lbl{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 8px;letter-spacing:.02em}
+.frame{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);margin-bottom:32px}
+.under{display:flex;gap:16px;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg);font-size:12px;color:var(--muted)}
+.under b{color:var(--text);font-weight:500}
+.diff{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.mark{outline:2px solid var(--brand);outline-offset:3px}
+.ct{font-weight:600;display:flex;gap:8px;align-items:center}
+</style></head><body><div class="wrap">
+<div class="ptitle" style="margin-bottom:24px"><h1>Storefront header</h1><p>The same header on every storefront page. Only the sign-in control changes with the visitor’s state.</p></div>
+<div class="lbl"><span class="pill" style="background:var(--bg);border:1px solid var(--border);color:var(--muted)"><span class="dot"></span>Visitor</span>Not signed in</div>
+<div class="frame"><div class="hdr"><a class="brandmark" href="#"><span class="logo"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span>Pet Store</a>
+<div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search pets by keyword — e.g. “angelfish”</span></div>
+<div class="hdr-right"><div class="lang" aria-label="Language"><a class="on" href="#">English</a><a href="#">日本語</a><a href="#">中文</a></div>
+<a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Cart</a><a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account</a><a class="btn mark" href="#"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>Sign in</a></div></div><div class="under"><span>Shows <b>Sign in</b></span><span>·</span><span>No <b>Sign out</b></span><span>·</span><span>Account and Checkout ask the visitor to sign in first</span></div></div>
+<div class="lbl"><span class="pill" style="background:var(--bg);border:1px solid var(--border);color:var(--success)"><span class="dot"></span>Signed in</span>Customer signed in, 2 items in the cart</div>
+<div class="frame"><div class="hdr"><a class="brandmark" href="#"><span class="logo"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span>Pet Store</a>
+<div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search pets by keyword — e.g. “angelfish”</span></div>
+<div class="hdr-right"><div class="lang" aria-label="Language"><a class="on" href="#">English</a><a href="#">日本語</a><a href="#">中文</a></div>
+<a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Cart <span class="pill" style="background:var(--brand);color:var(--on-brand);height:18px;padding:0 6px">2</span></a><a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account</a><a class="btn mark" href="#"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</a></div></div><div class="under"><span>Shows <b>Sign out</b></span><span>·</span><span>No <b>Sign in</b></span><span>·</span><span>Account opens Account information directly</span></div></div>
+<div class="diff">
+<div class="card"><div class="ct"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Pet Store</div><div class="cs">Logo and name go back to the Home screen.</div></div>
+<div class="card"><div class="ct"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Keyword search</div><div class="cs">Finds items matching any word typed.</div></div>
+<div class="card"><div class="ct"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</div><div class="cs">Ends the visit and empties the cart. The language stays as chosen.</div></div>
+</div></div></body></html>

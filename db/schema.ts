@@ -7,6 +7,13 @@ export const users = sqliteTable("users", {
   email: text("email").notNull().unique(),
 });
 
+// Storefront sign-on credentials; password_hash is a Bun.password (argon2id) hash.
+// customer-account (SWHR2-I-0006) adds its rows here and keeps these two columns.
+export const signonUsers = sqliteTable("signon_users", {
+  userId: text("user_id").primaryKey(),
+  passwordHash: text("password_hash").notNull(),
+});
+
 // Catalog display tables. `*_details` rows are keyed by (id, locale); the
 // column names are fixed by tests/acceptance/catalog-browsing/harness.ts.
 export const catalogCategories = sqliteTable(

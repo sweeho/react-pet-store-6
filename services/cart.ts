@@ -39,3 +39,16 @@ export async function lines(cart: Map<string, number>, locale?: string): Promise
   }
   return out;
 }
+
+/** Empties and forgets the cart of an ended session. */
+export function discardCart(sessionId: string): void {
+  carts.delete(sessionId);
+}
+
+/** Keeps a cart across a session id renewal. */
+export function moveCart(from: string, to: string): void {
+  const cart = carts.get(from);
+  if (!cart) return;
+  carts.delete(from);
+  carts.set(to, cart);
+}
