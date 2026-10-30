@@ -13,7 +13,7 @@ upstream: [artifacts/SWHR2-S-0017/SPRINT-PLAN.md]
 
 ## Executive Summary
 
-**Verdict: FAIL, escalate.** The sprint delivered no code. FEATURE SWHR2-T-0247 (Shopping cart) stayed DEFERRED, so the integrated branch has only the add-only cart stub from earlier sprints. Of 21 scenarios, 6 pass and 15 fail (see verdict lines below). The missing work is a feature, not a fix, so it was filed as future-sprint DEFECT SWHR2-T-0255. One unrelated flaky e2e was filed as SWHR2-T-0256.
+**Verdict: FAIL, escalate.** The sprint delivered no code. FEATURE SWHR2-T-0247 (Shopping cart) stayed DEFERRED, so the integrated branch has only the add-only cart stub from earlier sprints. Of 22 scenarios, 8 pass and 14 fail (see verdict lines below). The missing work is a feature, not a fix, so it was filed as future-sprint DEFECT SWHR2-T-0255. One unrelated flaky e2e was filed as SWHR2-T-0256.
 
 ## E2E Test Status
 
