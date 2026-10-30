@@ -31,6 +31,8 @@ export default function AddToCart({ itemId, size }: { itemId: string; size?: "sm
       <Button type="button" size={size} onClick={() => void add()}>
         <ShoppingCart aria-hidden="true" />
         {t.addToCart}
+        {/* The legacy button is an image whose name is always "Add to Cart"; keep that name in every language. */}
+        {locale === "en_US" ? null : <span className="sr-only"> (Add to Cart)</span>}
       </Button>
       {state === "idle" ? null : (
         <span role="status" className="text-muted-foreground text-xs">
