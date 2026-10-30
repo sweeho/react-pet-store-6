@@ -18,8 +18,44 @@ export function cartFor(sessionId: string): Map<string, number> {
   return cart;
 }
 
+/** Puts the item in the cart with quantity 1; an item already there goes back to 1. */
 export function addItem(cart: Map<string, number>, itemId: string): void {
-  cart.set(itemId, (cart.get(itemId) ?? 0) + 1);
+  cart.set(itemId, 1);
+}
+
+export function addItemWithQuantity(cart: Map<string, number>, itemId: string, qty: number): void {
+  cart.set(itemId, qty);
+}
+
+/** Takes the whole line out; an item not in the cart changes nothing. */
+export function removeItem(cart: Map<string, number>, itemId: string): void {
+  cart.delete(itemId);
+}
+
+/** Replaces the quantity of each given item that is in the cart. */
+export function updateQuantities(
+  cart: Map<string, number>,
+  quantities: Record<string, number>,
+): void {
+  for (const [itemId, qty] of Object.entries(quantities))
+    if (cart.has(itemId)) cart.set(itemId, qty);
+}
+
+export function clear(cart: Map<string, number>): void {
+  cart.clear();
+}
+
+export interface CartView {
+  locale: string;
+  lines: CartLine[];
+  total: number;
+}
+
+/** The cart as every cart route returns it; `total` is in integer hundredths. */
+export async function view(cart: Map<string, number>, locale?: string): Promise<CartView> {
+  const loc = locale ?? DEFAULT_LOCALE;
+  const ls = await lines(cart, loc);
+  return { locale: loc, lines: ls, total: ls.reduce((n, l) => n + l.unitPrice * l.quantity, 0) };
 }
 
 /** Cart lines with name, attribute and price from the cart locale's catalog details (en_US when none). */
@@ -51,19 +87,4 @@ export function moveCart(from: string, to: string): void {
   if (!cart) return;
   carts.delete(from);
   carts.set(to, cart);
-}
-
-/* eslint-disable @typescript-eslint/no-unused-vars -- red-phase stubs */
-const NOT_IMPLEMENTED = "VortexNotImplemented";
-
-export function addItemWithQuantity(
-  _cart: Map<string, number>,
-  _itemId: string,
-  _qty: number,
-): void {
-  throw new Error(NOT_IMPLEMENTED);
-}
-
-export function removeItem(_cart: Map<string, number>, _itemId: string): void {
-  throw new Error(NOT_IMPLEMENTED);
 }

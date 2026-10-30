@@ -1,4 +1,5 @@
 import { ShoppingCart } from "lucide-react";
+import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui";
 import { useScreen } from "@/locales/useScreen";
@@ -9,6 +10,7 @@ import { useLocale } from "./LocaleProvider";
 export default function AddToCart({ itemId, size }: { itemId: string; size?: "sm" | "default" }) {
   const { locale } = useLocale();
   const screen = useScreen("catalog", locale);
+  const navigate = useNavigate();
   const [state, setState] = useState<"idle" | "added" | "failed">("idle");
   if ("error" in screen) return screen.error;
   const t = screen.definition;
@@ -21,6 +23,7 @@ export default function AddToCart({ itemId, size }: { itemId: string; size?: "sm
         body: JSON.stringify({ itemId }),
       });
       setState(res.ok ? "added" : "failed");
+      if (res.ok) void navigate("/petstore/cart");
     } catch {
       setState("failed");
     }
