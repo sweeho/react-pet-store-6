@@ -91,6 +91,32 @@ describe("cart routes", () => {
     expect(ids((await getCart(app, cookies)).body)).toEqual(["EST-1"]);
   });
 
+  // Regression for SWHR2-T-0255 (SWHR2-R-0033): add-with-quantity through the cart route, not
+  // only the cart model.
+  // case: SWHR2-C-0080@v1
+  it("SWHR2-C-0080: adding EST-1 x 5 through the cart route to a cart holding EST-2 x 1 creates a line with quantity 5", async () => {
+    const app = await cartApp();
+    const cookies = sessionOf(await getCart(app));
+    expect((await addToCart(app, cookies, "EST-2")).status).toBe(200);
+    expect((await addToCart(app, cookies, "EST-1", 5)).status).toBe(200);
+    const v = (await getCart(app, cookies)).body;
+    expect(new Set(ids(v))).toEqual(new Set(["EST-1", "EST-2"]));
+    expect(qty(v, "EST-1")).toBe(5);
+    expect(qty(v, "EST-2")).toBe(1);
+  });
+
+  // case: SWHR2-C-0081@v1
+  it("SWHR2-C-0081: adding EST-1 x 2 through the cart route when the cart holds EST-1 x 3 sets the quantity to 2", async () => {
+    const app = await cartApp();
+    const cookies = sessionOf(await getCart(app));
+    await addToCart(app, cookies, "EST-1", 3);
+    expect(qty((await getCart(app, cookies)).body, "EST-1")).toBe(3);
+    expect((await addToCart(app, cookies, "EST-1", 2)).status).toBe(200);
+    const v = (await getCart(app, cookies)).body;
+    expect(ids(v)).toEqual(["EST-1"]);
+    expect(qty(v, "EST-1")).toBe(2);
+  });
+
   // case: SWHR2-C-0090@v1
   // The case's expected result: "The response is the empty-cart order error page (its known heading
   // or text), and no order is created." Both halves are asserted below.
