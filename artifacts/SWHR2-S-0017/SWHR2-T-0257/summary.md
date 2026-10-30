@@ -19,3 +19,5 @@ AC coverage: 14 of 15 cases pass locally; C-0085 disputed (locked test's `signIn
 Verification: `bun run lint` exit 0; `bun run typecheck` exit 0; `bun run test` 205 passed; `bun run test:acceptance:e2e` shopping-cart C-0084/0088/0096/0097 pass. `bun run test:e2e`: 2 failures in `e2e/account.spec.ts`, identical without these changes (verified with the changes stashed), so pre-existing.
 
 Not done (not on this ticket): orders and checkout (C-0089, 0090, 0101).
+
+CODE-REVIEW: self-review — no sub-agent run in this container; reviewed the diff by hand. Fixed: lint error from setState in an effect (moved to a version-counter refetch). Accepted: Update Cart drops a line whose quantity is blank or below 1 (matches the legacy cart). Rejected: validating the quantity on add (spec R-0033 says not to).
