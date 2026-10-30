@@ -4,6 +4,7 @@ import {
   addToCart,
   call,
   cartApp,
+  cookieValue,
   getCart,
   ids,
   qty,
@@ -69,5 +70,28 @@ describe("cart routes", () => {
     expect(r.status).toBe(200);
     expect(qty(r.body, "EST-1")).toBe(3);
     expect((r.body as { total: number }).total).toBe(4950);
+  });
+
+  it("[SWHR2-C-0084] an item added in one session does not appear in another session's cart", async () => {
+    const app = await cartApp();
+    const a = sessionOf(await getCart(app));
+    const b = sessionOf(await getCart(app));
+    await addToCart(app, a, "EST-1");
+    expect(ids((await getCart(app, a)).body)).toEqual(["EST-1"]);
+    expect(ids((await getCart(app, b)).body)).toEqual([]);
+  });
+
+  it("[SWHR2-C-0085] signing out with EST-1 in the cart leaves the cart empty afterwards", async () => {
+    const app = await cartApp();
+    const s = sessionOf(await getCart(app));
+    await addToCart(app, s, "EST-1");
+    const out = await call(app, "../../../routes/api/session/sign-out.post", {
+      method: "POST",
+      url: "/api/session/sign-out",
+      cookies: s,
+    });
+    const next = { ps_sid: cookieValue(out.setCookies, "ps_sid") ?? s.ps_sid };
+    expect(ids((await getCart(app, next)).body)).toEqual([]);
+    expect(ids((await getCart(app)).body)).toEqual([]);
   });
 });

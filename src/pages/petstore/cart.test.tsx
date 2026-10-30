@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -53,5 +53,39 @@ describe("cart screen", () => {
     expect(screen.queryByRole("button", { name: /update cart/i })).toBeNull();
     expect(screen.queryByRole("link", { name: /check ?out/i })).toBeNull();
     expect(screen.queryByText(/\$\d/)).toBeNull();
+  });
+
+  it("[SWHR2-C-0088] Remove on the EST-1 row redisplays the cart showing only EST-2", async () => {
+    const line = (itemId: string, name: string) => ({
+      itemId,
+      name,
+      productName: "Angelfish",
+      attribute: "",
+      quantity: 1,
+      unitPrice: 1650,
+      lineTotal: 1650,
+    });
+    const both = {
+      locale: "en_US",
+      total: 3300,
+      lines: [line("EST-1", "Large"), line("EST-2", "Small")],
+    };
+    const only2 = { locale: "en_US", total: 1650, lines: [line("EST-2", "Small")] };
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      Response.json(init?.method === "DELETE" ? only2 : both),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <MemoryRouter>
+        <CartPage />
+      </MemoryRouter>,
+    );
+    const row = (await screen.findByRole("link", { name: /Large/ })).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: /remove/i }));
+    await waitFor(() => expect(screen.queryByText("EST-1")).toBeNull());
+    expect(screen.getByText("EST-2")).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([u, i]) => String(u).endsWith("/EST-1") && i?.method === "DELETE"),
+    ).toBe(true);
   });
 });
