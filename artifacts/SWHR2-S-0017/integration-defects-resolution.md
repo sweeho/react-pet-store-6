@@ -30,4 +30,18 @@ upstream: [artifacts/SWHR2-S-0017/SPRINT-PLAN.md]
 | DEFECT-1 | Escalated | 0      | SWHR2-T-0255 |
 | DEFECT-2 | Escalated | 0      | SWHR2-T-0256 |
 
+## QA rework round 1 (SWHR2-T-0257)
+
+Head commit: 3724b7c. Official run red: 15 cases. These are the sprint's own acceptance work, so no DEFECT was filed.
+
+| Cause                                     | Cases                                | Fix                                                                                                             | Result       |
+| ----------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------- | ------------ |
+| Cart model has no set-quantity or remove  | C-0080, 0081, 0094, 0098, 0099, 0100 | `addItemWithQuantity`, `removeItem`, delete route, `quantity` on add                                            | pass locally |
+| No failure router                         | C-0091, 0092                         | `src/errors/routeFailure.ts`                                                                                    | pass locally |
+| Cart screen was a read-only list          | C-0086, 0087, 0084, 0088             | rebuilt `cart.tsx` to the mockups, locale strings                                                               | pass locally |
+| Add to Cart did not show the cart         | C-0096, 0097                         | navigate to `/petstore/cart` after add                                                                          | pass locally |
+| Locked test's sign-in helper is ambiguous | C-0085                               | none: disputed with `a2a_dispute_test_case` (target test, `tests/acceptance/shopping-cart/e2e/cart.spec.ts:11`) | still red    |
+
+Round-1 result: 14 of 15 pass locally. DEFECT-1 (SWHR2-T-0255) is partly addressed; orders and checkout (C-0089, 0090, 0101) remain.
+
 INTEGRATION_DEFECTS_RESOLUTION: ESCALATED
