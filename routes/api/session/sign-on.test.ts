@@ -133,7 +133,7 @@ describe("storefront sign-on", () => {
     const app = await loadApp();
     const r = await signInCustomer(app, "ann", true);
     const c = r.setCookies.find((s) => s.startsWith("remembered_username="));
-    expect(c).toMatch(/^remembered_username=ann(;|$)/);
+    expect(c ?? "").toMatch(/^remembered_username=ann(;|$)/);
     expect(maxAge(c!)).toBe("2678400");
   });
 
