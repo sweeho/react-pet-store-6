@@ -25,7 +25,7 @@ Summary line: `12 passed (5.3s)`
 | e2e/smoke.spec.ts        | 3                                | 0      | 0       |
 | e2e/sign-on.spec.ts      | not present in the regular suite |        |         |
 
-Additional run: `PLAYWRIGHT_BROWSERS_PATH=/tmp/pw bunx playwright test --config playwright.acceptance.config.ts tests/acceptance/sign-on` → `5 failed`, `4 passed (8.4s)`.
+Additional run: `PLAYWRIGHT_BROWSERS_PATH=/tmp/pw bunx playwright test --config playwright.acceptance.config.ts tests/acceptance/sign-on` → first run `5 failed`, `4 passed (8.4s)`; re-run on the sprint head after rework: `4 failed`, `5 passed (9.3s)`.
 
 | Case   | Result | Cause                                                                   |
 | ------ | ------ | ----------------------------------------------------------------------- |
@@ -40,5 +40,7 @@ Additional run: `PLAYWRIGHT_BROWSERS_PATH=/tmp/pw bunx playwright test --config 
 | C-0269 | fail   | test sets locale via unsupported `?locale=`; app verified correct       |
 
 No traces were kept (retries 0). Details in `qa-test-report.md` Issues Found.
+
+Regular suite re-run on the sprint head: `12 passed (5.8s)`.
 
 E2E-RESULT: chromium 12 passed, 0 failed, 0 skipped

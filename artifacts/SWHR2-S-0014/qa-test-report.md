@@ -14,14 +14,14 @@ upstream: [artifacts/SWHR2-S-0014/SPRINT-PLAN.md]
 
 ## Executive Summary
 
-Sprint goal: SWHR2-I-0005 Sign-on and access control. No product defect was found. Of the 19 scenarios, 11 pass (`SCENARIO-VERDICT` lines below), 5 are not testable here because the components they need do not exist yet (checkout, order lines, message hand-off, framework sample app), and 3 acceptance e2e cases fail because of faults in the locked tests, not the app (see Issues Found). Verdict: acceptable; not claimed "production-ready".
+Sprint goal: SWHR2-I-0005 Sign-on and access control. No product defect was found. Of the 19 scenarios, 11 pass (`SCENARIO-VERDICT` lines below), 5 are not testable here because the components they need do not exist yet (checkout, order lines, message hand-off, framework sample app), and 2 acceptance e2e cases (C-0258, C-0269) fail because of faults in the locked tests, not the app, and C-0252/C-0254 wait on checkout (see Issues Found). Verdict: acceptable; not claimed "production-ready".
 
 ## E2E Test Status
 
 Run with a Chromium 1223 build exposed to Playwright through `PLAYWRIGHT_BROWSERS_PATH` (the repo preflight expects 1155 and refuses).
 
 - `bunx playwright test` (regular suite): `12 passed (5.3s)`. Details in `integration-test-result.md`.
-- `bunx playwright test --config playwright.acceptance.config.ts tests/acceptance/sign-on`: `5 failed, 4 passed (8.4s)`. Failures: C-0252, C-0254 (checkout not built, SWHR2-I-0008), C-0256 (test races the admin sign-in), C-0258 (selector matches 3 links), C-0269 (test sets locale through an unsupported `?locale=` query).
+- `bunx playwright test --config playwright.acceptance.config.ts tests/acceptance/sign-on`: `5 failed, 4 passed (8.4s)`. Re-run on the sprint head after rework SWHR2-T-0234 (b836d3b): `5 passed` / `4 failed (9.3s)`; C-0256 now passes (20/20 repeats). Remaining failures: C-0252, C-0254 (checkout not built, SWHR2-I-0008), C-0258 (selector matches 3 links), C-0269 (test sets locale through an unsupported `?locale=` query).
 
 ## Unit Test Results
 
@@ -52,7 +52,7 @@ No fix was made: these are design decisions, not clear slips. Reported for the d
 
 No product defects. Findings in the locked acceptance tests (not edited; disputing would block this ticket and stall the sprint, so they are recorded here for the owner of the suite):
 
-- I1 C-0256 (`sign-on.spec.ts:90`): `page.goto("/supplier")` runs right after clicking admin sign-in, before the POST completes, so no admin session exists. With a wait, the app answers 409 and shows "Sign out of Administration first…" (verified).
+- I1 FIXED by SWHR2-T-0234 (test-env hashes cheaper, warm-up in `e2e/global-setup.ts`). C-0256 (`sign-on.spec.ts:90`): `page.goto("/supplier")` runs right after clicking admin sign-in, before the POST completes, so no admin session exists. With a wait, the app answers 409 and shows "Sign out of Administration first…" (verified).
 - I2 C-0258 (`:120`): `getByRole("link", {name:/sign ?in|…|back/i})` matches the header "Sign in", the sidebar "Sign in" and "Back to sign-in" (strict-mode violation). The required link is present.
 - I3 C-0269 (`:151`): sets Japanese with `/?locale=ja_JP`, which the app does not read (locale is set by `POST /api/session/locale`). Verified with that call: after sign-in and sign-out, `/api/session` returns `{"locale":"ja_JP","signedOn":false}` and `/petstore/signed-out` renders "サインアウトしました".
 - I4 C-0252 / C-0254: need checkout pages (SWHR2-I-0008); `requireCustomer` on the account route is covered by C-0253 (pass).
@@ -82,4 +82,4 @@ SPEC-GAP: the repo's browser preflight pins chromium-1155 while the container sh
 
 ## Recommendation
 
-Accept the sprint: no product defect found, the regular e2e suite is green and all scenarios that can be exercised pass. Follow-ups for the suite owner: fix I1 to I3 in the acceptance spec, and run the checkout and messaging scenarios when SWHR2-I-0008 and I-0011 land.
+Accept the sprint: no product defect found, the regular e2e suite is green and all scenarios that can be exercised pass. Follow-ups for the suite owner: fix I2 and I3 in the acceptance spec (still disputed), and run the checkout and messaging scenarios when SWHR2-I-0008 and I-0011 land.
