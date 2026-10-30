@@ -22,6 +22,10 @@ export default function PetstoreSignin() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [newUser, setNewUser] = useState("");
+  const [newSecret, setNewSecret] = useState("");
+  const [newSecretAgain, setNewSecretAgain] = useState("");
+  const [signUpFailed, setSignUpFailed] = useState(false);
 
   // Pre-fill only the remembered user name, never credentials.
   useEffect(() => {
@@ -52,6 +56,24 @@ export default function PetstoreSignin() {
     }).catch(() => null);
     if (res?.ok) void navigate(safeReturn(params.get("return")));
     else setFailed(true);
+  };
+
+  // The two passwords are not compared; the first one is used (SWHR2-R-0009.03).
+  const signUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignUpFailed(false);
+    const res = await fetch("/api/account/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: newUser,
+        password: newSecret,
+        passwordRepeat: newSecretAgain,
+      }),
+    }).catch(() => null);
+    if (res?.ok) void navigate("/petstore/account");
+    else if (res?.status === 409) void navigate("/petstore/user-creation-error");
+    else setSignUpFailed(true);
   };
 
   return (
@@ -105,7 +127,7 @@ export default function PetstoreSignin() {
           </Button>
         </form>
         <form
-          onSubmit={(e) => e.preventDefault()}
+          onSubmit={(e) => void signUp(e)}
           className="bg-background rounded-lg border p-6"
           aria-label={t.newTitle}
         >
@@ -114,15 +136,46 @@ export default function PetstoreSignin() {
           <label htmlFor="new-user" className="text-sm font-medium">
             {t.newUserName}
           </label>
-          <input id="new-user" name="newUser" className={field} placeholder="ann" />
+          <input
+            id="new-user"
+            name="newUser"
+            autoComplete="username"
+            required
+            value={newUser}
+            onChange={(e) => setNewUser(e.target.value)}
+            className={field}
+          />
           <label htmlFor="new-secret" className="text-sm font-medium">
             {t.newSecret}
           </label>
-          <input id="new-secret" name="newSecret" type="password" className={field} />
+          <input
+            id="new-secret"
+            name="newSecret"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={newSecret}
+            onChange={(e) => setNewSecret(e.target.value)}
+            className={field}
+          />
           <label htmlFor="new-secret2" className="text-sm font-medium">
             {t.newSecretAgain}
           </label>
-          <input id="new-secret2" name="newSecret2" type="password" className={field} />
+          <input
+            id="new-secret2"
+            name="newSecret2"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={newSecretAgain}
+            onChange={(e) => setNewSecretAgain(e.target.value)}
+            className={field}
+          />
+          {signUpFailed && (
+            <p role="alert" className="text-destructive mb-4 text-sm">
+              {t.signUpFailed}
+            </p>
+          )}
           <Button type="submit" variant="secondary" className="w-full">
             <UserPlus aria-hidden="true" className="mr-2 size-4" />
             {t.create}

@@ -17,9 +17,10 @@ const definition: ScreenDefinition = {
   failed: "That user ID and password were not recognised. Check them and try again.",
   newTitle: "New customer",
   newHelp: "Pick a user name and password. You will add your contact and card details next.",
-  newUserName: "Choose a user name",
-  newSecret: "Choose a pass phrase",
-  newSecretAgain: "Type the pass phrase again",
+  newUserName: "User name",
+  newSecret: "Password",
+  newSecretAgain: "Repeat password",
+  signUpFailed: "The account could not be created. Check the details and try again.",
   create: "Create new account",
   idleNote:
     "For your security you are signed out after 15 minutes without activity, and your cart is emptied.",

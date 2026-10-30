@@ -4,7 +4,9 @@ import { Link } from "react-router";
 import { areas } from "@/components/shell/areas";
 import CategoryPanel from "@/components/storefront/CategoryPanel";
 import { LocaleProvider } from "@/components/storefront/LocaleProvider";
+import MyListPanel from "@/components/storefront/MyListPanel";
 import PetMap from "@/components/storefront/PetMap";
+import PetTipsBanner from "@/components/storefront/PetTipsBanner";
 
 const STAFF_ROUTES = ["/admin", "/supplier"];
 const CATALOG_ROUTE = "/petstore";
@@ -31,6 +33,7 @@ function HomeContent() {
     <div className="mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row">
       <CategoryPanel />
       <div className="min-w-0 flex-1">
+        <PetTipsBanner screen="home" />
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl leading-8 font-semibold">Welcome to Pet Store</h1>
@@ -92,6 +95,7 @@ function HomeContent() {
           })}
         </ul>
       </div>
+      <MyListPanel />
     </div>
   );
 }

@@ -94,3 +94,60 @@ export const catalogItemDetails = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.itemId, t.locale] })],
 );
+
+// Customer account (SWHR2-I-0006). A customer is keyed by its sign-on user id and owns one
+// account (status, contact, payment card) and one profile.
+export const addresses = sqliteTable("addresses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  street1: text("street1").notNull(),
+  street2: text("street2").notNull().default(""),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zip: text("zip").notNull(),
+  country: text("country").notNull(),
+});
+
+export const contactInfo = sqliteTable("contact_info", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  givenName: text("given_name").notNull(),
+  familyName: text("family_name").notNull(),
+  telephone: text("telephone").notNull(),
+  email: text("email").notNull(),
+  addressId: integer("address_id")
+    .notNull()
+    .references(() => addresses.id),
+});
+
+export const customers = sqliteTable("customers", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => signonUsers.userId),
+});
+
+export const customerAccounts = sqliteTable(
+  "customer_accounts",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => customers.userId),
+    status: text("status").notNull().default("active"),
+    contactId: integer("contact_id")
+      .notNull()
+      .references(() => contactInfo.id),
+    cardNumber: text("card_number").notNull(),
+    cardType: text("card_type").notNull(),
+    cardExpiryMonth: integer("card_expiry_month").notNull(),
+    cardExpiryYear: integer("card_expiry_year").notNull(),
+  },
+  (t) => [check("customer_accounts_status", sql`${t.status} in ('active', 'disabled')`)],
+);
+
+export const customerProfiles = sqliteTable("customer_profiles", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => customers.userId),
+  preferredLanguage: text("preferred_language").notNull().default("en_US"),
+  favouriteCategory: text("favourite_category"),
+  myListOn: integer("my_list_on", { mode: "boolean" }).notNull().default(true),
+  bannerOn: integer("banner_on", { mode: "boolean" }).notNull().default(true),
+});
