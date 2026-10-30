@@ -13,7 +13,12 @@ const removeIn = (r: ReturnType<Page["getByRole"]>) =>
 async function signIn(page: Page) {
   await page.goto("/petstore/signin");
   await page.getByLabel(/user id/i).fill("j2ee");
-  await page.getByLabel(/password/i).fill("j2ee");
+  // The sign-up form on the same page has its own password fields; use the sign-in form's.
+  await page
+    .locator("form")
+    .filter({ has: page.getByLabel(/user id/i) })
+    .getByLabel(/password/i)
+    .fill("j2ee");
   await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   await expect(page.getByText(/^sign out$/i)).toBeVisible();
 }
