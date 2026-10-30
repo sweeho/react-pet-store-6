@@ -92,7 +92,9 @@ describe("cart routes", () => {
   });
 
   // case: SWHR2-C-0090@v1
-  it("SWHR2-C-0090: submitting an order with an empty cart is routed to the empty-cart error page and creates no order", async () => {
+  // The case's expected result: "The response is the empty-cart order error page (its known heading
+  // or text), and no order is created." Both halves are asserted below.
+  it("SWHR2-C-0090: submitting an order with an empty cart shows the configured empty-cart error page", async () => {
     const app = await cartApp();
     await seedCustomer(app.client, "j2ee", "j2ee");
     const signed = await call(app, "../../../routes/api/session/sign-in.post", {
@@ -167,7 +169,7 @@ describe("cart routes", () => {
 
 describe("failure routing", () => {
   // case: SWHR2-C-0091@v1
-  it("SWHR2-C-0091: a specific failure with no mapping of its own is routed to the page of its general kind", async () => {
+  it("SWHR2-C-0091: a specific failure with no mapping of its own is routed to the error page of the general kind it belongs to", async () => {
     const app = await cartApp();
     // A real request handler raises the item-not-found failure for an item that does not exist.
     const r = await call(app, "../../../routes/api/catalog/items/[itemId].get", {
@@ -179,28 +181,49 @@ describe("failure routing", () => {
     // The failure is more specific than the catalog kind it belongs to.
     expect(failure.kind).not.toBe("CatalogError");
     expect(failure.kinds[0]).toBe(failure.kind);
+    // The application's own configured error-page table: no table is passed in.
     const { routeFailure } = await import("../../../src/errors/routeFailure");
-    // Error routing configured with a page only for the general catalog kind.
-    expect(routeFailure(failure as never, { CatalogError: "catalog-error" })).toBe("catalog-error");
+    const serverError = routeFailure({ kind: "NoSuchKind", kinds: ["NoSuchKind"] });
+    // The specific failure on its own has no mapping in that table ...
+    expect(routeFailure({ kind: failure.kind, kinds: [failure.kind] })).toBe(serverError);
+    // ... the general catalog kind has one ...
+    const catalogPage = routeFailure({ kind: "CatalogError", kinds: ["CatalogError"] });
+    expect(catalogPage).not.toBe(serverError);
+    expect(String(catalogPage)).toMatch(/catalog/i);
+    // ... and the raised failure is routed to that general catalog page.
+    expect(routeFailure(failure as never)).toBe(catalogPage);
   });
 
   // case: SWHR2-C-0092@v1
   it("SWHR2-C-0092: a failure with no mapping for itself or any kind it belongs to gives a general server error", async () => {
-    const { H3 } = await import("nitro/h3");
-    // A test route raising a failure type that no error page is configured for.
+    const app = await cartApp();
+    const { H3, defineHandler } = await import("nitro/h3");
+    // The application ships no route that raises an unmapped failure, so the case's test route is
+    // supplied here. It is served behind the application's own middleware chain, in Nitro's
+    // file-name order, and the failure is left to the application's error handling to answer.
     class UnmappedTestFailure extends Error {
       kind = "UnmappedTestFailure";
       kinds = ["UnmappedTestFailure"];
     }
-    const server = new H3().get("/test/unmapped", () => {
-      throw new UnmappedTestFailure("unmapped");
-    });
-    const res = await server.fetch(new Request("http://localhost/test/unmapped"));
+    const encoding = (await import("../../../middleware/00.encoding")).default;
+    const server = new H3()
+      .use(encoding as never)
+      .use(app.session as never)
+      .get(
+        "/api/test/unmapped",
+        defineHandler(() => {
+          throw new UnmappedTestFailure("unmapped");
+        }),
+      );
+    const res = await server.fetch(new Request("http://localhost/api/test/unmapped"));
     expect(res.status).toBe(500);
-    const body = (await res.json()) as object;
+    // Not one of the mapped error pages: the application's table routes it to the server error page.
     const { routeFailure } = await import("../../../src/errors/routeFailure");
-    const page = String(routeFailure(body as never));
+    const page = String(
+      routeFailure({ kind: "UnmappedTestFailure", kinds: ["UnmappedTestFailure"] }),
+    );
     expect(page).toMatch(/server/i);
     expect(page).not.toMatch(/empty-cart|catalog/);
+    expect(res.headers.get("location")).toBeNull();
   });
 });

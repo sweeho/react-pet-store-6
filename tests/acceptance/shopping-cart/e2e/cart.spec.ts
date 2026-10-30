@@ -41,8 +41,10 @@ test.describe("shopping cart", () => {
     await expect(b.getByText(EMPTY)).toBeVisible();
   });
 
+  // The case's steps open the cart after signing out, then sign on again as j2ee and open it once
+  // more; its expected result is: "Both times the cart screen shows 'Your Shopping Cart is Empty.'"
   // case: SWHR2-C-0085@v1
-  test("SWHR2-C-0085: signing out with EST-1 in the cart leaves the cart empty, also after signing on again", async ({
+  test("SWHR2-C-0085: signing out with EST-1 in the cart leaves the cart empty afterwards", async ({
     page,
   }) => {
     await signIn(page);
