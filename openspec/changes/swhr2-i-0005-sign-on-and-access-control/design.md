@@ -138,3 +138,57 @@ The session cookies are `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` when 
 - An in-process `Map` session store, valid for the single-process deployment (`ecosystem.config.js`, `instances: 1`). Sessions do not survive a restart, which the session-only cart allows.
 - `Bun.password` (argon2id), built into the Bun runtime, for password hashing. No auth library is added.
 - Tests: route integration tests for the sign-in and sign-out routes, the guards, the idle expiry (with a fake clock) and the admin-before-supplier refusal; UI tests for the sign-in, signed-out and admin screens.
+
+## Sprint plan (SWHR2-S-0014)
+
+Planning record for sprint SWHR2-S-0014. The sections above are the adopted specification and are not changed. One FEATURE, **SWHR2-T-0230**, owns every task group in `tasks.md`, worked in order. Its plan is `artifacts/SWHR2-S-0014/SWHR2-T-0230/PLAN.md`.
+
+### Codebase findings
+
+- `middleware/10.session.ts` holds an in-memory `Map` of `{ id, locale }` sessions under one cookie `sid`. There is no area, no `lastSeen`, no idle expiry and no `userId`.
+- `services/cart.ts` keeps carts in a separate `Map` keyed by session id (`cartFor(id)`). A new session id therefore means an empty cart, so ending a session empties the cart without moving the cart into the session record.
+- `middleware/auth.ts` is boilerplate: it sets `event.context.user = { name: "Yeasin" }` on every request. Nothing reads it.
+- `GET /api/session` lives at `routes/api/session/index.get.ts` and returns `{ locale }` only. The acceptance suite imports `routes/api/session.get`. `routes/api/session/locale.post.test.ts` sends the cookie as `sid=`.
+- `db/schema.ts` is a single file (no `db/schema/storefront.ts`). It has no `signon_users` table. `db/client.ts` migrates from `drizzle/` and seeds the dev db (catalog fixture) only when `VITEST` is unset.
+- Storefront: `src/pages/petstore.tsx` wraps pages in `LocaleProvider`, `LanguageFlags` and `CategoryPanel`. `src/components/shell/AppShell.tsx` renders the global header (logo link and `SearchBox`) for every route via `src/main.tsx`. There is no `StorefrontHeader`, and no Account or Sign in/out control in a header; `areas.ts` points "Sign in" and "Account & profile" at `/petstore/signin`.
+- `src/pages/petstore/signin.tsx`, `src/pages/admin/index.tsx` and `src/pages/supplier/index.tsx` are `EmptyFrame` placeholders. Screen text comes from `src/locales/<locale>/` through `useScreen`.
+- There are no checkout, account-edit, order-fulfilment, messaging or order-line modules in the repo.
+- Acceptance suite `tests/acceptance/sign-on/` pins these paths: `middleware/10.session.ts` (default export), `routes/api/session.get.ts`, `routes/api/session/sign-in.post.ts`, `routes/api/admin/sign-in.post.ts`, `routes/api/admin/session.get.ts`, `src/components/storefront/StorefrontHeader.tsx`, cookies `ps_sid` / `admin_sid` / `remembered_username`, table `signon_users (user_id, password_hash)` and env `ADMIN_USERS` / `SUPPLIER_USERS` (`userId:Bun.password hash`). The e2e spec signs in as `j2ee`/`j2ee`, and as `admin`/`admin-pw` and `supplier`/`supplier-pw` unless `E2E_*` env overrides them.
+
+### Planning decisions
+
+- **P1 One FEATURE.** No SPIKE: Q1–Q7 do not block the build. Q5 is settled by "Area separation" above, and Q7 by operator env credentials.
+- **P2 Credential table.** The FEATURE adds `signon_users (user_id text primary key, password_hash text not null)` to `db/schema.ts`, with its drizzle migration. Sign-on cannot sign anyone in without it. customer-account (SWHR2-I-0006) writes to the same table later and keeps these two columns.
+- **P3 Dev/e2e demo customer.** Outside Vitest, `db/client.ts` seeds `j2ee` with a hashed password when `signon_users` is empty, the same way the catalog fixture is seeded. data-population (SWHR2-I-0014) replaces it. Nothing pre-fills the sign-in form (D1).
+- **P4 Operator credentials for browser tests.** The Playwright web servers get `ADMIN_USERS` / `SUPPLIER_USERS` for the test accounts through their `webServer.env`. The app ships no default admin or supplier credential.
+- **P5 Session store stays in the middleware module.** The acceptance harness loads `middleware/10.session.ts` and expects a fresh store on module reset. Its store `Map` may move into `services/session/store.ts` only if the middleware's default export keeps that contract.
+- **P6 Guard reach this sprint.** `requireCustomer` is applied to the routes that exist now: the account-edit entry that the header's Account link opens, and the sign-in landing page. Checkout (SWHR2-I-0008) applies it to order placement and billing/shipping when it builds those routes. Order-line and message hand-off modules (SWHR2-I-0011) are built with no role check.
+- **P7 Leave `middleware/auth.ts` alone; never read `event.context.user`.** Its fixed fake user feeds only the boilerplate `routes/api/hello.ts` example and its test, so deleting it is unrelated churn. The sign-on identity lives only on `event.context.session.userId`, and no guard reads `event.context.user`. Removing the boilerplate pair is a separate improvement ticket.
+
+### Phases
+
+1. **Session and credentials.** Area cookies, idle limits, `signon_users`, `services/session/auth.ts`, guards and the session/sign-in/sign-out routes (task groups 1, 3, 4.4, 5).
+2. **Screens.** Storefront header, sign-in, signed-out, administration sign-in / Login Error / landing, and supplier sign-in, built from the approved mockups (task groups 1.4, 2, 4.1–4.3, 5.2).
+3. **Internal services.** Task group 6 is recorded as the access-control rule for SWHR2-I-0011. No code exists to change this sprint.
+4. **Test harness.** Route integration tests beside each new route (`server` Vitest project), UI tests beside each new component or page, and the browser flows in `e2e/` (task group 7). The acceptance specs in `tests/acceptance/sign-on/` turn green for every linked case.
+5. **CI.** `.github/workflows/ci.yml` already runs on `vortex/**` pushes and PRs: doc links, typecheck, lint, unit, build, E2E and the acceptance tiers. The only CI-adjacent change is P4's `webServer.env`. No workflow edit is planned.
+
+### Test cases
+
+- Linked to SWHR2-T-0230: C-0253, C-0255–C-0262, C-0265–C-0267 and C-0269.
+- Deferred to checkout (SWHR2-I-0008): C-0252 and C-0254.
+- Deferred to order fulfilment (SWHR2-I-0011): C-0263, C-0264 and C-0268.
+- C-0251 is retired.
+
+### Spec discrepancies
+
+Recorded here and on the ticket. The adopted spec and the target design above are not edited.
+
+- **SD1** The target design places the session store in `services/session/store.ts` with per-area cookies `ps_sid` / `admin_sid` / `supplier_sid`. The code has a single cookie `sid` in `middleware/10.session.ts`. Resolved by P5; the existing locale test moves to `ps_sid`.
+- **SD2** The design attributes `signon_users` to customer-account in `db/schema/storefront.ts`. Neither the table nor that file exists. Resolved by P2 in `db/schema.ts`.
+- **SD3** The design names `GET /api/session` without a file. The code has `routes/api/session/index.get.ts`, and the acceptance suite imports `routes/api/session.get.ts`. Both map to the same URL, so the route moves to `routes/api/session.get.ts`.
+- **SD4** SWHR2-R-0027 (framework sample application, 30 minutes) has no target component, and its only case, C-0251, is retired. Task 3.1 builds nothing, and its criterion cannot be observed in this product. It needs a Business Owner disposition.
+- **SD5** SWHR2-R-0028.01 / .03, SWHR2-R-0121 and SWHR2-R-0124 describe behaviour of modules that do not exist yet (checkout, order fulfilment). This sprint delivers the guard and records the no-role-check rule. Their cases are deferred, see P6.
+- **SD6** `middleware/auth.ts` attaches a fixed fake user to every request, which neither the spec nor the design mentions. Left in place and ignored by every guard (P7); its removal is an improvement ticket.
+- **SD7** The brief's five user stories carry no story ids, so they cannot be linked to the ticket.
+- **SD8** The supplier area has no idle limit in the spec. Supplier sessions end only at sign-out or server restart, as the design says.
