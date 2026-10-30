@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -34,7 +34,7 @@ describe("signed-out screen", () => {
 
   it("[SWHR2-C-0269] is shown in Japanese when the session locale is ja_JP", async () => {
     await renderSignedOut("ja_JP");
-    expect(await screen.findByRole("heading")).toHaveTextContent(/[぀-ヿ一-鿿]/);
+    await waitFor(() => expect(screen.getByRole("heading")).toHaveTextContent(/[぀-ヿ一-鿿]/));
     expect(screen.getAllByRole("link", { name: /[぀-ヿ一-鿿]/ }).length).toBeGreaterThan(0);
   });
 });
