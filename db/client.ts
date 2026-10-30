@@ -11,6 +11,11 @@ import {
   catalogItems,
   catalogProductDetails,
   catalogProducts,
+  addresses,
+  contactInfo,
+  customerAccounts,
+  customerProfiles,
+  customers,
   signonUsers,
   users,
 } from "./schema";
@@ -30,6 +35,11 @@ export const db = drizzle(sqlite, {
   schema: {
     users,
     signonUsers,
+    addresses,
+    contactInfo,
+    customers,
+    customerAccounts,
+    customerProfiles,
     catalogCategories,
     catalogCategoryDetails,
     catalogProducts,
@@ -56,11 +66,50 @@ if (db.select().from(users).all().length === 0) {
     .run();
 }
 
-// Dev/e2e demo customer (sign-on design P3); data-population replaces it. Never under Vitest.
-if (!process.env.VITEST && db.select().from(signonUsers).all().length === 0) {
-  db.insert(signonUsers)
-    .values({ userId: "j2ee", passwordHash: Bun.password.hashSync("j2ee") })
-    .run();
+// Dev/e2e demo customer (sign-on design P3, customer-account P7); data-population replaces it.
+// Never under Vitest. Inserted directly: services/customers imports this module.
+if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
+  db.transaction((tx) => {
+    tx.insert(signonUsers)
+      .values({ userId: "j2ee", passwordHash: Bun.password.hashSync("j2ee") })
+      .onConflictDoNothing()
+      .run();
+    const address = tx
+      .insert(addresses)
+      .values({
+        street1: "901 San Antonio Road",
+        street2: "",
+        city: "Palo Alto",
+        state: "CA",
+        zip: "94303",
+        country: "USA",
+      })
+      .returning()
+      .get();
+    const contact = tx
+      .insert(contactInfo)
+      .values({
+        givenName: "ABC",
+        familyName: "XYZ",
+        telephone: "555-555-5555",
+        email: "j2ee@example.com",
+        addressId: address.id,
+      })
+      .returning()
+      .get();
+    tx.insert(customers).values({ userId: "j2ee" }).run();
+    tx.insert(customerAccounts)
+      .values({
+        userId: "j2ee",
+        contactId: contact.id,
+        cardNumber: "4111111111111111",
+        cardType: "Java(TM) Card",
+        cardExpiryMonth: 12,
+        cardExpiryYear: 2030,
+      })
+      .run();
+    tx.insert(customerProfiles).values({ userId: "j2ee" }).run();
+  });
 }
 
 // Seed fixture (design.md P6): five categories in the three storefront locales.
@@ -75,6 +124,13 @@ const categories: [string, L3][] = [
   ["REPTILES", ["Reptiles", "爬虫類", "爬行动物"]],
 ];
 const products: [string, string, string, L3, L3][] = [
+  [
+    "AV-CB-01",
+    "BIRDS",
+    "bird4.gif",
+    ["Amazon Parrot", "アマゾンオウム", "亚马逊鹦鹉"],
+    ["Great companion for up to 75 years", "最長75年間の素晴らしい仲間", "长达75年的好伙伴"],
+  ],
   [
     "FI-SW-01",
     "FISH",
@@ -106,6 +162,18 @@ const products: [string, string, string, L3, L3][] = [
 ];
 // [itemId, productId, image, descriptions, attr1, [listPrice, unitCost] per locale]
 const items: [string, string, string, L3, L3, readonly [number, number][]][] = [
+  [
+    "EST-18",
+    "AV-CB-01",
+    "bird4.jpg",
+    ["Adult Male Amazon Parrot", "オスの成鳥アマゾンオウム", "成年雄性亚马逊鹦鹉"],
+    ["Green", "緑", "绿色"],
+    [
+      [12500, 9000],
+      [1400000, 1000000],
+      [95000, 65000],
+    ],
+  ],
   [
     "EST-1",
     "FI-SW-01",

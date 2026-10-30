@@ -31,7 +31,7 @@ describe("storefront sign-in", () => {
   it("pre-fills the remembered user name and never a password", async () => {
     setup();
     expect(await screen.findByDisplayValue("ann")).toBeInTheDocument();
-    expect(screen.getByLabelText(/^password$/i)).toHaveValue("");
+    expect(screen.getAllByLabelText(/^password$/i)[0]).toHaveValue("");
     expect(screen.getByLabelText(/remember my user name/i)).toBeInTheDocument();
   });
 
@@ -39,7 +39,7 @@ describe("storefront sign-in", () => {
     const sent = setup();
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/user id/i), "x");
-    await user.type(screen.getByLabelText(/^password$/i), "pw");
+    await user.type(screen.getAllByLabelText(/^password$/i)[0], "pw");
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
     await screen.findByText("account page");
     expect(JSON.parse(sent[0])).toEqual({
@@ -52,7 +52,7 @@ describe("storefront sign-in", () => {
   it("shows a sign-in failure and stays on the screen", async () => {
     setup(401);
     const user = userEvent.setup();
-    await user.type(await screen.findByLabelText(/^password$/i), "bad");
+    await user.type((await screen.findAllByLabelText(/^password$/i))[0], "bad");
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
   });

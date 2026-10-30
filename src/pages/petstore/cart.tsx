@@ -2,6 +2,7 @@ import { Link } from "react-router";
 
 import EmptyFrame from "@/components/shell/EmptyFrame";
 import { useLocale } from "@/components/storefront/LocaleProvider";
+import PetTipsBanner from "@/components/storefront/PetTipsBanner";
 import { useScreen } from "@/locales/useScreen";
 import { formatMoney } from "../../../shared/i18n/format";
 
@@ -28,6 +29,7 @@ export default function PetstoreCart() {
 
   return (
     <div>
+      <PetTipsBanner screen="cart" />
       <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
       {lines.length > 0 ? (
         <ul className="divide-y rounded-md border">

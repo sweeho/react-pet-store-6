@@ -1,12 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import {
-  call,
-  count,
-  customers,
-  loadApp,
-} from "../../../tests/acceptance/customer-account/harness";
+import { call, count, customers, loadApp } from "../../../services/customers/testHarness";
 
 const register = (
   app: Awaited<ReturnType<typeof loadApp>>,
@@ -14,13 +9,13 @@ const register = (
   password: string,
   repeat = password,
 ) =>
-  call(app, "../../../routes/api/account/register.post", {
+  call(app, "account/register.post", {
     method: "POST",
     url: "/api/account/register",
     json: { userId, password, passwordRepeat: repeat },
   });
 const signIn = (app: Awaited<ReturnType<typeof loadApp>>, userId: string, password: string) =>
-  call(app, "../../../routes/api/session/sign-in.post", {
+  call(app, "session/sign-in.post", {
     method: "POST",
     url: "/api/session/sign-in",
     json: { userId, password, remember: false },

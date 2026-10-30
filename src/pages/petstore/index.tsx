@@ -1,4 +1,5 @@
 import PetMap from "@/components/storefront/PetMap";
+import PetTipsBanner from "@/components/storefront/PetTipsBanner";
 import { useLocale } from "@/components/storefront/LocaleProvider";
 import { useScreen } from "@/locales/useScreen";
 
@@ -12,6 +13,7 @@ export default function PetstoreHome() {
 
   return (
     <div>
+      <PetTipsBanner screen="home" />
       <h1 className="text-2xl font-semibold">{title}</h1>
       <p className="text-muted-foreground mt-1 mb-6">{message}</p>
       <h2 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">

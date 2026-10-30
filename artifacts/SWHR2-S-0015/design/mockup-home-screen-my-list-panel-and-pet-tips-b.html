@@ -1,0 +1,108 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Home screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--brand:#4f46e5;--on-brand:#ffffff;--success:#16a34a;--warning:#d97706;--danger:#dc2626;--info:#0284c7;--sans:Inter,system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--bg);display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr 40px;overflow:hidden}
+a{color:inherit;text-decoration:none}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+header{grid-column:1/3;display:flex;align-items:center;gap:16px;padding:0 24px 0 16px;border-bottom:1px solid var(--border);background:var(--bg)}
+.brandmark{display:flex;align-items:center;gap:8px;width:208px;font-weight:600;font-size:16px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center}
+.search{flex:1;max-width:520px;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lang{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px;font-weight:500}
+.lang a{padding:0 12px;height:32px;display:flex;align-items:center;color:var(--muted);border-right:1px solid var(--border)}
+.lang a:last-child{border-right:0}.lang a.on{background:var(--brand);color:var(--on-brand)}
+.ghost{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;font-weight:500;font-size:14px;border:1px solid transparent;white-space:nowrap}
+.btn.primary{background:var(--brand);color:var(--on-brand)}
+.btn.secondary{background:var(--bg);border-color:var(--border)}
+.btn.sm{height:32px;padding:0 12px}
+nav.rail{grid-row:2/4;border-right:1px solid var(--border);background:var(--surface);padding:16px 12px;display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.grp h6{font-size:12px;font-weight:600;color:var(--muted);padding:0 8px 4px;letter-spacing:.02em}
+.item{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:8px;font-weight:500}
+.item.on{background:var(--brand);color:var(--on-brand)}
+.sub{margin:2px 0 2px 24px;border-left:1px solid var(--border);padding-left:8px}
+.sub .item{height:28px;font-weight:400;color:var(--muted)}
+.lock{margin-left:auto;color:var(--muted)}.lock svg{width:12px;height:12px}
+main{overflow:hidden;padding:24px 32px;background:var(--bg)}
+.card{border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:16px}
+footer{grid-column:2;display:flex;align-items:center;gap:16px;padding:0 32px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+footer .sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500}
+.dot{width:6px;height:6px;border-radius:999px;background:currentColor}
+.hero{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
+.hero h1{font-size:24px;font-weight:600}.hero p{color:var(--muted);margin-top:4px}
+.lay{display:grid;grid-template-columns:1fr 280px;gap:24px}
+.banner{display:flex;gap:16px;align-items:center;padding:16px;margin-bottom:24px;background:var(--surface)}
+.bi{width:48px;height:48px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;flex:none}.bi svg{width:24px;height:24px}
+.banner b{font-size:16px;font-weight:600}.banner p{color:var(--muted);margin-top:2px}
+.tag{font-size:12px;font-weight:600;color:var(--brand);letter-spacing:.02em}
+.sec{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 12px;display:flex;justify-content:space-between}
+.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.cat{padding:0;overflow:hidden}
+.cat .art{height:96px;background:var(--surface);border-bottom:1px solid var(--border);display:grid;place-items:center;color:var(--brand)}
+.cat .art svg{stroke-width:1.5;width:36px;height:36px}
+.cat.fav{border-color:var(--brand)}
+.cn{display:flex;justify-content:space-between;align-items:center;padding:12px 12px 0;font-weight:600;font-size:16px}.cn span{color:var(--muted)}
+.cc{padding:2px 12px 12px;font-size:12px;color:var(--muted)}
+.areas{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.area{display:flex;gap:12px;align-items:flex-start;padding:12px 16px}
+.ai{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--brand);flex:none}
+.an{font-weight:600}.ad{color:var(--muted);font-size:12px;margin-top:2px}
+.ml{padding:0}
+.ml .h{padding:16px 16px 12px;border-bottom:1px solid var(--border)}
+.ml .h b{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+.ml .h span{font-size:12px;color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;height:40px;padding:0 16px;border-bottom:1px solid var(--border)}
+.row:last-of-type{border-bottom:0}
+.row .id{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.row a{font-weight:500}
+.ml .ft{padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.ml .ft a{color:var(--brand);font-weight:500}
+.fv{color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,var(--bg));border:1px solid color-mix(in srgb,var(--brand) 30%,var(--bg))}
+</style></head><body>
+<header>
+<a class="brandmark" href="#"><span class="logo"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span>Pet Store</a>
+<div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search pets by keyword — e.g. “angelfish”</span></div>
+<div class="hdr-right">
+<div class="lang" aria-label="Language"><a class="on" href="#">English</a><a href="#">日本語</a><a href="#">中文</a></div>
+<a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Cart</a>
+<a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>ABC XYX</a>
+<a class="btn secondary sm" href="#"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</a>
+</div></header>
+<nav class="rail" aria-label="Global">
+<div class="grp"><h6>Shop</h6><a class="item on" href="#"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a><a class="item" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Catalog</a><div class="sub"><a class="item" href="#">Birds</a><a class="item" href="#">Fish</a><a class="item" href="#">Dogs</a><a class="item" href="#">Reptiles</a><a class="item" href="#">Cats</a></div><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Shopping cart</a><a class="item" href="#"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Checkout</a></div>
+<div class="grp"><h6>You</h6><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</a><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account &amp; profile</a><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg>Language</a></div>
+<div class="grp"><h6>Store staff</h6><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Order approval<span class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17V10"/><path d="M13 17V6"/><path d="M18 17v-4"/></svg>Sales reporting<span class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>Supplier inventory<span class="lock"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a></div>
+</nav>
+<main>
+<div class="hero"><div><h1>Welcome back, ABC</h1><p>Pick a pet to browse, or search the whole catalog from the bar above.</p></div><a class="btn primary" href="#">Browse the catalog</a></div>
+<div class="lay"><div>
+<div class="card banner" role="complementary" aria-label="Pet tips"><div class="bi"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></div><div style="flex:1"><div class="tag">PET TIPS · DOGS</div><b>Keep your dog's walks short in hot weather</b><p>Walk early or late in the day, and carry water for both of you.</p></div><a class="btn secondary sm" href="#">Shop dogs</a></div>
+<div class="sec"><span>CHOOSE A PET</span><span style="font-weight:400">5 categories · 16 products</span></div>
+<div class="cats">
+<a class="card cat" href="#"><div class="art"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></div><div class="cn">Birds<span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="cc">2 products</div></a>
+<a class="card cat" href="#"><div class="art"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></div><div class="cn">Fish<span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="cc">4 products</div></a>
+<a class="card cat fav" href="#"><div class="art"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></div><div class="cn">Dogs<span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="cc"><span style="color:var(--brand);font-weight:500">Favourite</span> · 6 products</div></a>
+<a class="card cat" href="#"><div class="art"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></div><div class="cn">Reptiles<span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="cc">2 products</div></a>
+<a class="card cat" href="#"><div class="art"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></div><div class="cn">Cats<span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="cc">2 products</div></a>
+</div>
+<div class="sec"><span>EVERYTHING IN THE STORE</span></div>
+<div class="areas">
+<a class="card area" href="#"><div class="ai"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div><div><div class="an">Shopping cart</div><div class="ad">Kept for this visit only.</div></div></a>
+<a class="card area" href="#"><div class="ai"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><div><div class="an">Checkout</div><div class="ad">Pre-filled from your account.</div></div></a>
+<a class="card area" href="#"><div class="ai"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><div><div class="an">Account &amp; profile</div><div class="ad">Turn My List and pet tips on or off.</div></div></a>
+</div></div>
+<aside class="card ml" aria-label="My List"><div class="h"><b>My List <span class="pill fv"><span class="dot"></span>Dogs</span></b><span>From your favourite category</span></div>
+<div class="row"><a href="#">Bulldog</a><span class="id">K9-BD-01</span></div>
+<div class="row"><a href="#">Poodle</a><span class="id">K9-PO-02</span></div>
+<div class="row"><a href="#">Dalmation</a><span class="id">K9-DL-01</span></div>
+<div class="row"><a href="#">Golden Retriever</a><span class="id">K9-RT-01</span></div>
+<div class="row"><a href="#">Labrador Retriever</a><span class="id">K9-RT-02</span></div>
+<div class="row"><a href="#">Chihuahua</a><span class="id">K9-CW-01</span></div>
+<div class="ft">Showing up to 10 products. <a href="#">Change in Account &amp; profile</a></div>
+</aside></div>
+</main><footer><span>Pet Store</span><span>·</span><a href="#">Home</a><a href="#">Change language</a><span class="sp"></span><span>English (US)</span></footer></body></html>

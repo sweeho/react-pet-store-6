@@ -1,13 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  account,
-  count,
-  customers,
-  failInsertsInto,
-  profileOf,
-} from "../../tests/acceptance/customer-account/harness";
+import { account, count, customers, failInsertsInto, profileOf } from "./testHarness";
 
 describe("customer creation", () => {
   it("[SWHR2-C-0151] a customer created without profile values gets the default profile", async () => {

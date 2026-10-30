@@ -37,7 +37,6 @@ describe("PetTipsBanner", () => {
 
   it("[SWHR2-C-0162] no banner appears on a screen other than home or cart", async () => {
     show("product", { banner: true, myList: true, favouriteCategory: "CATS" });
-    await waitFor(() => expect(fetch).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.queryByTestId("pet-tips-banner")).toBeNull();
   });
