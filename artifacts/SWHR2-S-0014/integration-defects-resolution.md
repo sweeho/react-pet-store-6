@@ -30,4 +30,15 @@ Cases red in the official run: SWHR2-C-0256, C-0258, C-0269 (all `sign-on/e2e/si
 
 Result: the cases stay red in the official run until the approver edits or retires them; the sprint verdict cannot fire before then.
 
+## QA rework round 2 (SWHR2-T-0236, head b836d3b)
+
+C-0258 and C-0269 were kept as approved, so the app changes to meet them as written.
+
+| Case   | Cause                                                                                                                                                                                                                                    | Fix                                                                                                                                                                                                                                                                               | Result          |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| C-0258 | On `/admin` the storefront header and the nav both show a customer "Sign in" link, so the test's link query matched three links.                                                                                                         | The staff areas (`/admin`, `/supplier`) drop the customer Sign in/out slot from the header and the customer Sign in entry from the nav (`StorefrontHeader.tsx`, `GlobalNav.tsx`). They sign in on their own screens.                                                              | Passes locally. |
+| C-0269 | Four gaps in sequence: `/?locale=ja_JP` was ignored; the Japanese Add to Cart button had no "Add to Cart" name (every other acceptance spec finds it by that name); `<html lang>` stayed `en`; the home page `/` had no locale provider. | `middleware/10.session.ts` applies a supported `?locale=` on page requests; `AddToCart.tsx` adds a screen-reader-only " (Add to Cart)" for non-English locales; `LocaleProvider` sets `document.documentElement.lang`; `pages/index.tsx` wraps the home page in `LocaleProvider`. | Passes locally. |
+
+Regression check: full acceptance e2e before and after differ only by C-0258 and C-0269 turning green plus the existing C-0021/C-0022 flakiness (both fail intermittently on the unmodified branch too). Result in the official run is read at the next run.
+
 INTEGRATION_DEFECTS_RESOLUTION: COMPLETE

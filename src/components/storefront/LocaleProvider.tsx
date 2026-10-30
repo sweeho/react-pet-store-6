@@ -28,6 +28,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // The document language follows the session locale (en_US -> en, ja_JP -> ja, zh_CN -> zh).
+  useEffect(() => {
+    document.documentElement.lang = locale.split("_")[0];
+  }, [locale]);
+
   const setLocale = async (next: string) => {
     const res = await fetch("/api/session/locale", {
       method: "POST",

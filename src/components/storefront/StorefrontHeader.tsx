@@ -12,6 +12,9 @@ interface SessionState {
   signedOn: boolean;
 }
 
+/** The administration and supplier areas have their own sign-in, so the customer slot is left out. */
+const isStaffArea = (pathname: string) => /^\/(admin|supplier)(\/|$)/.test(pathname);
+
 const ghost = buttonVariants({ variant: "ghost", size: "sm" });
 
 /** The storefront page header: main-page link, search, Account, Cart and Sign in or Sign out. */
@@ -63,7 +66,7 @@ export default function StorefrontHeader() {
           <User className="mr-1.5 size-4" aria-hidden="true" />
           {t.account}
         </Link>
-        {session === null ? null : session.signedOn ? (
+        {session === null || isStaffArea(pathname) ? null : session.signedOn ? (
           <button
             type="button"
             onClick={() => void signOut()}

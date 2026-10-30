@@ -11,7 +11,7 @@ import {
   ShoppingCart,
   User,
 } from "lucide-react";
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 
 import { cn } from "@/utils";
 
@@ -36,6 +36,9 @@ const itemClass = ({ isActive }: { isActive: boolean }) =>
   );
 
 export default function GlobalNav() {
+  const { pathname } = useLocation();
+  // Staff areas sign in on their own screens; the customer sign-in entry would be a second, wrong one.
+  const staffArea = /^\/(admin|supplier)(\/|$)/.test(pathname);
   return (
     <nav aria-label="Global" className="flex flex-col gap-4 p-3">
       <NavLink to="/" end className={itemClass}>
@@ -49,7 +52,9 @@ export default function GlobalNav() {
           </h2>
           <ul className="flex flex-col">
             {areas
-              .filter((area) => area.group === group)
+              .filter(
+                (area) => area.group === group && !(staffArea && area.to === "/petstore/signin"),
+              )
               .map((area) => {
                 const Icon = icons[area.icon];
                 return (
