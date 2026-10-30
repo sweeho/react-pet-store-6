@@ -67,12 +67,22 @@ function end(session: Session) {
   discardCart(session.id);
 }
 
+let lastSweep = 0;
+
+/** Drops sessions past their idle limit, at most once a minute, so abandoned ones do not pile up. */
+function sweep(now: number) {
+  if (now - lastSweep < MINUTE) return;
+  lastSweep = now;
+  for (const s of sessions.values()) if (now - s.lastSeen > IDLE_LIMIT[s.area]) end(s);
+}
+
 /** Attaches the request's session for the area its path belongs to, dropping one past its idle limit. */
 export function attachSession(event: H3Event): Session {
   const area = areaOf(event.url.pathname);
   const id = getCookie(event, COOKIE[area]);
   const found = id ? sessions.get(id) : undefined;
   const now = Date.now();
+  sweep(now);
   if (found && found.area === area && now - found.lastSeen <= IDLE_LIMIT[area]) {
     found.lastSeen = now;
     event.context.session = found;
