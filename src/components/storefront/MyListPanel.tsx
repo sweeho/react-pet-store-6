@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 
 import { useScreen } from "@/locales/useScreen";
 
@@ -12,19 +12,26 @@ interface MyListItem {
 /** Up to ten products of the favourite category; renders nothing while MyList is off (SWHR2-R-0053). */
 export default function MyListPanel() {
   const { locale } = useLocale();
+  // The panel lives in the layout, so re-read after each client-side navigation (e.g. right after sign-up).
+  const { pathname } = useLocation();
   const text = useScreen("account", locale);
   const [items, setItems] = useState<MyListItem[]>([]);
 
   useEffect(() => {
     let live = true;
-    fetch(`/api/account/my-list?locale=${encodeURIComponent(locale)}`)
-      .then((r) => (r.ok ? (r.json() as Promise<{ items: MyListItem[] }>) : { items: [] }))
-      .then((d) => live && setItems(d.items.filter((p) => typeof p.productId === "string")))
-      .catch(() => undefined);
+    const load = async () => {
+      const session = (await (await fetch("/api/session")).json()) as { signedOn?: boolean };
+      if (!session.signedOn) return;
+      const res = await fetch(`/api/account/my-list?locale=${encodeURIComponent(locale)}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { items: MyListItem[] };
+      if (live) setItems(data.items.filter((p) => typeof p.productId === "string"));
+    };
+    load().catch(() => undefined);
     return () => {
       live = false;
     };
-  }, [locale]);
+  }, [locale, pathname]);
 
   if (items.length === 0 || "error" in text) return null;
   const t = text.definition;
