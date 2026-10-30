@@ -48,4 +48,11 @@ describe("My List panel data", () => {
     expect(text).not.toContain("Product 11");
     expect(text).not.toContain("Product 12");
   });
+
+  it("answers an empty list, not 401, when nobody is signed on", async () => {
+    const app = await customers();
+    const r = await call(app as never, "account/my-list.get", { url: "/api/account/my-list" });
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ items: [] });
+  });
 });
