@@ -100,3 +100,68 @@ The Add to Cart controls on the product item list, item detail and search result
 - Nitro (H3) routes under `routes/api/cart/` over the in-memory session store (sign-on). There is no Drizzle table, because the spec forbids durable storage.
 - Currency formatting uses `shared/i18n/format.ts` (localization).
 - Tests: unit tests for the cart model (re-add sets 1, remove absent item, replace quantity); route integration tests proving two sessions do not share a cart and sign-out empties it; UI tests for the empty and filled cart screens.
+
+## Planning — SWHR2-S-0016
+
+### Codebase findings (measured on the sprint branch, 2026-10-30)
+
+Part of the cart already exists. It was built by localization (SWHR2-I-0003) and catalog-browsing (SWHR2-I-0004) so that their cases had a cart to put items in.
+
+- `services/cart.ts`: a module-level `Map<sessionId, Map<itemId, qty>>`, plus `cartFor`, `addItem`, `lines(cart, locale?)`, `discardCart` and `moveCart`. `addItem` **increments** the quantity (`+1`), but this change requires 1 (SWHR2-R-0144; D1 above). `lines` returns `{ itemId, quantity, name, attribute, unitPrice }`. It reads `name` from the item description and `unitPrice` from the list price in integer hundredths, and skips lines the catalog cannot find. Nothing implements add-with-quantity, remove, update or clear.
+- `services/session/store.ts`: `end(session)` calls `discardCart`, so sign-out (`signOut`) and idle expiry (`sweep`, `attachSession`) already discard the cart. `renewSession` (sign-in) moves the anonymous cart to the new session id. SWHR2-R-0114.03 and SWHR2-R-0118 already hold at the session layer.
+- `routes/api/cart/index.get.ts` returns `{ locale, lines }` with no `total`. `routes/api/cart/items.post.ts` takes `{ itemId }`, ignores `quantity` and returns `{ count }`. There is no DELETE or PUT route. Neither route calls a guard (SWHR2-R-0117 holds).
+- `src/pages/petstore/cart.tsx` renders lines as a `<ul>` with no link, Remove, quantity input, Update Cart, total or Check Out. Its empty state is `EmptyFrame` with the message from `src/locales/<locale>/petstore-cart.ts`. In en_US that message is still the placeholder "Your cart will appear here once the cart ships." (ja_JP and zh_CN carry the same placeholder). The pet-tips banner is already on the page.
+- `src/components/storefront/AddToCart.tsx` POSTs `{ itemId }`, stays on the page and shows an "added" status. It is used in the product item table (`product/[productId].tsx`), on item detail (`item/[itemId].tsx`) and in the search results table (`search.tsx`). Both tables render `<tr>` rows.
+- Failure routing does not exist. There is no `services/errors.ts`, no `src/errors/`, no `src/pages/petstore/error/` and no Server Error page. Today failures are ad hoc: `HTTPError` with `data.kind` (`InvalidCredentials`, `SignOnRequired`), and `catalogResponse` maps `CatalogError` to a 500.
+- Checkout (SWHR2-I-0008) has not been built: there is no `routes/api/orders/`, no `/petstore/checkout` page and no order tables.
+- Locked acceptance suite: `tests/acceptance/shopping-cart/` (`harness.ts`, `cart.test.ts`, `cart-page.test.tsx`, `e2e/cart.spec.ts`). Other suites also exercise Add to Cart: catalog-browsing C-0200, sign-on C-0252/C-0269, localization C-0022, checkout and data-population.
+
+### Planning decisions
+
+- **P1 Keep `services/cart.ts`.** Target design names `services/cart/index.ts`. The file already exists at `services/cart.ts`, and both the acceptance suite and session store import `services/cart`, which resolves to either path. Do not move it.
+- **P2 Re-add sets 1.** `addItem` becomes `cart.set(itemId, 1)` (SWHR2-R-0144, D1). `addItemWithQuantity(cart, itemId, qty)` sets `qty` with no validation (SWHR2-R-0033). `removeItem` uses `cart.delete` (SWHR2-R-0146). `updateQuantities(cart, quantities)` sets each given quantity. `clear(cart)` empties the cart. None of them throws. Zero and negative quantities on update are an open SME record and not specified, so do not invent removal-on-zero.
+- **P3 One cart view from every route.** `GET /api/cart`, `POST /api/cart/items`, `DELETE /api/cart/items/[itemId]` and `PUT /api/cart` all return `{ locale, lines, total }`. `total` is Σ `unitPrice × quantity` in integer hundredths (Key Decision "Money is integer hundredths"). Keep the existing `CartLine` fields. A new field may be added only if the existing assertions in `services/cart.test.ts` (localization C-0033/C-0034, `toEqual`) are updated in the same commit.
+- **P4 Add to Cart opens the cart.** After a successful POST, `AddToCart` navigates to `/petstore/cart`, as the legacy `cart.do` did. C-0093, C-0096 and C-0097 click Add to Cart on the product or search page and then expect a cart row with a quantity input, with no other navigation.
+- **P5 Cart screen is a table.** Render one `<tr>` per line (the e2e cases locate rows by role `row`). Each row has a link whose name contains the line `name`, to `/petstore/item/<itemId>`, and shows the item id **once** as text. C-0200 uses a strict `getByText("EST-1")`, and C-0088 expects that text to disappear after Remove. Each row also has a Remove `<button>`, a quantity input (`type="number"` or text) pre-filled with the quantity, and the unit price via `formatMoney`. Below the table come an Update Cart button (PUT), the total via `formatMoney`, and a Check Out link to `/petstore/checkout`. The empty state renders no table, no money text, no Update Cart and no Check Out (C-0087). The en_US empty message becomes "Your Shopping Cart is Empty.", and ja_JP and zh_CN get translations. After Remove or Update Cart the page re-renders from the response view.
+- **P6 Failure routing.**
+  - `services/errors.ts` defines `AppFailure`, a base `Error` with a `kind` and a parent chain. It also defines `OrderFailure` (parent `AppFailure`) and `EmptyCartOrder` (parent `OrderFailure`, HTTP 422), plus a `failureBody(err)` helper returning `{ kind, kinds, message, trace }`.
+  - `src/errors/routeFailure.ts` exports `routeFailure(failure: { kind: string; kinds: string[] }, table?: Record<string, string>): string`. It walks `kinds` in order and returns the first mapped page. When nothing is mapped it returns the constant `SERVER_ERROR = "server-error"`.
+  - The default table maps `EmptyCartOrder` to `/petstore/error/empty-cart`. That page (`src/pages/petstore/error/empty-cart.tsx`) has a heading containing "empty" and no "Server Error" text.
+  - Throwing `EmptyCartOrder` from the order route, and the Server Error page itself, belong to checkout (SWHR2-I-0008; checkout SWHR2-R-0003).
+- **P7 No new table, no migration.** The cart stays in memory (SWHR2-R-0118).
+
+### Interface contracts fixed by the locked acceptance suite
+
+- `services/cart` exports `addItem(cart, id)`, `addItemWithQuantity(cart, id, qty)`, `removeItem(cart, id)` and `lines(cart, locale)`. The view helpers `ids`/`qty` accept a `CartLine[]` or `{ lines }`, with lines keyed `itemId` and `quantity`.
+- Route modules: `routes/api/cart/index.get.ts`, `routes/api/cart/items.post.ts` (body `{ itemId, quantity? }`) and `routes/api/cart/items/[itemId].delete.ts` (param `itemId`). The harness calls the handlers directly after the session middleware, and cookies are `ps_sid`.
+- `src/pages/petstore/cart.tsx`: the default export renders inside a bare `MemoryRouter` with no `LocaleProvider`, and `fetch` is stubbed to return the view `{ locale, total, lines: [{ itemId, name, productName, quantity, unitPrice, lineTotal }] }` for every request. Unit price 1650 must render `$16.50` and total 3300 must render `$33.00`.
+- `src/errors/routeFailure.ts`: `routeFailure({ kind, kinds }, table)` as in P6. An unmapped failure returns a value matching `/server/i`.
+
+### Phases
+
+1. Cart model (tasks 1.x, 2.x): P1 and P2 in `services/cart.ts`, with unit tests.
+2. Routes (2.x): extend GET and POST, and add `items/[itemId].delete.ts` and `index.put.ts` (P3), with route tests in `routes/api/cart/` (`server` vitest project).
+3. Failure routing (3.x): P6, with unit tests next to each file.
+4. Cart screen and Add to Cart (4.x): P4 and P5, with locale strings and UI tests.
+5. Test harness and CI (5.x): no harness changes are needed. Vitest's `client`/`server` projects already pick up the new tests by path, and `.github/workflows/ci.yml` already runs on pull requests into `vortex/**` (every ticket PR into the sprint branch) and on pushes to `dev`, so no CI change is needed. Add one Playwright spec, `e2e/cart.spec.ts`, covering add → cart → remove, executed at least once before it is committed. Run the locked `tests/acceptance/shopping-cart/` suite before handing off.
+
+### Test cases deferred
+
+These cases need checkout (SWHR2-I-0008), which builds `routes/api/orders/index.post.ts`, the order tables, the `/petstore/checkout` page and order placement. They are deferred to that brief and not linked here:
+
+- C-0089: Check Out opens order entry with street/address fields.
+- C-0090: the empty-cart order is refused with 422 `EmptyCartOrder` and no order rows.
+- C-0101: placing an order empties the cart.
+
+This sprint supplies what they depend on: the Check Out link, `clear()`, the `EmptyCartOrder` failure and the empty-cart error page.
+
+### Spec discrepancies
+
+- **SD1 File location.** Target design says `services/cart/index.ts`, but the code is in `services/cart.ts` (P1).
+- **SD2 Existing add increments.** `services/cart.ts` `addItem` adds 1 to an existing line, which contradicts SWHR2-R-0144 and D1. The FEATURE corrects it.
+- **SD3 "Item attribute and product name".** SWHR2-R-0115 says the row link carries the item attribute and the product name. Locked case C-0086 expects the link name "Large Angelfish", which is the item description (`name`), not the product name "Angelfish". The FEATURE follows the case, linking `name` and showing the attribute beside it.
+- **SD4 Shared sign-in locator.** The e2e `signIn` helper in `tests/acceptance/shopping-cart/e2e/cart.spec.ts`, used by C-0085, fills `getByLabel(/password/i)` on `/petstore/signin`. That page has three password inputs since customer-account. This is the same strict-mode conflict disputed for sign-on C-0269 and tracked in DEFECT SWHR2-T-0244. C-0085 is linked. If T-0244 is unresolved when the FEATURE runs, its outcome follows that dispute.
+
+### Assumptions
+
+- Japanese and Chinese wording for the new cart labels and the empty message is the FEATURE's choice, following the existing `src/locales/*/catalog.ts` tone. No locked case checks it beyond C-0022 (zh_CN name and price).

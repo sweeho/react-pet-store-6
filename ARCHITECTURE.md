@@ -26,6 +26,7 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 │   ├── components/shell/ # AppShell, GlobalNav, primary-area list, Empty/Error/Loading frames
 │   ├── pages/            # Frontend routes, file-based (+ *.test.tsx)
 │   ├── locales/          # Per-locale screen text definitions + registry + resolveScreen
+│   ├── errors/           # Failure-kind → error-page table (routeFailure)
 │   ├── hooks/, utils/, types/, constants/, data/, store/
 │   ├── test/              # Vitest setup
 │   ├── index.css           # Tailwind v4 + design tokens
@@ -60,6 +61,8 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 Routes decide access explicitly through the guards in `services/session/guards.ts`. `requireCustomer` protects account editing and the checkout steps. Every route under `/api/admin/**` and `/api/supplier/**` calls `requireAdmin` or `requireSupplier`. A 401 with failure kind `SignOnRequired` makes the SPA send the user to that area's sign-in screen and back. Internal services (message hand-off, order-line data) have no HTTP route and no role check of their own; the route that calls them decides. Storefront passwords are stored hashed (`Bun.password`). Administration and supplier credentials come from the operator's `ADMIN_USERS` / `SUPPLIER_USERS` environment, never from seed data. Spec: `openspec/specs/sign-on/` once change `swhr2-i-0005-sign-on-and-access-control` archives.
 
 **Page data states**: a data-driven page loads through `src/hooks/useApi.ts` (`{ data, error, loading, retry }`) and maps the three states onto the shared `LoadingFrame`, `ErrorFrame` (with retry) and `EmptyFrame`.
+
+**Failure routing**: a route raises a typed failure from `services/errors.ts`. Each failure has a `kind` and belongs to more general kinds, for example `EmptyCartOrder` → `OrderFailure` → `AppFailure`. Its response body is `{ kind, kinds, message, trace }`, with `kinds` listing the kind and then its parents. The SPA picks the error page through the single table in `src/errors/routeFailure.ts`. It uses the first kind in `kinds` that has a configured page, and the Server Error page when none does. Spec: `openspec/specs/shopping-cart/` (Failure routing to an error page) once change `swhr2-i-0007-shopping-cart` archives.
 
 ## Data flow example
 
@@ -108,3 +111,4 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 - **Every administration and supplier route makes an explicit access decision.** Routes guard with `requireAdmin` / `requireSupplier` / `requireCustomer` from `services/session/guards.ts`; a route with no guard is a defect. Internal services have no route and no role check, and their caller decides. Rationale: the legacy staff tools were partly unprotected. Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Guards; In-process hand-off).
 - **Sessions are area-scoped and server-owned.** Storefront, administration and supplier sessions use separate cookies, credentials and idle limits, and a live administration session blocks supplier sign-in. Rationale: the areas must not share a sign-on (SWHR2-R-0029/0030). Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Session middleware; Area separation).
 - **Data operations join the caller's transaction or open their own.** A service write that another change may need to combine takes an optional Drizzle `tx`, runs inside it when given, and otherwise calls `db.transaction` itself. Transaction bodies are synchronous, because `bun:sqlite` transactions do not span an `await`. Rationale: checkout must write order, contact and address data as one unit (SWHR2-R-0057, SWHR2-R-0060). Authored in change `swhr2-i-0006-customer-account-and-profil` (design.md, Planning P2).
+- **Failures carry a kind chain and route through one table.** A new failure type is a kind with a parent in `services/errors.ts`. A new error page is one entry in the `src/errors/routeFailure.ts` table. Pages and routes never pick an error page ad hoc. Rationale: a general kind's page catches its specific failures, and an unmapped failure always reaches the Server Error page (SWHR2-R-0116). Authored in change `swhr2-i-0007-shopping-cart` (design.md, Planning P6).
