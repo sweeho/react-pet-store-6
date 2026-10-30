@@ -12,11 +12,19 @@
 # every new project.
 name: CI
 
+# Pushes to dev only: agents push to ticket branches many times, and those runs
+# are read by nothing. Their work is checked on the pull request instead.
 on:
   push:
-    branches: ["vortex/**", dev, main]
+    branches: [dev]
   pull_request:
     branches: ["vortex/**", dev, main]
+
+# The platform reads the run at the head only, so a newer push cancels the run it
+# replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -83,3 +91,32 @@ jobs:
           name: vortex-test-results-acceptance
           path: .vortex-results/acceptance/
           if-no-files-found: warn
+
+  # Replays the pull request's [tdd:red] and [tdd:green] commits for the merge
+  # gate (Vortex plan 105). Only ticket pull requests into a sprint branch carry
+  # them; a sprint's own pull request has nothing to replay. The script always
+  # exits 0: the platform judges the uploaded result.
+  tdd-verify:
+    if: github.event_name == 'pull_request' && startsWith(github.base_ref, 'vortex/sprint/')
+    runs-on: ubuntu-24.04 # a pinned image: ubuntu-latest moves without warning
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Replay red and green commits
+        run: sh .vortex/tdd-verify.sh "${{ github.base_ref }}" "bun run test --reporter=default --reporter=junit --outputFile.junit=.vortex-results/junit.xml" ".vortex-results/junit.xml"
+
+      - name: Upload replay results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vortex-tdd-replay
+          path: vortex-replay/
