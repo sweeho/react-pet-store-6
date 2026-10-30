@@ -25,8 +25,6 @@ Summary line: `12 passed (5.3s)`
 | e2e/smoke.spec.ts        | 3                                | 0      | 0       |
 | e2e/sign-on.spec.ts      | not present in the regular suite |        |         |
 
-(12 tests in 4 files per `playwright test --list`; per-file counts for home/localization taken from that list.)
-
 Additional run: `PLAYWRIGHT_BROWSERS_PATH=/tmp/pw bunx playwright test --config playwright.acceptance.config.ts tests/acceptance/sign-on` → `5 failed`, `4 passed (8.4s)`.
 
 | Case   | Result | Cause                                                                   |
