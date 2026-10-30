@@ -18,8 +18,23 @@ export function cartFor(sessionId: string): Map<string, number> {
   return cart;
 }
 
+/** Adds one of the item; an item already in the cart goes back to quantity 1. */
 export function addItem(cart: Map<string, number>, itemId: string): void {
-  cart.set(itemId, (cart.get(itemId) ?? 0) + 1);
+  cart.set(itemId, 1);
+}
+
+/** Sets the item's quantity as supplied, replacing any existing one. The quantity is not validated. */
+export function addItemWithQuantity(
+  cart: Map<string, number>,
+  itemId: string,
+  quantity: number,
+): void {
+  cart.set(itemId, quantity);
+}
+
+/** Removes the whole line whatever its quantity; an item not in the cart is left alone. */
+export function removeItem(cart: Map<string, number>, itemId: string): void {
+  cart.delete(itemId);
 }
 
 /** Cart lines with name, attribute and price from the cart locale's catalog details (en_US when none). */

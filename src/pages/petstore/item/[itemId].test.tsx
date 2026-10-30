@@ -23,9 +23,13 @@ function renderItem() {
           }),
   );
   vi.stubGlobal("fetch", fetchMock);
-  const router = createMemoryRouter([{ path: "/petstore/item/:itemId", element: <ItemPage /> }], {
-    initialEntries: ["/petstore/item/EST-1"],
-  });
+  const router = createMemoryRouter(
+    [
+      { path: "/petstore/item/:itemId", element: <ItemPage /> },
+      { path: "/petstore/cart", element: <p>cart screen</p> },
+    ],
+    { initialEntries: ["/petstore/item/EST-1"] },
+  );
   render(<RouterProvider router={router} />);
   return fetchMock;
 }
@@ -41,12 +45,12 @@ describe("item detail page", () => {
     expect(screen.getByRole("button", { name: /add to cart/i })).toBeInTheDocument();
   });
 
-  it("[SWHR2-C-0200] Add to Cart posts EST-1 to the cart API", async () => {
+  it("[SWHR2-C-0200] Add to Cart posts EST-1 to the cart API and shows the cart", async () => {
     const fetchMock = renderItem();
     await userEvent.click(await screen.findByRole("button", { name: /add to cart/i }));
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
     expect(post?.[0]).toBe("/api/cart/items");
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({ itemId: "EST-1" });
-    expect(await screen.findByRole("status")).toBeInTheDocument();
+    expect(await screen.findByText("cart screen")).toBeInTheDocument();
   });
 });
