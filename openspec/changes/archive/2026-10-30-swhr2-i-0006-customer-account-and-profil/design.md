@@ -181,3 +181,105 @@ The fixed expiry-year list and the three card types are constants in `shared/acc
 - `Bun.password` hashing (sign-on).
 - Nitro (H3) routes under `routes/api/account/`, and SPA pages and components with Tailwind and the shadcn/ui-style primitives.
 - Tests: route integration tests covering duplicate user, failed profile rolling back the account, and profile defaults; UI tests for the account form choices, My List limits and banner placement; a Playwright sign-up spec.
+
+## Planning — SWHR2-S-0015
+
+Added at sprint planning (SWHR2-T-0238). The FEATURE SWHR2-T-0239 owns every task group and works them in order. Its per-ticket steps are in `artifacts/SWHR2-S-0015/SWHR2-T-0239/PLAN.md`.
+
+### Codebase findings (measured on the sprint branch, 2026-10-30)
+
+- `db/schema.ts` is a single file. There is no `db/schema/` directory. `signon_users (user_id, password_hash)` already exists: sign-on created it in migration `drizzle/0003_kind_gladiator.sql`, and its comment reserves the table for this change. The latest migration is 0003.
+- `db/client.ts` registers every table in the drizzle `schema` map, runs migrations, turns foreign keys on, and seeds dev data outside Vitest. That data is the `j2ee`/`j2ee` sign-on user (no customer row) and a catalog with FISH, REPTILES and other products, but no BIRDS product. Under Vitest it is an in-memory database.
+- `services/session/auth.ts#verifyCustomer` checks `signon_users` with `Bun.password.verify`. `routes/api/session/sign-in.post.ts` signs on with `renewSession(event, userId)`. `services/session/guards.ts#requireCustomer` returns the user id or a 401 `SignOnRequired`.
+- `routes/api/account/index.get.ts` returns only `{ userId }`. `src/pages/petstore/account.tsx` shows "Signed in as …", and on a 401 it sends the visitor to `/petstore/signin?return=/petstore/account`.
+- `src/pages/petstore/signin.tsx` already draws the New customer form: user name and two pass-phrase fields. Its submit is a no-op, the fields are not `required`, and its labels ("Choose a pass phrase") do not contain the word "password".
+- `routes/api/session.get.ts` returns `{ locale, signedOn, userId?, rememberedUserName? }` and no preferences.
+- Screens: `/` (`src/pages/index.tsx`, the app home with PetMap and CategoryPanel, inside its own `LocaleProvider`). `/petstore/*` (`src/pages/petstore.tsx` layout with LanguageFlags, CategoryPanel and an outlet). `/petstore` (storefront home). `/petstore/cart`.
+- Screen text comes from `src/locales/<locale>/<screen>.ts` registered in `src/locales/registry.ts`, read with `useScreen`.
+- `services/catalog#listProducts(categoryId, locale, start, size)` returns a name-ordered page through the 5-minute list cache.
+- The locked acceptance suite `tests/acceptance/customer-account/` already exists (`harness.ts`, `service.test.ts`, `register.test.ts`, `forms.test.tsx`, `e2e/account.spec.ts`). It is the binding contract for the module paths, export names, table and column names, and labels listed under Interface contracts below.
+- CI: `.github/workflows/ci.yml` runs on pull requests to `vortex/**`, `dev` and `main`, and on pushes to `dev`. It runs the unit suite, `test:acceptance`, and `test:acceptance:e2e` (continue-on-error while the suite is red), plus the red-green replay on pull requests into a sprint branch.
+
+### Planning decisions
+
+- **P1 Schema location.** The six new tables go into the existing `db/schema.ts` and are registered in `db/client.ts`. They are `customers`, `customer_accounts`, `contact_info`, `addresses` and `customer_profiles`, with `signon_users` kept as it is. This replaces the `db/schema/storefront.ts` named under Data. One drizzle-kit migration (0004) is generated and committed.
+- **P2 Transactions are synchronous.** `drizzle-orm/bun-sqlite` runs a `db.transaction` callback synchronously, so `createCustomer` and the address operations must do all their writes inside a synchronous callback, with no `await` inside it. The exported functions may still return promises.
+  - Address operations take an optional `tx`. Without one they call `db.transaction` on the module's `db` binding at call time. Acceptance C-0173 spies on `db.transaction`, so a captured reference would miss it.
+- **P3 Registration answers with JSON, not HTTP redirects.** `POST /api/account/register` behaves as follows:
+  - success: it hashes the password with `Bun.password`, signs the visitor on with `renewSession`, and answers 2xx with `{ userId, next: "/petstore/account" }`;
+  - user id taken: 409 `{ kind: "UserExists" }`;
+  - blank field: 400.
+    The SPA does the "redirect": it navigates to `/petstore/account` on success and to `/petstore/user-creation-error` on 409. Acceptance C-0155/C-0156 assert the status codes.
+- **P4 Sign-up form.** The existing New customer form submits to the route above.
+  - All three inputs are `required`, so an empty field never reaches the server and the browser reports it (SWHR2-R-0009.02).
+  - Labels: "User name", "Password", "Repeat password". The two passwords are not compared.
+- **P5 Account information page** (`/petstore/account`). `GET /api/account` returns `{ userId, customer? }`.
+  - No customer: the page shows the empty form and saves with `POST`.
+  - Customer exists: it pre-fills and saves with `PUT`.
+  - Any 2xx response without `customer` (including one carrying only session fields) renders the empty form.
+  - On save the page returns to `/petstore`.
+  - The response never carries the full card number: last four digits only (SD1). In edit mode the card-number field starts empty, and leaving it blank keeps the stored number.
+- **P6 `PUT /api/account` is a partial update** of `{ profile?, contact?, card?, status? }`, applied in one transaction. A signed-on user with no customer gets 404 `NoCustomer`.
+- **P7 Dev seed.** Outside Vitest, `db/client.ts` gives the seeded `j2ee` a full customer through `createCustomer` with the default profile, so the e2e `PUT /api/account` is always an update. It also adds one BIRDS product, `AV-CB-01` (Amazon Parrot) in all three locales, with one item. Data-population (SWHR2-I-0014) replaces both seeds.
+- **P8 Preferences reach the shell through the session.** For a signed-on customer, `GET /api/session` adds `preferences: { myList, banner, favouriteCategory }`, read from `customer_profiles` on each call.
+  - `PetTipsBanner` takes `screen` and renders only for `home` or `cart` with the banner preference on. It carries `data-testid="pet-tips-banner"` and `data-category` set to `dogs|cats|reptiles|birds|fish`, with `dogs` for any other value. It is mounted on `/`, `/petstore` and `/petstore/cart`.
+  - `MyListPanel` (`data-testid="my-list"`) renders only with the MyList preference on. It reads `GET /api/account/my-list` → `{ items: [{ productId, name }] }`, which comes from `listProducts(favourite, locale, 0, 10)`, and it links each item to `/petstore/product/<productId>`. It is mounted in the `/petstore` layout and on `/`.
+- **P9 Card constants** live in `shared/account.ts`:
+  - `CARD_TYPES` = Java(TM) Card, Duke Express, Meow Card;
+  - `EXPIRY_YEARS` = a fixed list, 2026 to 2035. It is provisional until Q2 is answered, and it must contain 2030, the year the acceptance fixture uses.
+    The account routes reject other values with 400. The service stores what it is given, as the legacy components did.
+- **P10 Screen text** goes in a new `account` screen definition for en_US, ja_JP and zh_CN (account form and User Creation Error), plus the sign-up label changes in `signon`.
+- **P11 Language save.** Saving the profile's preferred language does not change the session locale. No approved requirement covers it (Q7, SD7).
+
+### Interface contracts fixed by the locked acceptance suite
+
+- **`services/customers/index.ts`** exports:
+  - `registerUser(userId, password)`
+  - `createCustomer(userId, { contact: { givenName, familyName, telephone, email, address: { street1, street2, city, state, zip, country } }, card: { cardNumber, cardType, expiryMonth, expiryYear } }, profile?: { preferredLanguage?, favouriteCategory?, myListOn?, bannerOn? })`. It rejects a duplicate.
+  - `getCustomer(userId)`, which returns one object
+  - `updateCustomer(userId, { profile?, status?, contact?, card? })`
+  - `contactSnapshot(contactId)`, which returns a fresh copy each call, with the address copied too
+- **`services/customers/address.ts`** exports `updateAddressField(addressId, field, value, tx?)`.
+- **Tables and columns:**
+  - `customers(user_id)`
+  - `customer_accounts(user_id, status, contact_id, card_number, …)`, with `status` checked to `active|disabled`, default `active`
+  - `contact_info(id, given_name, family_name, telephone, email, address_id)`
+  - `addresses(id, street1, street2, city, state, zip, country)`
+  - `customer_profiles(user_id, preferred_language, favourite_category, my_list_on, banner_on)`. The two flags are `integer NOT NULL default 1`.
+- **Routes:** `routes/api/account/register.post.ts` and `routes/api/account/my-list.get.ts`.
+- **Components:** `src/pages/petstore/account.tsx` and `src/components/storefront/PetTipsBanner.tsx` (default exports).
+- **Labels:**
+  - On the account page, exactly one control matches /card type/i (a select of the three types).
+  - Exactly one control matches /(expir|year)/i: the expiry-year `<select>`. The month control's label must contain neither word, for example "Month".
+  - Text inputs are labelled given name, family name, phone, e-mail, street, city, state, zip and country, plus card number. State and country are text inputs.
+- **Sign-up form:** it is the `<form>` containing "New customer". Its user field matches /user (name|id)/i, and its first and last /password/i fields are the two passwords.
+
+### Phases
+
+1. Data model and migration (tasks 1.x).
+2. Customer service and address operations (2.x).
+3. Routes: register, account GET/POST/PUT, my-list, and session preferences (3.3, 3.4, 5.x data).
+4. Screens: sign-up wiring, User Creation Error, account page, My List panel, pet-tips banner, locale definitions (3.1, 3.2, 3.5, 3.6, 4.x, 5.x).
+5. Dev seed (P7).
+6. **Test harness.** Colocated tests follow the existing patterns: `routes/api/**` route tests in the server project, page and component tests in jsdom, and service tests next to `services/customers/`. The locked acceptance suite `tests/acceptance/customer-account/` is run unmodified and must go green except the deferred C-0174. No new harness is needed: the suite reuses the sign-on and shopping-cart harnesses.
+7. **CI.** No workflow change. The existing `ci.yml` already runs the unit, acceptance and acceptance-e2e tiers on pull requests into `vortex/**`, and the red-green replay on the FEATURE's pull request.
+
+### Test cases deferred
+
+- SWHR2-C-0174 (Account creation before purchase): its last step checks out and expects an order id. It is deferred to checkout (SWHR2-I-0008). Sign-up and account creation are covered by C-0164, C-0149, C-0150 and the service cases.
+
+### Spec discrepancies
+
+Recorded, not edited into the delta spec.
+
+- **SD-P1 (SWHR2-R-0013, SWHR2-R-0055)** "Redirected onward" and "redirected to the user-creation error page" describe a server-side page flow. The replacement is an SPA over a JSON API, and the approved cases assert 2xx and 409 `UserExists`. The redirect is done by the SPA (P3).
+- **SWHR2-R-0061:** the scenario ends in a purchase, which needs checkout (SWHR2-I-0008). The account part is built here, and the case is deferred.
+- **Account screen (task 5.1):** there is no approved requirement for it (ACCT-SCR-0009 is pending). It is built as the account information page described in P5, tagged to the account and profile contents requirements, and it masks the card number (SD1).
+- **Task 4.2** waits for the SME's expiry window (Q2). A provisional fixed list is built (P9).
+- **SWHR2-R-0054 "Home screen":** this repository has two home screens, `/` and `/petstore`. Case C-0160 opens `/`. The banner is shown on both, and on the cart.
+- **Data section:** it names `db/schema/storefront.ts` and creates `signon_users`. In this repository the schema is the single `db/schema.ts`, and `signon_users` already exists (P1).
+
+### Assumptions
+
+- The provisional expiry years 2026–2035 are acceptable until the SME answers Q2.
+- The password maximum length (Q3) is not enforced beyond the existing sign-on limits. User ids keep the legacy limit of 25 characters with no `%` or `*`. The route answers 400 on a breach, which is not a "user name in use" message (SD5 is not reproduced).
