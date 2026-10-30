@@ -1,5 +1,6 @@
 #!/bin/sh
 # tdd-verify: replay a pull request's [tdd:red] and [tdd:green] commits (Vortex plan 105).
+# tdd-verify-version: 2
 #
 # Installed into a project's repository as .vortex/tdd-verify.sh by the Design
 # workbench's Setup stage, and run by CI on every pull request. It does NOT judge
@@ -14,9 +15,15 @@
 # tagged commit is checked out IN PLACE, so the installed dependencies are reused.
 #
 # Writes, for the CI step that uploads the artifact `vortex-tdd-replay`:
-#   vortex-replay/replay.json        {"base": ..., "red": <sha|null>, "green": <sha|null>, "suites": N}
+#   vortex-replay/replay.json        {"base": ..., "red": <sha|null>, "green": <sha|null>, "suites": N, "repeats": R}
 #   vortex-replay/red-<n>.xml        suite n's JUnit report at the [tdd:red] commit
 #   vortex-replay/green-<n>.xml      suite n's JUnit report at the [tdd:green] commit
+#   vortex-replay/green-<n>.r<k>.xml suite n's report on repeat k (1..R) at the [tdd:green] commit
+#
+# The repeats catch an unreliable test: one that passes once and fails on a second
+# run of the same code (a test that acts before the app is ready). R is
+# TDD_VERIFY_REPEATS, default 2; 0 turns them off. The merge gate judges them only
+# for the ticket's own test cases, and only while its switch is on.
 #
 # The newest commit whose subject ends with [tdd:red] (or [tdd:green]) between the
 # merge base and HEAD is the one replayed. A pull request with neither tag writes
@@ -56,8 +63,11 @@ red=$(tagged red)
 green=$(tagged green)
 
 suites=$(( $# / 2 ))
-printf '{"base":"%s","red":%s,"green":%s,"suites":%s}\n' \
-  "$base" "$(json_sha "$red")" "$(json_sha "$green")" "$suites" > "$out/replay.json"
+repeats=${TDD_VERIFY_REPEATS:-2}
+case "$repeats" in ''|*[!0-9]*) repeats=2 ;; esac
+if [ -z "$green" ]; then repeats=0; fi
+printf '{"base":"%s","red":%s,"green":%s,"suites":%s,"repeats":%s}\n' \
+  "$base" "$(json_sha "$red")" "$(json_sha "$green")" "$suites" "$repeats" > "$out/replay.json"
 
 # Run every suite at one commit, copying each report out of the tree before the
 # next checkout. A suite that writes no report leaves no file; the merge gate
@@ -80,6 +90,20 @@ replay() {
 }
 
 if [ -n "$red" ]; then replay red "$red" "$@"; fi
-if [ -n "$green" ]; then replay green "$green" "$@"; fi
+if [ -n "$green" ]; then
+  replay green "$green" "$@"
+  k=1
+  while [ "$k" -le "$repeats" ]; do
+    replay "green-r$k" "$green" "$@"
+    # replay names its files <phase>-<n>; the reader expects green-<n>.r<k>.
+    n=1
+    while [ "$n" -le "$suites" ]; do
+      if [ -f "$out/green-r$k-$n.xml" ]; then mv "$out/green-r$k-$n.xml" "$out/green-$n.r$k.xml"; fi
+      if [ -f "$out/green-r$k-$n.log" ]; then mv "$out/green-r$k-$n.log" "$out/green-$n.r$k.log"; fi
+      n=$(( n + 1 ))
+    done
+    k=$(( k + 1 ))
+  done
+fi
 git checkout -q --detach "$origin_head" || true
 exit 0
