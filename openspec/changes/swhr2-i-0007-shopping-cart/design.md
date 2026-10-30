@@ -103,7 +103,7 @@ The Add to Cart controls on the product item list, item detail and search result
 
 ## Planning (sprint SWHR2-S-0017)
 
-Owner: FEATURE SWHR2-T-0253 does every task group in `tasks.md`, in order. Plan: `artifacts/SWHR2-S-0017/SWHR2-T-0253/PLAN.md`.
+Owner: FEATURE SWHR2-T-0247 does every task group in `tasks.md`, in order. Plan: `artifacts/SWHR2-S-0016/SWHR2-T-0247/PLAN.md`. T-0247 was deferred unmerged from SWHR2-S-0016 and is resumed here, not re-created; its earlier implementation is commit `648f31b` on `vortex/feat/SWHR2-T-0247-shopping-cart-8b2f9f34`.
 
 ### Codebase findings
 

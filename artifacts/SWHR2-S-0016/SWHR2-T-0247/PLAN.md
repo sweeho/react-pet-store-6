@@ -1,6 +1,10 @@
-# PLAN — SWHR2-T-0253 Shopping cart (FEATURE)
+# PLAN — SWHR2-T-0247 Shopping cart (FEATURE)
 
 Change: `swhr2-i-0007-shopping-cart`. Read its `design.md` FIRST (Target design, then `## Planning` and `## Spec discrepancies`), then `specs/shopping-cart/spec.md` and `tasks.md`.
+
+## Resumed ticket
+
+T-0247 was planned in SWHR2-S-0016, implemented on `vortex/feat/SWHR2-T-0247-shopping-cart-8b2f9f34` (commit `648f31b`, "[tdd:green]"), and deferred without merging; the sprint branch still has the pre-sprint partial cart. It is carried into SWHR2-S-0017 and dispatched from the S-0017 sprint branch. Start from that commit: review it against this plan and the change's design.md, bring over what holds, and fix what does not. Do not bring over `src/pages/petstore/error/empty-cart.tsx`; checkout (SWHR2-I-0008) owns the error pages.
 
 ## Objective
 
@@ -36,6 +40,7 @@ Create or modify only:
 - `src/pages/petstore/cart.tsx`, `src/pages/petstore/cart.test.tsx`
 - `src/locales/{en_US,ja_JP,zh_CN}/petstore-cart.ts`
 - `src/components/storefront/AddToCart.tsx` (+ its test)
+- `e2e/cart.spec.ts` (if brought over from the earlier branch)
 - Tests whose assertions the Add to Cart navigation or the re-add rule legitimately changes (`src/pages/petstore/item/[itemId].test.tsx`, `product/[productId].test.tsx`, `search.test.tsx`, `routes/api/catalog/browse-to-cart.test.ts`)
 
 Read-only: `services/session/**`, `services/catalog/**`, `tests/acceptance/**`.
