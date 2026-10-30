@@ -89,7 +89,7 @@ describe("cart routes", () => {
   });
 
   // case: SWHR2-C-0090@v1
-  it("SWHR2-C-0090: submitting an order with an empty cart gives the empty-cart order failure and creates no order", async () => {
+  it("SWHR2-C-0090: submitting an order with an empty cart is routed to the empty-cart error page and creates no order", async () => {
     const app = await cartApp();
     await seedCustomer(app.client, "j2ee", "j2ee");
     const signed = await call(app, "../../../routes/api/session/sign-in.post", {
@@ -105,6 +105,10 @@ describe("cart routes", () => {
     });
     expect(r.status).toBe(422);
     expect(JSON.stringify(r.body)).toContain("EmptyCartOrder");
+    // The response resolves, through the application's configured error-page table,
+    // to the empty-cart order error page, not the general Server Error page.
+    const { routeFailure } = await import("../../../src/errors/routeFailure");
+    expect(String(routeFailure(r.body as never))).toMatch(/empty-cart/);
     expect(app.client.query("select count(*) n from op_purchase_orders").get()).toEqual({ n: 0 });
     expect(
       app.client.query("select count(*) n from messages where channel = 'order.new'").get(),

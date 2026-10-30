@@ -63,12 +63,19 @@ test.describe("shopping cart", () => {
   // Regression for SWHR2-T-0248 (SWHR2-R-0115): the served cart screen, not a stubbed fetch,
   // must carry the row controls and the Update Cart / total / Check Out block.
   // case: SWHR2-C-0086@v1
-  test("[SWHR2-C-0086] the served cart screen shows Large Angelfish with Remove, quantity, $16.50, Update Cart, total and Check Out", async ({
+  test("[SWHR2-C-0086] the served cart screen with 2 x Large Angelfish shows the linked name, Remove, quantity 2, $16.50, Update Cart, total $33.00 and Check Out", async ({
     page,
   }) => {
     await addItem(page, "EST-1");
     await page.goto("/petstore/cart");
+    const qtyField = (p: Page) =>
+      row(p, /Large Angelfish/)
+        .getByRole("textbox")
+        .or(row(p, /Large Angelfish/).getByRole("spinbutton"));
+    await qtyField(page).fill("2");
+    await page.getByRole("button", { name: /update cart/i }).click();
     const line = row(page, /Large Angelfish/);
+    await expect(qtyField(page)).toHaveValue("2");
     await expect(line.getByRole("link", { name: /Large Angelfish/ })).toHaveAttribute(
       "href",
       /item\/EST-1/,
@@ -76,11 +83,10 @@ test.describe("shopping cart", () => {
     await expect(
       line.getByRole("button", { name: /remove/i }).or(line.getByRole("link", { name: /remove/i })),
     ).toBeVisible();
-    await expect(line.getByRole("textbox").or(line.getByRole("spinbutton"))).toHaveValue("1");
     await expect(line.getByText(/\$16\.50/).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /update cart/i })).toBeVisible();
-    // One unit, so the total equals the unit price: the row price plus the total.
-    expect(await page.getByText(/\$16\.50/).count()).toBeGreaterThanOrEqual(2);
+    // The cart total for 2 x 16.50, shown below the row.
+    await expect(page.getByText(/\$33\.00/).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /check ?out/i })).toBeVisible();
   });
 
@@ -108,7 +114,12 @@ test.describe("shopping cart", () => {
       .or(row(page, "EST-1").getByRole("link", { name: /add to cart/i }))
       .first()
       .click();
-    await expect(page.getByText("EST-1").first()).toBeVisible();
+    // The browser lands on the cart screen, and EST-1 is a line in it.
+    await expect(page).toHaveURL(/\/cart/);
+    const line = row(page, /Large Angelfish|EST-1/);
+    await expect(line.getByRole("spinbutton").or(line.getByRole("textbox"))).toHaveValue("1");
+    await page.goto("/petstore/cart");
+    await expect(row(page, /Large Angelfish|EST-1/)).toHaveCount(1);
     expect(urls.filter((u) => /signin|sign-in/i.test(u))).toEqual([]);
   });
 
