@@ -1,6 +1,6 @@
 # Summary — SWHR2-T-0234
 
-CODE-REVIEW: n/a — test-environment change only, no product code.
+CODE-REVIEW: self-review — no sub-agent run, the diff is two config hashes and a warm-up loop; checked that the warm-up posts only rejected credentials (no session change) and that cheap hashes are confined to the Playwright web-server env, not product code; no findings.
 
 ## What changed
 
