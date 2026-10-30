@@ -100,3 +100,56 @@ The Add to Cart controls on the product item list, item detail and search result
 - Nitro (H3) routes under `routes/api/cart/` over the in-memory session store (sign-on). There is no Drizzle table, because the spec forbids durable storage.
 - Currency formatting uses `shared/i18n/format.ts` (localization).
 - Tests: unit tests for the cart model (re-add sets 1, remove absent item, replace quantity); route integration tests proving two sessions do not share a cart and sign-out empties it; UI tests for the empty and filled cart screens.
+
+## Planning (sprint SWHR2-S-0017)
+
+Owner: FEATURE SWHR2-T-0253 does every task group in `tasks.md`, in order. Plan: `artifacts/SWHR2-S-0017/SWHR2-T-0253/PLAN.md`.
+
+### Codebase findings
+
+What the repository already has (built by catalog-browsing and sign-on, measured on the sprint branch at `6972c0b`):
+
+- `services/cart.ts` (not `services/cart/index.ts`): module-level `Map<sessionId, Map<itemId, qty>>`; `cartFor`, `addItem` (**increments**), `lines(cart, locale)` returning `{ itemId, quantity, name, attribute, unitPrice }` from `services/catalog` `getItem` (skips an item it cannot find), `discardCart`, `moveCart`. Unit test `services/cart.test.ts` (C-0033/C-0034, locale lines).
+- `services/session/store.ts`: the session's `end()` calls `discardCart` on sign-out and idle expiry; `renewSession` (sign-in) moves the cart to the new id; storefront sign-out starts a fresh session. So SWHR2-R-0114.03 and SWHR2-R-0118 are already wired; this change adds their tests.
+- `routes/api/cart/index.get.ts` returns `{ locale, lines }` (no total); `routes/api/cart/items.post.ts` takes `{ itemId }` only and returns `{ count }`. Both fall back to an `"anonymous"` cart when no session is attached. No DELETE or PUT route.
+- `src/components/storefront/AddToCart.tsx` is used by the product item list, item detail and search results; it POSTs and stays on the page with an "added" status.
+- `src/pages/petstore/cart.tsx` is a placeholder list (no link, Remove, quantity input, total, Update Cart or Check Out); `src/locales/*/petstore-cart.ts` holds "Your cart will appear here once the cart ships.".
+- Prices are integer hundredths (ARCHITECTURE.md Key Decisions); `shared/i18n/format.ts` `formatMoney` formats them.
+- No `src/errors/`, no `services/errors.ts`; `services/catalog/errors.ts` has a `CatalogError` class. 401 responses already carry `data: { kind }` (`services/session/http.ts`).
+- Checkout (change `swhr2-i-0008-checkout-and-order-placemen`) is not built: no `routes/api/orders`, no `/petstore/checkout`, no `src/pages/petstore/error/`.
+- Acceptance tests already exist under `tests/acceptance/shopping-cart/` (`cart.test.ts`, `cart-page.test.tsx`, `e2e/cart.spec.ts`, `harness.ts`). They are the interface contract.
+
+### Planning decisions
+
+- **P1 Keep `services/cart.ts`.** Extend the existing module rather than move it to `services/cart/index.ts`; imports of `services/cart` resolve either way and the session store already depends on it.
+- **P2 Re-add sets 1.** `addItem` changes from increment to `set(itemId, 1)`, per Target design and the brief (Solution, Add).
+- **P3 Model functions.** Add `addItemWithQuantity(cart, itemId, qty)`, `removeItem(cart, itemId)`, `updateQuantities(cart, { [itemId]: qty })` (a quantity ≤ 0 removes the line, as the legacy update did) and `clear(cart)`; also `clearCart(sessionId)` for checkout to call after placement.
+- **P4 Cart view.** Every cart route returns `{ locale, lines, total }`, each line `{ itemId, name, attribute, productName, quantity, unitPrice, lineTotal }`, money in hundredths. Drop the `"anonymous"` fallback: the session middleware always attaches a storefront session.
+- **P5 Routes.** Add `routes/api/cart/items/[itemId].delete.ts` and `routes/api/cart/index.put.ts`; `items.post.ts` accepts optional `quantity`. No guard on any (SWHR2-R-0117).
+- **P6 Add then show the cart.** `AddToCart` navigates to `/petstore/cart` after a successful add, as legacy `cart.do` did; the acceptance E2E (C-0096, C-0097, C-0093) expects the cart rows after Add.
+- **P7 Failure routing.** `services/errors.ts` defines `AppFailure` and its sub-kinds with a parent chain and a helper that raises an H3 error whose `data` is `{ kind, kinds, message }`. `src/errors/routeFailure.ts` exports `routeFailure(failure, table)` returning the first page in `table` along `failure.kinds`, else the `"server-error"` page id. The default table maps `EmptyCartOrder` to `empty-cart`. Checkout builds the pages themselves.
+- **P8 Cart screen.** A table (`role="row"` per line) following the approved mockups; empty state is the shared `EmptyFrame` with "Your Shopping Cart is Empty." in en_US and its ja_JP/zh_CN equivalents in the locale definitions.
+
+### Phases
+
+1. Cart model (tasks 1.x, 2.x model side) with unit tests in `services/cart.test.ts`.
+2. Routes (2.x) with integration tests under `routes/api/cart/`.
+3. Failure routing (3.x) with unit tests.
+4. Cart screen and Add to Cart (4.x) with UI tests.
+5. **Test harness.** Make the existing acceptance suite in `tests/acceptance/shopping-cart/` pass for every linked case; the vitest and Playwright acceptance configs already pick it up. Keep `tests/acceptance/catalog-browsing/e2e/browse.spec.ts` C-0200 green after the Add to Cart navigation change.
+6. **CI.** No workflow change: the existing CI runs lint, typecheck, unit, E2E and the acceptance suites on pushes and pull requests to `vortex/**`. The branch must be green there.
+
+### Test cases deferred to checkout (SWHR2-I-0008)
+
+C-0089 (Check Out lands on order information entry), C-0090 (empty-cart order error page, needs `POST /api/orders`) and C-0101 (placing an order empties the cart) exercise checkout's route and pages. This change provides the Check Out link, `routeFailure` with the `EmptyCartOrder` mapping, and `clearCart`; checkout's sprint owes the cases.
+
+## Spec discrepancies
+
+Recorded, not edited into the delta spec.
+
+- **SD1 Re-add.** `services/cart.ts` `addItem` increments an existing line (legacy pass A reading). The design and brief say re-add sets 1; the spec only covers the first add (SWHR2-R-0144). Built as the design says (P2).
+- **SD2 Shared anonymous cart.** The cart routes fall back to one `"anonymous"` cart when no session is attached, which would share a cart across requests (against SWHR2-R-0114). Unreachable in practice because the session middleware always attaches one; removed (P4).
+- **SD3 Missing catalog items.** `lines()` silently skips an item the catalog no longer returns while the map entry stays, so `items.post` reports a count that includes it (legacy D3 "ghost lines"). The spec says nothing; the total and empty check are computed from the listed lines so an all-ghost cart shows the empty message.
+- **SD4 Scenarios that need checkout.** SWHR2-R-0115.04, SWHR2-R-0116.01 and SWHR2-R-0147.01 can be observed only through checkout, which is a later capability. Their cart-side parts are built here; their cases are deferred.
+- **SD5 Module path.** Target design names `services/cart/index.ts`; the code has `services/cart.ts` (P1).
+- **SD6 Screen row content.** The spec asks for "item attribute and product name"; the acceptance test C-0086 finds the link by the item description ("Large Angelfish"). The row shows the item description as the link text, plus attribute and product name.
