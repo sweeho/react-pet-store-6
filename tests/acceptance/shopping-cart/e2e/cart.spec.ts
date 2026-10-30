@@ -4,6 +4,11 @@ const EMPTY = "Your Shopping Cart is Empty.";
 const addBtn = (p: Page) =>
   p.getByRole("button", { name: /add to cart/i }).or(p.getByRole("link", { name: /add to cart/i }));
 const row = (p: Page, text: string | RegExp) => p.getByRole("row").filter({ hasText: text });
+/** The cart row whose name links to item `id`'s detail page (exact id, so EST-1 never picks EST-10). */
+const itemRow = (p: Page, id: string) =>
+  p.getByRole("row").filter({ has: p.locator(`a[href$="/item/${id}"]`) });
+const removeIn = (r: ReturnType<Page["getByRole"]>) =>
+  r.getByRole("button", { name: /remove/i }).or(r.getByRole("link", { name: /remove/i }));
 
 async function signIn(page: Page) {
   await page.goto("/petstore/signin");
@@ -37,6 +42,8 @@ test.describe("shopping cart", () => {
   }) => {
     await signIn(page);
     await addItem(page, "EST-1");
+    await page.goto("/petstore/cart");
+    await expect(itemRow(page, "EST-1")).toHaveCount(1);
     await page.getByText(/^sign out$/i).click();
     await page.goto("/petstore/cart");
     await expect(page.getByText(EMPTY)).toBeVisible();
@@ -52,12 +59,18 @@ test.describe("shopping cart", () => {
     await addItem(page, "EST-1");
     await addItem(page, "EST-2");
     await page.goto("/petstore/cart");
-    await row(page, "EST-1")
-      .getByRole("button", { name: /remove/i })
-      .or(row(page, "EST-1").getByRole("link", { name: /remove/i }))
-      .click();
-    await expect(page.getByText("EST-1")).toHaveCount(0);
-    await expect(page.getByText("EST-2").first()).toBeVisible();
+    await expect(itemRow(page, "EST-1")).toHaveCount(1);
+    await expect(itemRow(page, "EST-2")).toHaveCount(1);
+    await removeIn(itemRow(page, "EST-1")).click();
+    // The redisplayed cart has a single line row (one Remove control), and it is EST-2.
+    const lines = page.getByRole("row").filter({
+      has: page
+        .getByRole("button", { name: /remove/i })
+        .or(page.getByRole("link", { name: /remove/i })),
+    });
+    await expect(lines).toHaveCount(1);
+    await expect(itemRow(page, "EST-2")).toHaveCount(1);
+    await expect(itemRow(page, "EST-1")).toHaveCount(0);
   });
 
   // Regression for SWHR2-T-0248 (SWHR2-R-0115): the served cart screen, not a stubbed fetch,
@@ -166,33 +179,34 @@ test.describe("shopping cart", () => {
     await addItem(page, "EST-1");
     await addItem(page, "EST-2");
     await page.goto("/petstore/cart");
+    await expect(itemRow(page, "EST-1")).toHaveCount(1);
+    await expect(itemRow(page, "EST-2")).toHaveCount(1);
     await page.getByRole("link", { name: /check ?out/i }).click();
+    // Fill in the order information (billing fields come first on the form).
+    const fields: [RegExp, string][] = [
+      [/first name|given name/i, "ABC"],
+      [/last name|family name/i, "XYZ"],
+      [/address 1|street/i, "1 Main St"],
+      [/city/i, "Palo Alto"],
+      [/zip|postal/i, "94303"],
+      [/phone|telephone/i, "555-555-5555"],
+      [/e-?mail/i, "abc@xyz.com"],
+    ];
+    for (const [label, value] of fields) await page.getByLabel(label).first().fill(value);
+    const placed = page.waitForResponse(
+      (r) => r.request().method() === "POST" && /\/api\/orders$/.test(r.url()),
+    );
     await page
-      .getByRole("button", { name: /continue|submit|place|next/i })
+      .getByRole("button", { name: /continue|submit|place|confirm/i })
       .first()
       .click();
-    const confirm = page.getByRole("button", { name: /confirm|place order|submit/i });
-    if (await confirm.count()) await confirm.first().click();
-    await expect(page.getByText(/\b1001\d+\b/).first()).toBeVisible();
+    const res = await placed;
+    expect(res.status()).toBe(200);
+    const { orderId } = (await res.json()) as { orderId: string };
+    expect(orderId).toMatch(/^1001\d+$/);
+    // The order is confirmed to the customer with its id.
+    await expect(page.getByText(orderId).first()).toBeVisible();
     await page.goto("/petstore/cart");
     await expect(page.getByText(EMPTY)).toBeVisible();
-  });
-});
-
-test.describe("empty cart order", () => {
-  // case: SWHR2-C-0090@v1
-  test("SWHR2-C-0090: submitting an order with an empty cart shows the empty-cart error page", async ({
-    page,
-  }) => {
-    await signIn(page);
-    await page.goto("/petstore/checkout");
-    await page
-      .getByRole("button", { name: /continue|submit|place|next|confirm/i })
-      .first()
-      .click();
-    // the dedicated page src/pages/petstore/error/empty-cart.tsx, not the Server Error page
-    await expect(page.getByRole("heading", { name: /empty/i }).first()).toBeVisible();
-    await expect(page.getByText(/server error/i)).toHaveCount(0);
-    await expect(page.getByText(/notify (the )?administrator/i)).toHaveCount(0);
   });
 });

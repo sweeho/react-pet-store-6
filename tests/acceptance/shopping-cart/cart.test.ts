@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -104,11 +107,17 @@ describe("cart routes", () => {
       json: { billing: {}, shipping: {} },
     });
     expect(r.status).toBe(422);
-    expect(JSON.stringify(r.body)).toContain("EmptyCartOrder");
-    // The response resolves, through the application's configured error-page table,
-    // to the empty-cart order error page, not the general Server Error page.
+    expect((r.body as { kind?: string }).kind).toBe("EmptyCartOrder");
+    // The application's error-page table resolves the reply to the empty-cart order error page,
+    // and that page is what the shopper is shown: render it and read its text.
     const { routeFailure } = await import("../../../src/errors/routeFailure");
     expect(String(routeFailure(r.body as never))).toMatch(/empty-cart/);
+    const Page = (await import("../../../src/pages/petstore/error/empty-cart")).default;
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Page)));
+    const text = html.replace(/<[^>]+>/g, " ");
+    expect(text).toMatch(/cart/i);
+    expect(text).toMatch(/empty/i);
+    expect(text).not.toMatch(/server error/i);
     expect(app.client.query("select count(*) n from op_purchase_orders").get()).toEqual({ n: 0 });
     expect(
       app.client.query("select count(*) n from messages where channel = 'order.new'").get(),
@@ -119,10 +128,11 @@ describe("cart routes", () => {
   it("SWHR2-C-0094: a visitor who has not signed on can remove EST-1 with no role check refusing it", async () => {
     const app = await cartApp();
     const cookies = sessionOf(await getCart(app));
-    await addToCart(app, cookies, "EST-1");
+    expect((await addToCart(app, cookies, "EST-1")).status).toBe(200);
+    expect(ids((await getCart(app, cookies)).body)).toEqual(["EST-1"]);
     const r = await removeFromCart(app, cookies, "EST-1");
     expect(r.status).toBe(200);
-    expect(ids((await getCart(app, cookies)).body)).not.toContain("EST-1");
+    expect(ids((await getCart(app, cookies)).body)).toEqual([]);
   });
 
   // case: SWHR2-C-0095@v1
@@ -130,6 +140,9 @@ describe("cart routes", () => {
     const app = await cartApp();
     const s1 = sessionOf(await getCart(app));
     await addToCart(app, s1, "EST-1", 2);
+    const before = (await getCart(app, s1)).body;
+    expect(ids(before)).toEqual(["EST-1"]);
+    expect(qty(before, "EST-1")).toBe(2);
     await call(app, "../../../routes/api/session/sign-out.post", {
       method: "POST",
       url: "/api/session/sign-out",
@@ -155,22 +168,39 @@ describe("cart routes", () => {
 describe("failure routing", () => {
   // case: SWHR2-C-0091@v1
   it("SWHR2-C-0091: a specific failure with no mapping of its own is routed to the page of its general kind", async () => {
+    const app = await cartApp();
+    // A real request handler raises the item-not-found failure for an item that does not exist.
+    const r = await call(app, "../../../routes/api/catalog/items/[itemId].get", {
+      url: "/api/catalog/items/NO-SUCH-ITEM",
+      params: { itemId: "NO-SUCH-ITEM" },
+    });
+    const failure = r.body as { kind: string; kinds: string[] };
+    expect(failure.kinds).toContain("CatalogError");
+    // The failure is more specific than the catalog kind it belongs to.
+    expect(failure.kind).not.toBe("CatalogError");
+    expect(failure.kinds[0]).toBe(failure.kind);
     const { routeFailure } = await import("../../../src/errors/routeFailure");
-    const table = { CatalogError: "catalog-error" };
-    const page = routeFailure(
-      { kind: "ItemNotFound", kinds: ["ItemNotFound", "CatalogError", "AppFailure"] },
-      table,
-    );
-    expect(page).toBe("catalog-error");
+    // Error routing configured with a page only for the general catalog kind.
+    expect(routeFailure(failure as never, { CatalogError: "catalog-error" })).toBe("catalog-error");
   });
 
   // case: SWHR2-C-0092@v1
   it("SWHR2-C-0092: a failure with no mapping for itself or any kind it belongs to gives a general server error", async () => {
+    const { H3 } = await import("nitro/h3");
+    // A test route raising a failure type that no error page is configured for.
+    class UnmappedTestFailure extends Error {
+      kind = "UnmappedTestFailure";
+      kinds = ["UnmappedTestFailure"];
+    }
+    const server = new H3().get("/test/unmapped", () => {
+      throw new UnmappedTestFailure("unmapped");
+    });
+    const res = await server.fetch(new Request("http://localhost/test/unmapped"));
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as object;
     const { routeFailure } = await import("../../../src/errors/routeFailure");
-    const table = { CatalogError: "catalog-error", EmptyCartOrder: "empty-cart" };
-    const page = routeFailure({ kind: "Weird", kinds: ["Weird", "AppFailure"] }, table);
-    expect(String(page)).toMatch(/server/i);
-    expect(page).not.toBe("catalog-error");
-    expect(page).not.toBe("empty-cart");
+    const page = String(routeFailure(body as never));
+    expect(page).toMatch(/server/i);
+    expect(page).not.toMatch(/empty-cart|catalog/);
   });
 });
