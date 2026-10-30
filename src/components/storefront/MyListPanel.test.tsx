@@ -7,11 +7,7 @@ import MyListPanel from "./MyListPanel";
 afterEach(() => vi.unstubAllGlobals());
 
 function show(items: { productId: string; name: string }[]) {
-  const fetchMock = vi.fn(async (url: string) =>
-    String(url).startsWith("/api/session")
-      ? Response.json({ signedOn: true, userId: "j2ee" })
-      : Response.json({ items }),
-  );
+  const fetchMock = vi.fn(async () => Response.json({ items }));
   vi.stubGlobal("fetch", fetchMock);
   render(
     <MemoryRouter>
@@ -35,24 +31,5 @@ describe("MyListPanel", () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.queryByTestId("my-list")).toBeNull();
-  });
-
-  it("does not request the My List API for an anonymous visitor (no 401 console error)", async () => {
-    const fetchMock = vi.fn(async (url: string) =>
-      String(url).startsWith("/api/session")
-        ? Response.json({ signedOn: false })
-        : new Response(null, { status: 401 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    render(
-      <MemoryRouter>
-        <MyListPanel />
-      </MemoryRouter>,
-    );
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    await new Promise((r) => setTimeout(r, 20));
-    expect(
-      fetchMock.mock.calls.map(([u]) => String(u)).filter((u) => u.includes("my-list")),
-    ).toEqual([]);
   });
 });

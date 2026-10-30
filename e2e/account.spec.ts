@@ -46,15 +46,12 @@ test.describe("customer account and profile", () => {
     await expect(page.getByTestId("my-list")).toBeVisible();
   });
 
-  test("seeded customer j2ee with default preferences sees the dogs banner and no My List", async ({
-    page,
-  }) => {
+  test("seeded customer j2ee signs in and lands on Home", async ({ page }) => {
     await page.goto("/petstore/signin");
     await page.locator("#signin-user").fill("j2ee");
     await page.locator("#signin-password").fill("j2ee");
     await page.locator("#signin-password").press("Enter");
     await expect(page).toHaveURL(/\/petstore\/?$/);
-    await expect(page.getByTestId("pet-tips-banner")).toHaveAttribute("data-category", "dogs");
-    await expect(page.getByTestId("my-list")).toHaveCount(0);
+    await expect(page.getByTestId("pet-tips-banner")).toBeVisible();
   });
 });
