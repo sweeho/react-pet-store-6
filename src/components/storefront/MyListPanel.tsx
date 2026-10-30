@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 
 import { useScreen } from "@/locales/useScreen";
 
@@ -12,6 +12,8 @@ interface MyListItem {
 /** Up to ten products of the favourite category; renders nothing while MyList is off (SWHR2-R-0053). */
 export default function MyListPanel() {
   const { locale } = useLocale();
+  // The panel lives in the layout, so re-read after each client-side navigation (e.g. right after sign-up).
+  const { pathname } = useLocation();
   const text = useScreen("account", locale);
   const [items, setItems] = useState<MyListItem[]>([]);
 
@@ -29,7 +31,7 @@ export default function MyListPanel() {
     return () => {
       live = false;
     };
-  }, [locale]);
+  }, [locale, pathname]);
 
   if (items.length === 0 || "error" in text) return null;
   const t = text.definition;
