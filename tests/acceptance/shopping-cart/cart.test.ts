@@ -224,8 +224,8 @@ describe("failure routing", () => {
   it("SWHR2-C-0092: a failure with no mapping for itself or any kind it belongs to gives a general server error", async () => {
     // The application ships no route that raises an unmapped failure, so the case's test route is
     // the real cart route with the cart service it calls made to raise one. The request goes through
-    // the application's own session middleware and route handler, and the answer is whatever the
-    // application's failure handling makes of it.
+    // the application's own session middleware and route handler. The test supplies no status of its
+    // own: the 500 and the reply body must both be set by the application's failure handling.
     class UnmappedTestFailure extends Error {
       kind = "UnmappedTestFailure";
       kinds = ["UnmappedTestFailure"];
@@ -239,17 +239,43 @@ describe("failure routing", () => {
     }));
     try {
       const app = await cartApp();
-      const r = await getCart(app);
-      expect(r.status).toBe(500);
+      const { H3Event } = await import("nitro/h3");
+      const event = new H3Event(new Request("http://localhost/api/cart"));
+      await app.session(event);
+      const handler = (await import("../../../routes/api/cart/index.get")).default as (
+        e: typeof event,
+      ) => Promise<unknown>;
+      // The application's answer, read as the application gives it: a reply it returns, or the
+      // error it throws with the status and data it set on it. A failure that escapes with no
+      // status of its own is not a server error the application gave.
+      let status: number | undefined;
+      let body: unknown;
+      try {
+        const out = await handler(event);
+        if (out instanceof Response) {
+          status = out.status;
+          body = await out.json();
+        } else {
+          status = event.res.status;
+          body = out;
+        }
+      } catch (err) {
+        const e = err as { status?: number; statusCode?: number; data?: unknown };
+        expect(err).not.toBeInstanceOf(UnmappedTestFailure);
+        status = e.status ?? e.statusCode;
+        body = e.data;
+      }
+      expect(status).toBe(500);
       // The application's general server error (checkout SWHR2-R-0003), not the raised failure
       // passed through and not a mapped failure kind.
-      const body = r.body as { kind?: string; kinds?: string[] };
-      expect(body.kind).toBe("AppFailure");
-      expect(JSON.stringify(body)).toContain("unmapped-test");
+      expect(body).toBeTruthy();
+      const reply = body as { kind?: string; kinds?: string[] };
+      expect(reply.kind).toBe("AppFailure");
+      expect(JSON.stringify(reply)).toContain("unmapped-test");
       // The application's error-page table shows that reply on the Server Error page, not on one of
       // the mapped error pages.
       const { routeFailure } = await import("../../../src/errors/routeFailure");
-      const page = String(routeFailure(body as never));
+      const page = String(routeFailure(reply as never));
       expect(page).toMatch(/server/i);
       expect(page).not.toMatch(/empty-cart|catalog/);
     } finally {
