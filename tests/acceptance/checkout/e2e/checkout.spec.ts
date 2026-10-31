@@ -98,7 +98,7 @@ test.describe("server error page", () => {
       db.exec(`create trigger if not exists acc_c0212_boom before insert on messages
         when new.payload like '%BoomC0212%'
         begin select raise(abort, 'boom-test'); end`);
-      const firstNames = page.getByLabel(/first name|given name/i);
+      const firstNames = page.getByLabel(/^(first name|given name):?$/i);
       for (let i = 0; i < (await firstNames.count()); i++)
         await firstNames.nth(i).fill("BoomC0212");
       const placed = page.waitForResponse(
