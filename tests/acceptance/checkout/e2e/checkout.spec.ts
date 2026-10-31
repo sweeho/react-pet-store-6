@@ -1,10 +1,25 @@
-import { Database } from "bun:sqlite";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
 // The dev server's database file (db/client.ts resolves it from the project root).
-const openDb = () => new Database(path.join(process.cwd(), "sqlite.db"));
+const DB_FILE = path.join(process.cwd(), "sqlite.db");
+
+// Playwright runs this file under Node, where bun:sqlite does not exist, so each statement runs
+// in a bun child process against the same file. Returns the first row of a query, or null.
+function sql(statement: string, ...params: string[]): Record<string, unknown> | null {
+  const script = `
+    const { Database } = require("bun:sqlite");
+    const [file, statement, params] = JSON.parse(process.argv[1]);
+    const db = new Database(file);
+    try { console.log(JSON.stringify(db.query(statement).get(...params) ?? null)); }
+    finally { db.close(); }`;
+  const out = execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, statement, params])], {
+    encoding: "utf8",
+  });
+  return JSON.parse(out.trim() || "null") as Record<string, unknown> | null;
+}
 
 async function toCheckout(page: Page) {
   await page.goto("/petstore/signin");
@@ -63,25 +78,16 @@ test.describe("checkout form", () => {
     await expect(page.getByText(orderId).first()).toBeVisible();
 
     // the stored order: billing details on the header, shipping details on its contact record
-    const db = openDb();
-    try {
-      const row = (table: string) =>
-        db.query(`select * from ${table} where order_id = ?`).get(orderId) as Record<
-          string,
-          unknown
-        > | null;
-      await expect.poll(() => row("op_purchase_orders"), { timeout: 10_000 }).toBeTruthy();
-      const prefilled = ["ABC", "XYZ", "1 Main St", "Palo Alto", "CA", "94303"];
-      expect(Object.values(row("op_purchase_orders")!)).toEqual(expect.arrayContaining(prefilled));
-      expect(Object.values(row("op_po_contacts") ?? {})).toEqual(
-        expect.arrayContaining([...prefilled, "abc@xyz.com", "555-555-5555"]),
-      );
-      expect(Object.values(row("op_po_contacts") ?? {})).toEqual(
-        expect.arrayContaining([expect.stringMatching(/^(USA|United States)$/)]),
-      );
-    } finally {
-      db.close();
-    }
+    const row = (table: string) => sql(`select * from ${table} where order_id = ?`, orderId);
+    await expect.poll(() => row("op_purchase_orders"), { timeout: 10_000 }).toBeTruthy();
+    const prefilled = ["ABC", "XYZ", "1 Main St", "Palo Alto", "CA", "94303"];
+    expect(Object.values(row("op_purchase_orders")!)).toEqual(expect.arrayContaining(prefilled));
+    expect(Object.values(row("op_po_contacts") ?? {})).toEqual(
+      expect.arrayContaining([...prefilled, "abc@xyz.com", "555-555-5555"]),
+    );
+    expect(Object.values(row("op_po_contacts") ?? {})).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^(USA|United States)$/)]),
+    );
   });
 });
 
@@ -93,9 +99,8 @@ test.describe("server error page", () => {
     page,
   }) => {
     await toCheckout(page);
-    const db = openDb();
     try {
-      db.exec(`create trigger if not exists acc_c0212_boom before insert on messages
+      sql(`create trigger if not exists acc_c0212_boom before insert on messages
         when new.payload like '%BoomC0212%'
         begin select raise(abort, 'boom-test'); end`);
       const firstNames = page.getByLabel(/^(first name|given name):?$/i);
@@ -117,8 +122,7 @@ test.describe("server error page", () => {
       await expect(page.getByText(/\bat \S+/).first()).toBeVisible();
       await expect(page.getByText(/notify (the )?administrator/i).first()).toBeVisible();
     } finally {
-      db.exec("drop trigger if exists acc_c0212_boom");
-      db.close();
+      sql("drop trigger if exists acc_c0212_boom");
     }
   });
 });
