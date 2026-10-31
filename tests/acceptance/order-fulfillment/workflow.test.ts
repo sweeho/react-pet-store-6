@@ -71,7 +71,7 @@ describe("order workflow", () => {
   });
 
   // case: SWHR2-C-0107@v1
-  it("SWHR2-C-0107: deleting a purchase order also deletes its contact, credit card and line items", async () => {
+  it("SWHR2-C-0107: deleting a purchase order also deletes its contact, address, credit card and line items", async () => {
     const f = await fulfilment();
     await f.receive.createPurchaseOrder(
       f.db,
@@ -82,9 +82,24 @@ describe("order workflow", () => {
       ]),
     );
     expect(count(f.client, "op_po_line_items")).toBe(3);
+    // the contact's address (street "1 Main St") is stored outside the order header
+    const tables = (
+      f.client
+        .query(
+          "select name from sqlite_master where type = 'table' and name like 'op\\_%' escape '\\'",
+        )
+        .all() as { name: string }[]
+    ).map((t) => t.name);
+    const holdingAddress = () =>
+      tables.filter((t) =>
+        JSON.stringify(f.client.query(`select * from ${t}`).all()).includes("1 Main St"),
+      );
+    expect(holdingAddress().filter((t) => t !== "op_purchase_orders")).not.toEqual([]);
     f.client.exec("delete from op_purchase_orders where order_id = '10011'");
     for (const t of ["op_po_contacts", "op_po_cards", "op_po_line_items"])
       expect(count(f.client, t)).toBe(0);
+    // no table still holds the deleted order's address
+    expect(holdingAddress()).toEqual([]);
   });
 
   // case: SWHR2-C-0114@v1
