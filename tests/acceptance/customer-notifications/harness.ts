@@ -52,6 +52,8 @@ export async function mailApp(
   resetEnv();
   Object.assign(process.env, env);
   const outbox: Sent[] = [];
+  /** The message objects exactly as the app handed them to the transport. */
+  const raw: Record<string, unknown>[] = [];
   const created: { host?: string; auth?: { user?: string } }[] = [];
   let attempts = 0;
   let release: () => void = () => undefined;
@@ -69,6 +71,7 @@ export async function mailApp(
         attempts++;
         if (opts.failConnect) throw new Error("connect ECONNREFUSED");
         if (!open) await opened;
+        raw.push(m);
         outbox.push({
           from: list(m.from)[0] ?? "",
           to: list(m.to),
@@ -122,6 +125,7 @@ export async function mailApp(
     send,
     config,
     outbox,
+    raw,
     created,
     release,
     sendAttempts,
