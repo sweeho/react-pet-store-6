@@ -8,8 +8,8 @@ const SUPPLIER = {
 /** Signs in as supplier and sets the given stock quantities through the inventory API. */
 async function supplierWith(page: Page, stock: Record<string, number>) {
   await page.goto("/supplier");
-  await page.getByLabel(/user id/i).fill(SUPPLIER.user);
-  await page.getByLabel(/password/i).fill(SUPPLIER.pw);
+  await page.getByLabel(/^user ?id:?$/i).fill(SUPPLIER.user);
+  await page.getByLabel(/^password:?$/i).fill(SUPPLIER.pw);
   await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   const res = await page.request.post("/api/supplier/inventory", {
     data: {
