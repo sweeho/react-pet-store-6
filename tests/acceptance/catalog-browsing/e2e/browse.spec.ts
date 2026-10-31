@@ -41,7 +41,7 @@ test.describe("catalog browsing", () => {
   });
 
   // case: SWHR2-C-0201@v1
-  test("SWHR2-C-0201: the side panel lists Birds, Cats, Dogs, Fish, Reptiles on every storefront screen", async ({
+  test("SWHR2-C-0201: the side panel lists exactly Birds, Cats, Dogs, Fish, Reptiles on the home, category, product and item screens", async ({
     page,
   }) => {
     for (const url of [

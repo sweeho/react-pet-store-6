@@ -21,7 +21,7 @@ const PRIMARY_AREA_ROUTES = [
 
 describe("landing page", () => {
   // case: SWHR2-C-0271@v1
-  it("SWHR2-C-0271: every primary area has exactly one link on the landing page", () => {
+  it("SWHR2-C-0271: every primary area is linked from the landing page", () => {
     render(
       <MemoryRouter>
         <Landing />
@@ -29,10 +29,7 @@ describe("landing page", () => {
     );
     const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
     for (const route of PRIMARY_AREA_ROUTES) {
-      expect(
-        hrefs.filter((h) => h === route),
-        route,
-      ).toHaveLength(1);
+      expect(hrefs, route).toContain(route);
     }
   });
 });

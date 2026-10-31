@@ -130,8 +130,12 @@ describe("seed loading", () => {
     expect(count(client, "catalog_products")).toBe(16);
     expect(count(client, "catalog_items")).toBe(28);
     for (const locale of ["en_US", "ja_JP", "zh_CN"]) {
+      expect(count(client, "catalog_category_details", `locale = '${locale}'`)).toBe(5);
+      expect(count(client, "catalog_product_details", `locale = '${locale}'`)).toBe(16);
       expect(count(client, "catalog_item_details", `locale = '${locale}'`)).toBe(28);
     }
+    expect(count(client, "catalog_category_details")).toBe(15);
+    expect(count(client, "catalog_product_details")).toBe(48);
     expect(count(client, "catalog_item_details")).toBe(84);
   });
 
@@ -194,59 +198,67 @@ describe("installation", () => {
 
   // case: SWHR2-C-0078@v1
   it("SWHR2-C-0078: installing onto a database that lacks the supplier and order-processing datastores creates only those", async () => {
-    // an earlier install: only the storefront structures exist, with a customer in them
     const { Database } = await import("bun:sqlite");
-    const { drizzle } = await import("drizzle-orm/bun-sqlite");
-    const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-    const { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = await import(
-      "node:fs"
-    );
+    const { cpSync, mkdtempSync, symlinkSync } = await import("node:fs");
     const { tmpdir } = await import("node:os");
     const path = await import("node:path");
-    const sqlFile = readdirSync("drizzle").find((f) => f.endsWith(".sql")) as string;
-    const parts = readFileSync(path.join("drizzle", sqlFile), "utf8").split(
-      "--> statement-breakpoint",
+    const repo = process.cwd();
+    // The application resolves sqlite.db, drizzle/ and db/seed/ from its working directory,
+    // so a scratch directory is the host. Outside Vitest db/client.ts uses the file database.
+    const host = mkdtempSync(path.join(tmpdir(), "install-"));
+    cpSync(path.join(repo, "drizzle"), path.join(host, "drizzle"), { recursive: true });
+    symlinkSync(path.join(repo, "db"), path.join(host, "db"));
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([k]) => !k.startsWith("VITEST") && k !== "NODE_ENV"),
     );
-    const later = (stmt: string) => /\b(sup_|op_|messages)/.test(stmt);
-    const dir = mkdtempSync(path.join(tmpdir(), "install-"));
-    mkdirSync(path.join(dir, "meta"));
-    writeFileSync(
-      path.join(dir, "0000_storefront.sql"),
-      parts.filter((x) => !later(x)).join("--> statement-breakpoint"),
-    );
-    writeFileSync(
-      path.join(dir, "0001_rest.sql"),
-      parts.filter(later).join("--> statement-breakpoint"),
-    );
-    const entry = (idx: number, tag: string) => ({
-      idx,
-      version: "6",
-      when: 1700000000000 + idx,
-      tag,
-      breakpoints: true,
-    });
-    const journal = (entries: unknown[]) =>
-      writeFileSync(
-        path.join(dir, "meta", "_journal.json"),
-        JSON.stringify({ version: "7", dialect: "sqlite", entries }),
+    const run = (cmd: string[]) => {
+      const r = Bun.spawnSync(cmd, { cwd: host, env, stdout: "pipe", stderr: "pipe" });
+      expect(r.exitCode, `${cmd.join(" ")}\n${r.stderr.toString()}`).toBe(0);
+    };
+
+    // The installation step creates the datastores; opening the database runs it.
+    run(["bun", "-e", `await import(${JSON.stringify(path.join(repo, "db/client.ts"))})`]);
+    const file = path.join(host, "sqlite.db");
+    const schema = (client: InstanceType<typeof Database>) =>
+      new Map(
+        (
+          client
+            .query(
+              "select name, sql from sqlite_master where type = 'table' and name not like 'sqlite_%'",
+            )
+            .all() as {
+            name: string;
+            sql: string;
+          }[]
+        ).map((t) => [t.name, t.sql]),
       );
-    const client = new Database(":memory:");
-    const db = drizzle(client);
-    journal([entry(0, "0000_storefront")]);
-    migrate(db, { migrationsFolder: dir });
-    const names = () =>
-      (
-        client.query("select name from sqlite_master where type = 'table'").all() as {
-          name: string;
-        }[]
-      ).map((t) => t.name);
-    expect(names()).not.toContain("sup_orders");
-    expect(names()).not.toContain("op_purchase_orders");
-    client.exec("insert into customers (user_id) values ('keepme')");
-    // installing again
-    journal([entry(0, "0000_storefront"), entry(1, "0001_rest")]);
-    migrate(db, { migrationsFolder: dir });
-    for (const t of ["sup_orders", "op_purchase_orders", "messages"]) expect(names()).toContain(t);
-    expect(count(client, "customers", "user_id = 'keepme'")).toBe(1);
+    const isSupplierOrOrderProcessing = (name: string) => /^(sup_|op_|messages$)/.test(name);
+
+    // An existing storefront datastore with no supplier or order-processing datastore,
+    // holding a marker customer.
+    const before = new Database(file);
+    const removed = [...schema(before).keys()].filter(isSupplierOrOrderProcessing);
+    for (const t of ["sup_orders", "op_purchase_orders", "messages"]) expect(removed).toContain(t);
+    for (const t of removed) before.exec(`drop table "${t}"`);
+    const storefront = schema(before);
+    expect([...storefront.keys()]).toContain("customers");
+    expect([...storefront.keys()]).toContain("catalog_products");
+    before.exec("insert into customers (user_id) values ('keepme')");
+    before.close();
+
+    // installing again: `bun run db:seed`
+    run(["bun", path.join(repo, "scripts/seed.ts")]);
+
+    const after = new Database(file);
+    const tables = schema(after);
+    // the supplier and order-processing datastores now exist
+    for (const t of removed) expect([...tables.keys()]).toContain(t);
+    // only those were created: every other table is a storefront table as it stood before
+    const created = [...tables.keys()].filter((t) => !storefront.has(t)).sort();
+    expect(created).toEqual([...removed].sort());
+    for (const [name, sql] of storefront) expect(tables.get(name), name).toBe(sql);
+    // the storefront datastore was not recreated
+    expect(count(after, "customers", "user_id = 'keepme'")).toBe(1);
+    after.close();
   });
 });

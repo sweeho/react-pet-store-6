@@ -6,9 +6,10 @@ import {
   messages,
   mod,
   purchaseOrder,
+  statusOf,
 } from "../order-fulfillment/harness";
 
-export { approvalXml, messages, mod };
+export { approvalXml, messages, mod, statusOf };
 
 export interface Sent {
   from: string;
@@ -52,7 +53,10 @@ export async function mailApp(
   resetEnv();
   Object.assign(process.env, env);
   const outbox: Sent[] = [];
+  /** The message objects exactly as the app handed them to the transport. */
+  const raw: Record<string, unknown>[] = [];
   const created: { host?: string; auth?: { user?: string } }[] = [];
+  let attempts = 0;
   let release: () => void = () => undefined;
   let open = !opts.gated;
   const opened = new Promise<void>((res) => {
@@ -65,8 +69,10 @@ export async function mailApp(
     created.push(options);
     return {
       sendMail: async (m: Record<string, unknown>) => {
+        attempts++;
         if (opts.failConnect) throw new Error("connect ECONNREFUSED");
         if (!open) await opened;
+        raw.push(m);
         outbox.push({
           from: list(m.from)[0] ?? "",
           to: list(m.to),
@@ -113,7 +119,21 @@ export async function mailApp(
     f.messaging.enqueue(f.db, "supplier.invoice", f.invoiceFor(orderId, lines));
     await f.drain();
   };
-  return { ...f, send, config, outbox, created, release, pendingOrder, approve, fulfilLines };
+  /** How many times the app has tried to hand an e-mail to the mail server. */
+  const sendAttempts = () => attempts;
+  return {
+    ...f,
+    send,
+    config,
+    outbox,
+    raw,
+    created,
+    release,
+    sendAttempts,
+    pendingOrder,
+    approve,
+    fulfilLines,
+  };
 }
 
 export const subjects = (outbox: Sent[]) => outbox.map((m) => m.subject);
