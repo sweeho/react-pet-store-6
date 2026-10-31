@@ -182,10 +182,10 @@ describe("catalog reads", () => {
     s.category("FISH", { en_US: "Fish" });
     s.product("FI-SW-01", "FISH", { en_US: "Angelfish" });
     s.item(item("EST-1", "FI-SW-01", "Large Angelfish", 1650, 1000));
-    const got = await catalog.getItem("EST-1", "en_US");
-    const text = JSON.stringify(got);
-    expect(text).toContain("Large Angelfish");
-    expect(text).toMatch(/16\.5|1650/);
-    expect(text).toMatch(/\b10\b|10\.00|1000/);
+    const got = (await catalog.getItem("EST-1", "en_US")) as Record<string, unknown>;
+    expect(got.description).toBe("Large Angelfish");
+    // money is held in hundredths: 16.50 is 1650, 10.00 is 1000
+    expect(got.listPrice).toBe(1650);
+    expect(got.unitCost ?? got.unitPrice).toBe(1000);
   });
 });
