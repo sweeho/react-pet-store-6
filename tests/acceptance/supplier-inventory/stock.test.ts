@@ -58,6 +58,15 @@ describe("inventory update submission", () => {
     const list = await call(app, LIST, { url: "/api/supplier/inventory", cookies });
     const byId = Object.fromEntries((list.body as Row[]).map((r) => [r.itemId, r.quantity]));
     expect([byId["EST-1"], byId["EST-2"], byId["EST-3"]]).toEqual([50, 20, 12]);
+
+    const bad = await submit(app, cookies, [
+      { itemId: "EST-1", quantity: 70, marked: true },
+      { itemId: "EST-2", quantity: -5, marked: true },
+      { itemId: "EST-3", quantity: 12, marked: false },
+    ]);
+    expect(bad.status).toBeGreaterThanOrEqual(400);
+    expect(bad.status).toBeLessThan(500);
+    expect([qty(app, "EST-1"), qty(app, "EST-2"), qty(app, "EST-3")]).toEqual([50, 20, 12]);
   });
 });
 
