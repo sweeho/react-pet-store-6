@@ -194,59 +194,72 @@ describe("installation", () => {
 
   // case: SWHR2-C-0078@v1
   it("SWHR2-C-0078: installing onto a database that lacks the supplier and order-processing datastores creates only those", async () => {
-    // an earlier install: only the storefront structures exist, with a customer in them
     const { Database } = await import("bun:sqlite");
-    const { drizzle } = await import("drizzle-orm/bun-sqlite");
-    const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-    const { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } = await import(
+    const { cpSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } = await import(
       "node:fs"
     );
     const { tmpdir } = await import("node:os");
     const path = await import("node:path");
-    const sqlFile = readdirSync("drizzle").find((f) => f.endsWith(".sql")) as string;
-    const parts = readFileSync(path.join("drizzle", sqlFile), "utf8").split(
-      "--> statement-breakpoint",
+    const repo = process.cwd();
+    // The application resolves sqlite.db, drizzle/ and db/seed/ from its working directory,
+    // so a scratch directory is the host. Outside Vitest db/client.ts uses the file database.
+    const host = mkdtempSync(path.join(tmpdir(), "install-"));
+    cpSync(path.join(repo, "drizzle"), path.join(host, "drizzle"), { recursive: true });
+    symlinkSync(path.join(repo, "db"), path.join(host, "db"));
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([k]) => !k.startsWith("VITEST") && k !== "NODE_ENV"),
     );
-    const later = (stmt: string) => /\b(sup_|op_|messages)/.test(stmt);
-    const dir = mkdtempSync(path.join(tmpdir(), "install-"));
-    mkdirSync(path.join(dir, "meta"));
-    writeFileSync(
-      path.join(dir, "0000_storefront.sql"),
-      parts.filter((x) => !later(x)).join("--> statement-breakpoint"),
-    );
-    writeFileSync(
-      path.join(dir, "0001_rest.sql"),
-      parts.filter(later).join("--> statement-breakpoint"),
-    );
-    const entry = (idx: number, tag: string) => ({
-      idx,
-      version: "6",
-      when: 1700000000000 + idx,
-      tag,
-      breakpoints: true,
-    });
-    const journal = (entries: unknown[]) =>
-      writeFileSync(
-        path.join(dir, "meta", "_journal.json"),
-        JSON.stringify({ version: "7", dialect: "sqlite", entries }),
+    const run = (cmd: string[]) => {
+      const r = Bun.spawnSync(cmd, { cwd: host, env, stdout: "pipe", stderr: "pipe" });
+      expect(r.exitCode, `${cmd.join(" ")}\n${r.stderr.toString()}`).toBe(0);
+    };
+
+    // An earlier release: only the migrations that precede the first supplier or
+    // order-processing migration in the project's drizzle/ journal have shipped.
+    const journalPath = path.join(host, "drizzle", "meta", "_journal.json");
+    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
+      entries: { tag: string }[];
+    };
+    const createsLater = (tag: string) =>
+      /create table [`"]?(sup_|op_|messages)/i.test(
+        readFileSync(path.join(host, "drizzle", `${tag}.sql`), "utf8"),
       );
-    const client = new Database(":memory:");
-    const db = drizzle(client);
-    journal([entry(0, "0000_storefront")]);
-    migrate(db, { migrationsFolder: dir });
-    const names = () =>
+    const split = journal.entries.findIndex((e) => createsLater(e.tag));
+    expect(
+      split,
+      "no drizzle migration creates the supplier/order-processing tables",
+    ).toBeGreaterThan(0);
+    writeFileSync(
+      journalPath,
+      JSON.stringify({ ...journal, entries: journal.entries.slice(0, split) }),
+    );
+    // that release's installation step: opening the database runs its migrations
+    run(["bun", "-e", `await import(${JSON.stringify(path.join(repo, "db/client.ts"))})`]);
+    const file = path.join(host, "sqlite.db");
+    const names = (client: InstanceType<typeof Database>) =>
       (
         client.query("select name from sqlite_master where type = 'table'").all() as {
           name: string;
         }[]
       ).map((t) => t.name);
-    expect(names()).not.toContain("sup_orders");
-    expect(names()).not.toContain("op_purchase_orders");
-    client.exec("insert into customers (user_id) values ('keepme')");
-    // installing again
-    journal([entry(0, "0000_storefront"), entry(1, "0001_rest")]);
-    migrate(db, { migrationsFolder: dir });
-    for (const t of ["sup_orders", "op_purchase_orders", "messages"]) expect(names()).toContain(t);
-    expect(count(client, "customers", "user_id = 'keepme'")).toBe(1);
+    const before = new Database(file);
+    const storefront = names(before);
+    expect(storefront).toContain("customers");
+    expect(storefront).toContain("catalog_products");
+    for (const t of ["sup_orders", "op_purchase_orders", "messages"])
+      expect(storefront).not.toContain(t);
+    before.exec("insert into customers (user_id) values ('keepme')");
+    before.close();
+
+    // installing the current release: the full journal, then `bun run db:seed`
+    writeFileSync(journalPath, JSON.stringify(journal));
+    run(["bun", path.join(repo, "scripts/seed.ts")]);
+
+    const after = new Database(file);
+    const tables = names(after);
+    for (const t of ["sup_orders", "op_purchase_orders", "messages"]) expect(tables).toContain(t);
+    for (const t of storefront) expect(tables).toContain(t);
+    expect(count(after, "customers", "user_id = 'keepme'")).toBe(1);
+    after.close();
   });
 });
