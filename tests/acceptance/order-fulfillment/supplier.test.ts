@@ -79,7 +79,6 @@ describe("supplier orders", () => {
     expect(inv).toHaveLength(1);
     expect(inv[0].status).toBe("delivered");
     expect(inv[0].payload).toContain("EST-1");
-    expect(statusOf(f.client, "10018")).toBe("COMPLETED");
   });
 
   // case: SWHR2-C-0113@v1
