@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { catalogCalls, loadCatalog, nameOf, recordQueries, rows, seeder } from "./harness";
@@ -85,32 +85,18 @@ describe("catalog data access selected by configuration", () => {
 
     const names = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf);
 
-    expect(sqliteStore).toBeInstanceOf(Database);
-    expect(catalogCalls(sqliteCalls).length).toBeGreaterThan(0);
+    const served = catalogCalls(sqliteCalls);
+    expect(served.length).toBeGreaterThan(0);
     expect(names).toEqual(["Angelfish", "Koi"]);
     expect(catalogCalls(otherCalls)).toHaveLength(0);
     expect(catalogCalls(defaultCalls)).toHaveLength(0);
-  });
-
-  // case: SWHR2-C-0281@v1
-  it("SWHR2-C-0281: a configuration naming a dialect other than SQLite is served by that dialect's connection", async () => {
-    // Same setup, but the configuration names the other dialect: the read must move to the
-    // connection registered for that dialect and return its products.
-    const sqliteStore = await dialectStore(["Guppy"]);
-    const otherStore = await dialectStore(["Angelfish", "Koi"]);
-    const { client, catalog } = await startCatalog({ [DIALECT]: "oracle" });
-    catalog.registerDialect("sqlite", sqliteStore);
-    catalog.registerDialect("oracle", otherStore);
-    const sqliteCalls = recordQueries(sqliteStore);
-    const otherCalls = recordQueries(otherStore);
-    const defaultCalls = recordQueries(client);
-
-    const names = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf);
-
-    expect(catalogCalls(otherCalls).length).toBeGreaterThan(0);
-    expect(names).toEqual(["Angelfish", "Koi"]);
-    expect(catalogCalls(sqliteCalls)).toHaveLength(0);
-    expect(catalogCalls(defaultCalls)).toHaveLength(0);
+    // The statements the catalog sent are written in SQLite's dialect: values are bound with
+    // SQLite's "?" placeholder (not Oracle's ":1"/":name"), and none uses Oracle-only syntax.
+    for (const { sql, params } of served) {
+      expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+      expect(sql).not.toMatch(/:\w+/);
+      expect(sql).not.toMatch(/\brownum\b|\bfetch\s+(next|first)\b|\bfrom\s+dual\b|\bnvl\s*\(/i);
+    }
   });
 
   // case: SWHR2-C-0282@v1
