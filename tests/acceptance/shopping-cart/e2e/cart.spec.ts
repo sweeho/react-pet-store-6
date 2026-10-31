@@ -12,12 +12,12 @@ const removeIn = (r: ReturnType<Page["getByRole"]>) =>
 
 async function signIn(page: Page) {
   await page.goto("/petstore/signin");
-  await page.getByLabel(/user id/i).fill("j2ee");
+  await page.getByLabel(/^user id:?$/i).fill("j2ee");
   // The sign-up form on the same page has its own password fields; use the sign-in form's.
   await page
     .locator("form")
-    .filter({ has: page.getByLabel(/user id/i) })
-    .getByLabel(/password/i)
+    .filter({ has: page.getByLabel(/^user id:?$/i) })
+    .getByLabel(/^password:?$/i)
     .fill("j2ee");
   await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   await expect(page.getByText(/^sign out$/i)).toBeVisible();
@@ -119,7 +119,7 @@ test.describe("shopping cart", () => {
     await page.goto("/petstore/cart");
     await page.getByRole("link", { name: /check ?out/i }).click();
     await expect(page).toHaveURL(/checkout/);
-    await expect(page.getByLabel(/street|address 1/i).first()).toBeVisible();
+    await expect(page.getByLabel(/^(street( address)?|address 1):?$/i).first()).toBeVisible();
   });
 
   // case: SWHR2-C-0093@v1
@@ -191,13 +191,13 @@ test.describe("shopping cart", () => {
     await page.getByRole("link", { name: /check ?out/i }).click();
     // Fill in the order information (billing fields come first on the form).
     const fields: [RegExp, string][] = [
-      [/first name|given name/i, "ABC"],
-      [/last name|family name/i, "XYZ"],
-      [/address 1|street/i, "1 Main St"],
-      [/city/i, "Palo Alto"],
-      [/zip|postal/i, "94303"],
-      [/phone|telephone/i, "555-555-5555"],
-      [/e-?mail/i, "abc@xyz.com"],
+      [/^(first name|given name):?$/i, "ABC"],
+      [/^(last name|family name):?$/i, "XYZ"],
+      [/^(street( address)?|address 1):?$/i, "1 Main St"],
+      [/^city:?$/i, "Palo Alto"],
+      [/^(zip( code)?|postal code):?$/i, "94303"],
+      [/^(phone|telephone)( number)?:?$/i, "555-555-5555"],
+      [/^e-?mail:?$/i, "abc@xyz.com"],
     ];
     for (const [label, value] of fields) await page.getByLabel(label).first().fill(value);
     const placed = page.waitForResponse(
