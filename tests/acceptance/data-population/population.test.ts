@@ -199,9 +199,7 @@ describe("installation", () => {
   // case: SWHR2-C-0078@v1
   it("SWHR2-C-0078: installing onto a database that lacks the supplier and order-processing datastores creates only those", async () => {
     const { Database } = await import("bun:sqlite");
-    const { cpSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } = await import(
-      "node:fs"
-    );
+    const { cpSync, mkdtempSync, symlinkSync } = await import("node:fs");
     const { tmpdir } = await import("node:os");
     const path = await import("node:path");
     const repo = process.cwd();
@@ -218,51 +216,48 @@ describe("installation", () => {
       expect(r.exitCode, `${cmd.join(" ")}\n${r.stderr.toString()}`).toBe(0);
     };
 
-    // An earlier release: only the migrations that precede the first supplier or
-    // order-processing migration in the project's drizzle/ journal have shipped.
-    const journalPath = path.join(host, "drizzle", "meta", "_journal.json");
-    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
-      entries: { tag: string }[];
-    };
-    const createsLater = (tag: string) =>
-      /create table [`"]?(sup_|op_|messages)/i.test(
-        readFileSync(path.join(host, "drizzle", `${tag}.sql`), "utf8"),
-      );
-    const split = journal.entries.findIndex((e) => createsLater(e.tag));
-    expect(
-      split,
-      "no drizzle migration creates the supplier/order-processing tables",
-    ).toBeGreaterThan(0);
-    writeFileSync(
-      journalPath,
-      JSON.stringify({ ...journal, entries: journal.entries.slice(0, split) }),
-    );
-    // that release's installation step: opening the database runs its migrations
+    // The installation step creates the datastores; opening the database runs it.
     run(["bun", "-e", `await import(${JSON.stringify(path.join(repo, "db/client.ts"))})`]);
     const file = path.join(host, "sqlite.db");
-    const names = (client: InstanceType<typeof Database>) =>
-      (
-        client.query("select name from sqlite_master where type = 'table'").all() as {
-          name: string;
-        }[]
-      ).map((t) => t.name);
+    const schema = (client: InstanceType<typeof Database>) =>
+      new Map(
+        (
+          client
+            .query(
+              "select name, sql from sqlite_master where type = 'table' and name not like 'sqlite_%'",
+            )
+            .all() as {
+            name: string;
+            sql: string;
+          }[]
+        ).map((t) => [t.name, t.sql]),
+      );
+    const isSupplierOrOrderProcessing = (name: string) => /^(sup_|op_|messages$)/.test(name);
+
+    // An existing storefront datastore with no supplier or order-processing datastore,
+    // holding a marker customer.
     const before = new Database(file);
-    const storefront = names(before);
-    expect(storefront).toContain("customers");
-    expect(storefront).toContain("catalog_products");
-    for (const t of ["sup_orders", "op_purchase_orders", "messages"])
-      expect(storefront).not.toContain(t);
+    const removed = [...schema(before).keys()].filter(isSupplierOrOrderProcessing);
+    for (const t of ["sup_orders", "op_purchase_orders", "messages"]) expect(removed).toContain(t);
+    for (const t of removed) before.exec(`drop table "${t}"`);
+    const storefront = schema(before);
+    expect([...storefront.keys()]).toContain("customers");
+    expect([...storefront.keys()]).toContain("catalog_products");
     before.exec("insert into customers (user_id) values ('keepme')");
     before.close();
 
-    // installing the current release: the full journal, then `bun run db:seed`
-    writeFileSync(journalPath, JSON.stringify(journal));
+    // installing again: `bun run db:seed`
     run(["bun", path.join(repo, "scripts/seed.ts")]);
 
     const after = new Database(file);
-    const tables = names(after);
-    for (const t of ["sup_orders", "op_purchase_orders", "messages"]) expect(tables).toContain(t);
-    for (const t of storefront) expect(tables).toContain(t);
+    const tables = schema(after);
+    // the supplier and order-processing datastores now exist
+    for (const t of removed) expect([...tables.keys()]).toContain(t);
+    // only those were created: every other table is a storefront table as it stood before
+    const created = [...tables.keys()].filter((t) => !storefront.has(t)).sort();
+    expect(created).toEqual([...removed].sort());
+    for (const [name, sql] of storefront) expect(tables.get(name), name).toBe(sql);
+    // the storefront datastore was not recreated
     expect(count(after, "customers", "user_id = 'keepme'")).toBe(1);
     after.close();
   });

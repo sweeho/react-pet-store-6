@@ -4,14 +4,19 @@ test.describe("installed application areas", () => {
   // case: SWHR2-C-0079@v1
   test("SWHR2-C-0079: /petstore answers with the storefront and the supplier, admin and order-processing areas are available", async ({
     page,
-    request,
   }) => {
     const store = await page.goto("/petstore");
     expect(store?.status()).toBe(200);
     await expect(page.getByRole("heading").first()).toBeVisible();
+    // Signed out, each area answers with its own sign-in page. The SPA serves its
+    // Not Found page for unknown URLs with a 2xx status, so the status alone does not
+    // show the area is installed: its sign-in form must render and Not Found must not.
     for (const area of ["/supplier", "/admin"]) {
-      const res = await request.get(area);
-      expect(res.status(), area).toBeLessThan(400);
+      const res = await page.goto(area);
+      expect(res?.status(), area).toBeLessThan(400);
+      await expect(page.getByText(/not found|404/i), area).toHaveCount(0);
+      await expect(page.getByLabel(/^user ?id:?$/i), area).toBeVisible();
+      await expect(page.getByLabel(/^password:?$/i), area).toBeVisible();
     }
     // order processing is the in-process worker: it accepts an order from a signed-in shopper
     await page.goto("/petstore/signin");
