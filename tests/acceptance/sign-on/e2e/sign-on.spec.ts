@@ -13,6 +13,9 @@ const LOGIN_ERROR =
 
 const addToCart = (p: Page) =>
   p.getByRole("button", { name: /add to cart/i }).or(p.getByRole("link", { name: /add to cart/i }));
+/** The cart row whose name links to item `id`'s detail page (rows show names, not ids). */
+const itemRow = (p: Page, id: string) =>
+  p.getByRole("row").filter({ has: p.locator(`a[href$="/item/${id}"]`) });
 
 async function fillLogin(page: Page, user: string, pw: string) {
   await page.getByLabel(/user id/i).fill(user);
@@ -40,7 +43,10 @@ test.describe("sign-on", () => {
       .click();
     await expect(page.getByLabel(/user id/i)).toBeVisible();
     await fillLogin(page, "j2ee", "j2ee");
-    await expect(page).not.toHaveURL(/signin/);
+    // The shopper continues to checkout: the shipping and billing form, with no sign-in prompt.
+    await expect(page).toHaveURL(/checkout/);
+    await expect(page.getByLabel(/user id/i)).toHaveCount(0);
+    await expect(page.getByLabel(/first name/i).first()).toBeVisible();
   });
 
   // case: SWHR2-C-0253@v1
@@ -157,6 +163,9 @@ test.describe("sign-on", () => {
       await page.goto(`/petstore/item/${id}`);
       await addToCart(page).click();
     }
+    await page.goto("/petstore/cart");
+    await expect(itemRow(page, "EST-1")).toHaveCount(1);
+    await expect(itemRow(page, "EST-2")).toHaveCount(1);
     await page
       .getByRole("link", { name: /sign out|サインアウト|ログアウト/i })
       .or(page.getByText(/sign out|サインアウト|ログアウト/i))
@@ -173,7 +182,8 @@ test.describe("sign-on", () => {
       .getByRole("link", { name: /cart|カート/i })
       .first()
       .click();
-    await expect(page.getByText("EST-1")).toHaveCount(0);
-    await expect(page.getByText("EST-2")).toHaveCount(0);
+    await expect(page).toHaveURL(/cart/);
+    await expect(itemRow(page, "EST-1")).toHaveCount(0);
+    await expect(itemRow(page, "EST-2")).toHaveCount(0);
   });
 });
