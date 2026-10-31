@@ -39,6 +39,17 @@ async function startCatalog(config: Record<string, string>) {
   return env;
 }
 
+/** A separate migrated SQLite catalog store whose "FISH" category holds the given en_US products. */
+async function dialectStore(products: string[]) {
+  vi.resetModules();
+  const { db } = await import("../../../db/client");
+  const client = db.$client as unknown as Database;
+  const s = seeder(client);
+  s.category("FISH", { en_US: "Fish" });
+  products.forEach((name, i) => s.product(`FI-D-${i}`, "FISH", { en_US: name }));
+  return client;
+}
+
 describe("catalog data access selected by configuration", () => {
   // case: SWHR2-C-0280@v1
   it("SWHR2-C-0280: catalog reads go through the data-access implementation named in the deployment configuration", async () => {
@@ -61,32 +72,45 @@ describe("catalog data access selected by configuration", () => {
 
   // case: SWHR2-C-0281@v1
   it("SWHR2-C-0281: catalog reads use the database dialect named in the deployment configuration", async () => {
+    // Each dialect name gets its own SQLite store holding different products, and the default
+    // store holds only Angelfish, so the products returned show which connection served the read.
+    const sqliteStore = await dialectStore(["Angelfish", "Koi"]);
+    const otherStore = await dialectStore(["Guppy"]);
     const { client, catalog } = await startCatalog({ [DIALECT]: "sqlite" });
-    seeder(client).product("FI-FW-02", "FISH", { en_US: "Koi" });
-    const sqliteCalls = recordQueries(client);
+    catalog.registerDialect("sqlite", sqliteStore);
+    catalog.registerDialect("oracle", otherStore);
+    const sqliteCalls = recordQueries(sqliteStore);
+    const otherCalls = recordQueries(otherStore);
+    const defaultCalls = recordQueries(client);
 
     const names = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf);
 
-    expect(client).toBeInstanceOf(Database);
+    expect(sqliteStore).toBeInstanceOf(Database);
     expect(catalogCalls(sqliteCalls).length).toBeGreaterThan(0);
     expect(names).toEqual(["Angelfish", "Koi"]);
+    expect(catalogCalls(otherCalls)).toHaveLength(0);
+    expect(catalogCalls(defaultCalls)).toHaveLength(0);
   });
 
   // case: SWHR2-C-0281@v1
-  it("SWHR2-C-0281: a configuration naming a dialect other than SQLite is not served by the SQLite catalog store", async () => {
-    // The same store and data, but the configuration names another dialect. If the setting
-    // is read, the SQLite connection cannot be the one that serves the read.
+  it("SWHR2-C-0281: a configuration naming a dialect other than SQLite is served by that dialect's connection", async () => {
+    // Same setup, but the configuration names the other dialect: the read must move to the
+    // connection registered for that dialect and return its products.
+    const sqliteStore = await dialectStore(["Guppy"]);
+    const otherStore = await dialectStore(["Angelfish", "Koi"]);
     const { client, catalog } = await startCatalog({ [DIALECT]: "oracle" });
-    seeder(client).product("FI-FW-02", "FISH", { en_US: "Koi" });
-    const sqliteCalls = recordQueries(client);
+    catalog.registerDialect("sqlite", sqliteStore);
+    catalog.registerDialect("oracle", otherStore);
+    const sqliteCalls = recordQueries(sqliteStore);
+    const otherCalls = recordQueries(otherStore);
+    const defaultCalls = recordQueries(client);
 
-    const outcome = await catalog.listProducts("FISH", "en_US", 0, 10).then(
-      (r) => rows(r).map(nameOf),
-      () => "catalog failure",
-    );
+    const names = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf);
 
+    expect(catalogCalls(otherCalls).length).toBeGreaterThan(0);
+    expect(names).toEqual(["Angelfish", "Koi"]);
     expect(catalogCalls(sqliteCalls)).toHaveLength(0);
-    expect(outcome).not.toEqual(["Angelfish", "Koi"]);
+    expect(catalogCalls(defaultCalls)).toHaveLength(0);
   });
 
   // case: SWHR2-C-0282@v1
