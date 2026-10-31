@@ -5,6 +5,9 @@ import { loadCatalog, nameOf, rows, seeder } from "./harness";
 
 afterEach(() => vi.useRealTimers());
 
+/** The item's unit price (the unit cost shown as "Your Price"). */
+const unitPriceOf = (item: Record<string, unknown>) => item.unitCost ?? item.unitPrice;
+
 async function fish() {
   const env = await loadCatalog();
   const s = seeder(env.client);
@@ -55,8 +58,14 @@ describe("catalog page cache", () => {
       product: "FI-FW-01",
       details: { en_US: { descn: "Koi", list: 1650, unit: 1000 } },
     });
-    expect(JSON.stringify(await catalog.getItem("EST-1", "en_US"))).toMatch(/10\.00|\b10\b|1000/);
+    // money is held in hundredths: 10.00 is 1000, 12.00 is 1200, 16.50 is 1650
+    const before = (await catalog.getItem("EST-1", "en_US")) as Record<string, unknown>;
+    expect(unitPriceOf(before)).toBe(1000);
+    expect(before.listPrice).toBe(1650);
     client.exec("update catalog_item_details set unit_cost = 1200 where item_id = 'EST-1'");
-    expect(JSON.stringify(await catalog.getItem("EST-1", "en_US"))).toMatch(/12\.00|\b12\b|1200/);
+    const after = (await catalog.getItem("EST-1", "en_US")) as Record<string, unknown>;
+    expect(unitPriceOf(after)).toBe(1200);
+    // only the unit price changed
+    expect(after.listPrice).toBe(1650);
   });
 });

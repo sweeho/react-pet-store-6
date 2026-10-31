@@ -72,6 +72,23 @@ describe("catalog data access selected by configuration", () => {
     expect(names).toEqual(["Angelfish", "Koi"]);
   });
 
+  // case: SWHR2-C-0281@v1
+  it("SWHR2-C-0281: a configuration naming a dialect other than SQLite is not served by the SQLite catalog store", async () => {
+    // The same store and data, but the configuration names another dialect. If the setting
+    // is read, the SQLite connection cannot be the one that serves the read.
+    const { client, catalog } = await startCatalog({ [DIALECT]: "oracle" });
+    seeder(client).product("FI-FW-02", "FISH", { en_US: "Koi" });
+    const sqliteCalls = recordQueries(client);
+
+    const outcome = await catalog.listProducts("FISH", "en_US", 0, 10).then(
+      (r) => rows(r).map(nameOf),
+      () => "catalog failure",
+    );
+
+    expect(catalogCalls(sqliteCalls)).toHaveLength(0);
+    expect(outcome).not.toEqual(["Angelfish", "Koi"]);
+  });
+
   // case: SWHR2-C-0282@v1
   it("SWHR2-C-0282: changing only the configured data-access implementation changes which implementation serves catalog reads", async () => {
     const run = async (named: "A" | "B") => {
