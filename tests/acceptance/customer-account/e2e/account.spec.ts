@@ -88,8 +88,17 @@ test.describe("sign up", () => {
   }) => {
     await page.goto("/petstore/signin");
     await fillSignUp(page, "newuser", "secret1", "secret1");
+    const registered = page.waitForResponse(
+      (r) => r.request().method() === "POST" && /register/.test(r.url()),
+    );
     await submitSignUp(page);
+    expect((await registered).status()).toBeLessThan(300);
     await expect(page.getByLabel(/card type/i)).toBeVisible();
+    // the name newuser is now registered: it signs on with the chosen password
+    const res = await page.request.post("/api/session/sign-in", {
+      data: { userId: "newuser", password: "secret1", remember: false },
+    });
+    expect(res.status()).toBe(200);
   });
 
   // case: SWHR2-C-0165@v1
