@@ -15,8 +15,8 @@ test.describe("installed application areas", () => {
     }
     // order processing is the in-process worker: it accepts an order from a signed-in shopper
     await page.goto("/petstore/signin");
-    await page.getByLabel(/user id/i).fill("j2ee");
-    await page.getByLabel(/password/i).fill("j2ee");
+    await page.getByLabel(/^user id:?$/i).fill("j2ee");
+    await page.getByLabel(/^password:?$/i).fill("j2ee");
     await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
     await expect(page.getByText(/^sign out$/i)).toBeVisible();
     const added = await page.request.post("/api/cart/items", { data: { itemId: "EST-1" } });
