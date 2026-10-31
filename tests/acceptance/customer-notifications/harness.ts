@@ -6,9 +6,10 @@ import {
   messages,
   mod,
   purchaseOrder,
+  statusOf,
 } from "../order-fulfillment/harness";
 
-export { approvalXml, messages, mod };
+export { approvalXml, messages, mod, statusOf };
 
 export interface Sent {
   from: string;
