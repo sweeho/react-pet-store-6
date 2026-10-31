@@ -53,6 +53,7 @@ export async function mailApp(
   Object.assign(process.env, env);
   const outbox: Sent[] = [];
   const created: { host?: string; auth?: { user?: string } }[] = [];
+  let attempts = 0;
   let release: () => void = () => undefined;
   let open = !opts.gated;
   const opened = new Promise<void>((res) => {
@@ -65,6 +66,7 @@ export async function mailApp(
     created.push(options);
     return {
       sendMail: async (m: Record<string, unknown>) => {
+        attempts++;
         if (opts.failConnect) throw new Error("connect ECONNREFUSED");
         if (!open) await opened;
         outbox.push({
@@ -113,7 +115,20 @@ export async function mailApp(
     f.messaging.enqueue(f.db, "supplier.invoice", f.invoiceFor(orderId, lines));
     await f.drain();
   };
-  return { ...f, send, config, outbox, created, release, pendingOrder, approve, fulfilLines };
+  /** How many times the app has tried to hand an e-mail to the mail server. */
+  const sendAttempts = () => attempts;
+  return {
+    ...f,
+    send,
+    config,
+    outbox,
+    created,
+    release,
+    sendAttempts,
+    pendingOrder,
+    approve,
+    fulfilLines,
+  };
 }
 
 export const subjects = (outbox: Sent[]) => outbox.map((m) => m.subject);

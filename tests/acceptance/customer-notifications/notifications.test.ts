@@ -159,6 +159,21 @@ describe("queues and channels", () => {
     const waiting = messages(a.client, "notify.approval", "%1009%");
     expect(waiting).toHaveLength(1);
     expect(waiting[0].status).toBe("pending");
+    // Run the queue until the app has tried the unreachable mail server.
+    for (let i = 0; i < 5 && a.sendAttempts() === 0; i++) {
+      a.client.exec("update messages set available_at = 0 where status = 'pending'");
+      await a.worker.processDue();
+    }
+    expect(a.sendAttempts()).toBeGreaterThan(0);
+    expect(a.outbox).toEqual([]);
+    expect(
+      a.client.query("select status from op_order_workflow where order_id = '1009'").get(),
+    ).toEqual({ status: "APPROVED" });
+    const undelivered = [
+      ...messages(a.client, "notify.approval", "%1009%"),
+      ...messages(a.client, "mail.outbound", "%1009%"),
+    ].filter((m) => m.status === "pending");
+    expect(undelivered.length).toBeGreaterThan(0);
   });
 
   // case: SWHR2-C-0062@v1
