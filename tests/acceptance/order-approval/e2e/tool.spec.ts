@@ -72,11 +72,11 @@ test.describe("order approval tool", () => {
   }) => {
     const reqs = await openTool(page, SEED);
     await page
-      .getByLabel(/start|from/i)
+      .getByLabel(/^(start|from)( date)?:?$/i)
       .first()
       .fill("01/01/2002");
     await page
-      .getByLabel(/end|to/i)
+      .getByLabel(/^(end|to)( date)?:?$/i)
       .first()
       .fill("06/30/2002");
     await page
