@@ -201,7 +201,11 @@ describe("request decoding", () => {
   // case: SWHR2-C-0040@v1
   it("SWHR2-C-0040: a Chinese keyword in a search query parameter is read as the same characters", async () => {
     const app = await twoLocaleApp();
-    seeder(app.client).product("FI-ZH", "FISH", { en_US: "金鱼", ja_JP: "金鱼", zh_CN: "金鱼" });
+    const s = seeder(app.client);
+    s.product("FI-ZH", "FISH", { en_US: "金鱼", ja_JP: "金鱼", zh_CN: "金鱼" });
+    // search returns items, so FI-ZH carries one described by the keyword in every locale
+    const zh = { descn: "金鱼", list: 1200, unit: 800 };
+    s.item({ id: "EST-ZH", product: "FI-ZH", details: { en_US: zh, ja_JP: zh, zh_CN: zh } });
     const mw = await encoding();
     const event = new H3Event(
       new Request(`http://localhost/api/catalog/search?keyword=${encodeURIComponent("金鱼")}`),
@@ -213,7 +217,7 @@ describe("request decoding", () => {
     ) => Promise<unknown>;
     const out = await handler(event);
     const text = out instanceof Response ? await out.text() : JSON.stringify(out);
-    // a product named exactly the decoded keyword is found, so the search used the decoded keyword
-    expect(text).toContain("FI-ZH");
+    // the item named and described by exactly the decoded keyword is found, so the search used the decoded keyword
+    expect(text).toContain("EST-ZH");
   });
 });
