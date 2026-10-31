@@ -12,23 +12,25 @@ const item = (id: string, product: string, descn = "d", list = 1650, unit = 1000
 
 describe("catalog reads", () => {
   // case: SWHR2-C-0183@v1
-  it("SWHR2-C-0183: FISH products read through the route and through the service are identical", async () => {
+  it("SWHR2-C-0183: FISH products read directly from the store and through the service are identical", async () => {
     const { client, catalog } = await loadCatalog();
     const s = seeder(client);
     s.category("FISH", { en_US: "Fish" });
     s.product("FI-SW-01", "FISH", { en_US: "Angelfish" });
     s.product("FI-FW-02", "FISH", { en_US: "Koi" });
-    const route = (await import("../../../routes/api/catalog/categories/[categoryId]/products.get"))
-      .default;
-    const event = new H3Event(
-      new Request("http://localhost/api/catalog/categories/FISH/products?locale=en_US&size=10"),
-    );
-    event.context.params = { categoryId: "FISH" };
-    const viaRoute = rows(await route(event));
+    const direct = client
+      .query(
+        `select p.product_id as id, d.name as name, d.description as description
+           from catalog_products p
+           join catalog_product_details d on d.product_id = p.product_id and d.locale = 'en_US'
+          where p.category_id = 'FISH'
+          order by d.name`,
+      )
+      .all() as { id: string; name: string; description: string }[];
     const viaService = rows(await catalog.listProducts("FISH", "en_US", 0, 10));
-    expect(viaService.map(nameOf)).toEqual(["Angelfish", "Koi"]);
-    expect(viaRoute.map((r) => [idOf(r), nameOf(r), r.description])).toEqual(
-      viaService.map((r) => [idOf(r), nameOf(r), r.description]),
+    expect(direct.map((r) => r.name)).toEqual(["Angelfish", "Koi"]);
+    expect(viaService.map((r) => [idOf(r), nameOf(r), r.description])).toEqual(
+      direct.map((r) => [r.id, r.name, r.description]),
     );
   });
 

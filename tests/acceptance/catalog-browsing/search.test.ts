@@ -49,7 +49,8 @@ describe("catalog search", () => {
   it("SWHR2-C-0179: 'fish' returns an item through its category id FISH even when no text matches", async () => {
     const env = await loadCatalog();
     const s = seeder(env.client);
-    s.category("FISH", { en_US: "Fish" });
+    // the category's name and description are "Aquatic", so only its id FISH can match "fish"
+    s.category("FISH", { en_US: "Aquatic" });
     s.product("FI-FW-02", "FISH", { en_US: "Koi" });
     s.item({
       id: "EST-4",

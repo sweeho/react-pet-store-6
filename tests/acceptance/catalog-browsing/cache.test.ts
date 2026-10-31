@@ -26,17 +26,25 @@ describe("catalog page cache", () => {
   });
 
   // case: SWHR2-C-0189@v1
-  it("SWHR2-C-0189: within 5 minutes shopper B gets either the cached render or a fresh one, and nothing else", async () => {
+  it("SWHR2-C-0189: within 5 minutes shopper B is served the FISH list cached from shopper A's view", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { client, catalog } = await fish();
-    await catalog.listProducts("FISH", "en_US", 0, 10); // shopper A at T0
+    const forA = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf); // shopper A at T0
+    expect(forA).toEqual(["Koi"]);
     vi.setSystemTime(Date.now() + 60 * 1000);
     client.exec(
       "update catalog_product_details set name = 'Koi Carp' where product_id = 'FI-FW-01' and locale = 'en_US'",
     );
-    const names = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf);
-    expect(names.length).toBe(1);
-    expect(["Koi", "Koi Carp"]).toContain(names[0]);
+    // the store now holds the new name, so a fresh read would say "Koi Carp"
+    expect(
+      client
+        .query(
+          "select name from catalog_product_details where product_id = 'FI-FW-01' and locale = 'en_US'",
+        )
+        .get(),
+    ).toEqual({ name: "Koi Carp" });
+    const forB = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf); // shopper B at T0 + 1 min
+    expect(forB).toEqual(forA);
   });
 
   // case: SWHR2-C-0190@v1
