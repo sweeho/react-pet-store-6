@@ -4,11 +4,11 @@ spec: 1
 status: complete
 author_role: validation
 sprint: SWHR2-S-0017
-ticket: SWHR2-T-0257
-branch: vortex/test/SWHR2-T-0257-qa-rework-round-1-15-case-s-red-in-the-o-80799318
+ticket: SWHR2-T-0259
+branch: vortex/test/SWHR2-T-0259-qa-rework-round-1-15-case-s-red-in-the-o-d985d707
 ---
 
-# Summary — SWHR2-T-0257
+# Summary — SWHR2-T-0259
 
 Built the shopping cart the sprint left deferred: set-quantity add, remove, Update Cart, the failure router, the mockup-matching cart screen, and Add to Cart showing the cart.
 

@@ -4,11 +4,11 @@ spec: 1
 status: complete
 author_role: validation
 sprint: SWHR2-S-0017
-ticket: SWHR2-T-0257
-branch: vortex/test/SWHR2-T-0257-qa-rework-round-1-15-case-s-red-in-the-o-80799318
+ticket: SWHR2-T-0259
+branch: vortex/test/SWHR2-T-0259-qa-rework-round-1-15-case-s-red-in-the-o-d985d707
 ---
 
-# PLAN — SWHR2-T-0257 (QA rework round 1)
+# PLAN — SWHR2-T-0259 (QA rework round 1)
 
 Causes shared by the 15 red cases, each fixed once (change `swhr2-i-0007-shopping-cart`):
 
