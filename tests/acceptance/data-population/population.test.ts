@@ -130,8 +130,12 @@ describe("seed loading", () => {
     expect(count(client, "catalog_products")).toBe(16);
     expect(count(client, "catalog_items")).toBe(28);
     for (const locale of ["en_US", "ja_JP", "zh_CN"]) {
+      expect(count(client, "catalog_category_details", `locale = '${locale}'`)).toBe(5);
+      expect(count(client, "catalog_product_details", `locale = '${locale}'`)).toBe(16);
       expect(count(client, "catalog_item_details", `locale = '${locale}'`)).toBe(28);
     }
+    expect(count(client, "catalog_category_details")).toBe(15);
+    expect(count(client, "catalog_product_details")).toBe(48);
     expect(count(client, "catalog_item_details")).toBe(84);
   });
 
