@@ -2,7 +2,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   addToCart,
@@ -222,34 +222,38 @@ describe("failure routing", () => {
 
   // case: SWHR2-C-0092@v1
   it("SWHR2-C-0092: a failure with no mapping for itself or any kind it belongs to gives a general server error", async () => {
-    const app = await cartApp();
-    const { H3, defineHandler } = await import("nitro/h3");
     // The application ships no route that raises an unmapped failure, so the case's test route is
-    // supplied here. It is served behind the application's own middleware chain, in Nitro's
-    // file-name order, and the failure is left to the application's error handling to answer.
+    // the real cart route with the cart service it calls made to raise one. The request goes through
+    // the application's own session middleware and route handler, and the answer is whatever the
+    // application's failure handling makes of it.
     class UnmappedTestFailure extends Error {
       kind = "UnmappedTestFailure";
       kinds = ["UnmappedTestFailure"];
     }
-    const encoding = (await import("../../../middleware/00.encoding")).default;
-    const server = new H3()
-      .use(encoding as never)
-      .use(app.session as never)
-      .get(
-        "/api/test/unmapped",
-        defineHandler(() => {
-          throw new UnmappedTestFailure("unmapped");
-        }),
-      );
-    const res = await server.fetch(new Request("http://localhost/api/test/unmapped"));
-    expect(res.status).toBe(500);
-    // Not one of the mapped error pages: the application's table routes it to the server error page.
-    const { routeFailure } = await import("../../../src/errors/routeFailure");
-    const page = String(
-      routeFailure({ kind: "UnmappedTestFailure", kinds: ["UnmappedTestFailure"] }),
-    );
-    expect(page).toMatch(/server/i);
-    expect(page).not.toMatch(/empty-cart|catalog/);
-    expect(res.headers.get("location")).toBeNull();
+    vi.resetModules();
+    vi.doMock("../../../services/cart", async (orig) => ({
+      ...(await orig<object>()),
+      lines: () => {
+        throw new UnmappedTestFailure("unmapped-test");
+      },
+    }));
+    try {
+      const app = await cartApp();
+      const r = await getCart(app);
+      expect(r.status).toBe(500);
+      // The application's general server error (checkout SWHR2-R-0003), not the raised failure
+      // passed through and not a mapped failure kind.
+      const body = r.body as { kind?: string; kinds?: string[] };
+      expect(body.kind).toBe("AppFailure");
+      expect(JSON.stringify(body)).toContain("unmapped-test");
+      // The application's error-page table shows that reply on the Server Error page, not on one of
+      // the mapped error pages.
+      const { routeFailure } = await import("../../../src/errors/routeFailure");
+      const page = String(routeFailure(body as never));
+      expect(page).toMatch(/server/i);
+      expect(page).not.toMatch(/empty-cart|catalog/);
+    } finally {
+      vi.doUnmock("../../../services/cart");
+    }
   });
 });
