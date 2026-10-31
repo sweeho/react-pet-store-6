@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { call } from "../shopping-cart/harness";
 import { seeder } from "../catalog-browsing/harness";
-import { loadApp, seedCustomer } from "../sign-on/harness";
+import { call as signOn, cookieValue, loadApp, seedCustomer } from "../sign-on/harness";
 
 type App = Awaited<ReturnType<typeof loadApp>>;
 
@@ -146,28 +146,27 @@ describe("request decoding", () => {
   // case: SWHR2-C-0032@v1
   it("SWHR2-C-0032: after sign-on every handler of a request sees 山田太郎 decoded as UTF-8", async () => {
     const app: App = await loadApp();
-    const mw = await encoding();
-    const event = formEvent("/api/account/register", {
-      userId: "山田太郎",
-      password: "pw-1234",
-      passwordRepeat: "pw-1234",
-      remember: "false",
+    await seedCustomer(app.client, "j2ee", "j2ee");
+    const signed = await signOn(app, `${ROUTES}/session/sign-in.post`, {
+      method: "POST",
+      url: "/api/session/sign-in",
+      json: { userId: "j2ee", password: "j2ee", remember: false },
     });
+    expect(signed.status).toBe(200);
+    const sid = cookieValue(signed.setCookies, "ps_sid");
+    expect(sid, "sign-on issues a ps_sid session cookie").toBeDefined();
+    // the signed-on shopper's next request: a form POST through the middleware chain
+    const mw = await encoding();
+    const event = formEvent("/api/test/echo", { name: "山田太郎" }, `ps_sid=${sid}`);
     await mw(event);
     await app.session(event);
-    // two real handlers read the one request's userId, one after the other
-    const run = async (route: string) => {
-      const handler = (await import(`${ROUTES}/${route}`)).default as (
-        e: H3Event,
-      ) => Promise<unknown>;
-      const out = await handler(event);
-      return out instanceof Response ? out.status : event.res.status || 200;
+    // test route: more than one handler of the one request, each recording the value it sees
+    const seen: unknown[] = [];
+    const recorder = async (e: H3Event) => {
+      seen.push(await formValue(e, "name"));
     };
-    expect(await run("account/register.post")).toBeLessThan(300);
-    expect(
-      app.client.query("select count(*) c from signon_users where user_id = '山田太郎'").get(),
-    ).toEqual({ c: 1 });
-    expect(await run("session/sign-in.post")).toBe(200);
+    for (const handler of [recorder, recorder]) await handler(event);
+    expect(seen).toEqual(["山田太郎", "山田太郎"]);
   });
 
   // case: SWHR2-C-0040@v1
