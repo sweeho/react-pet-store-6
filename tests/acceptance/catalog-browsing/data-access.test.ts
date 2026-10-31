@@ -50,6 +50,26 @@ async function dialectStore(products: string[]) {
   return client;
 }
 
+/**
+ * A connection registered for the Oracle dialect. It offers the same prepare/execute surface as
+ * the SQLite connection, records every statement and its bound values, and returns no rows.
+ */
+function oracleConnection() {
+  const calls: { sql: string; params: unknown[] }[] = [];
+  const connection = {
+    prepare: (sql: string) => {
+      const exec =
+        (result: unknown) =>
+        (...args: unknown[]) => {
+          calls.push({ sql, params: args.flat(Infinity) });
+          return result;
+        };
+      return { all: exec([]), values: exec([]), get: exec(null), run: exec({ changes: 0 }) };
+    },
+  };
+  return { calls, connection };
+}
+
 describe("catalog data access selected by configuration", () => {
   // case: SWHR2-C-0280@v1
   it("SWHR2-C-0280: catalog reads go through the data-access implementation named in the deployment configuration", async () => {
@@ -97,6 +117,47 @@ describe("catalog data access selected by configuration", () => {
       expect(sql).not.toMatch(/:\w+/);
       expect(sql).not.toMatch(/\brownum\b|\bfetch\s+(next|first)\b|\bfrom\s+dual\b|\bnvl\s*\(/i);
     }
+  });
+
+  // case: SWHR2-C-0281@v1
+  it("SWHR2-C-0281: changing only the configured database dialect changes the SQL dialect of catalog reads", async () => {
+    // The same FISH read under two configurations that differ only in the dialect named. The
+    // Oracle connection is a recorder that cannot run SQL, so what it receives is exactly what
+    // the catalog wrote for Oracle; it answers with no rows.
+    const run = async (dialect: "sqlite" | "oracle") => {
+      const sqliteStore = await dialectStore(["Angelfish", "Koi"]);
+      const oracle = oracleConnection();
+      const { client, catalog } = await startCatalog({ [DIALECT]: dialect });
+      catalog.registerDialect("sqlite", sqliteStore);
+      catalog.registerDialect("oracle", oracle.connection);
+      const sqliteCalls = recordQueries(sqliteStore);
+      const defaultCalls = recordQueries(client);
+      await catalog.listProducts("FISH", "en_US", 0, 10);
+      return {
+        sqlite: catalogCalls(sqliteCalls).map((c) => c.sql),
+        oracle: catalogCalls(oracle.calls).map((c) => c.sql),
+        default: catalogCalls(defaultCalls).length,
+      };
+    };
+
+    const sqliteRun = await run("sqlite");
+    const oracleRun = await run("oracle");
+
+    expect(sqliteRun.sqlite.length).toBeGreaterThan(0);
+    expect(sqliteRun.oracle).toHaveLength(0);
+    expect(sqliteRun.default).toBe(0);
+
+    expect(oracleRun.oracle.length).toBeGreaterThan(0);
+    expect(oracleRun.sqlite).toHaveLength(0);
+    expect(oracleRun.default).toBe(0);
+    // Oracle statements bind with ":name"/":1", never SQLite's "?", and page without LIMIT.
+    for (const sql of oracleRun.oracle) {
+      expect(sql).not.toMatch(/\?/);
+      expect(sql).not.toMatch(/\blimit\b/i);
+    }
+    expect(oracleRun.oracle.some((sql) => /:\w+/.test(sql))).toBe(true);
+    // The dialect changed the SQL: no Oracle statement is one the SQLite run sent.
+    for (const sql of oracleRun.oracle) expect(sqliteRun.sqlite).not.toContain(sql);
   });
 
   // case: SWHR2-C-0282@v1
