@@ -5,11 +5,11 @@ type Profile = { favouriteCategory?: string; myListOn?: boolean; bannerOn?: bool
 async function signIn(page: Page, user = "j2ee", pw = "j2ee") {
   await page.goto("/petstore/signin");
   await page
-    .getByLabel(/user id/i)
+    .getByLabel(/^user id:?$/i)
     .first()
     .fill(user);
   await page
-    .getByLabel(/^password/i)
+    .getByLabel(/^password:?$/i)
     .first()
     .fill(pw);
   await page
@@ -28,13 +28,13 @@ const signUpForm = (page: Page) =>
   page.locator("form").filter({ hasText: /new customer|sign ?up|register/i });
 async function fillSignUp(page: Page, user: string, pw: string, repeat: string) {
   const f = signUpForm(page);
-  await f.getByLabel(/user (name|id)/i).fill(user);
+  await f.getByLabel(/^user (name|id):?$/i).fill(user);
   await f
-    .getByLabel(/password/i)
+    .getByLabel(/^password:?$/i)
     .first()
     .fill(pw);
   await f
-    .getByLabel(/password/i)
+    .getByLabel(/^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i)
     .last()
     .fill(repeat);
 }
@@ -55,7 +55,7 @@ test.describe("sign up", () => {
     await expect(
       page.getByText(/user name.*(in use|taken|exists)|already (exists|in use)/i).first(),
     ).toBeVisible();
-    await expect(page.getByLabel(/card type/i)).toHaveCount(0);
+    await expect(page.getByLabel(/^card type:?$/i)).toHaveCount(0);
     // nothing was created or changed: the existing account keeps its old password
     const res = await page.request.post("/api/session/sign-in", {
       data: { userId: "j2ee", password: "other1", remember: false },
@@ -75,7 +75,7 @@ test.describe("sign up", () => {
     await fillSignUp(page, "newuser", "secret1", "");
     await submitSignUp(page);
     const repeated = signUpForm(page)
-      .getByLabel(/password/i)
+      .getByLabel(/^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i)
       .last();
     expect(await repeated.evaluate((el: HTMLInputElement) => el.validity.valueMissing)).toBe(true);
     expect(posts).toEqual([]);
@@ -93,7 +93,7 @@ test.describe("sign up", () => {
     );
     await submitSignUp(page);
     expect((await registered).status()).toBeLessThan(300);
-    await expect(page.getByLabel(/card type/i)).toBeVisible();
+    await expect(page.getByLabel(/^card type:?$/i)).toBeVisible();
     // the name newuser is now registered: it signs on with the chosen password
     const res = await page.request.post("/api/session/sign-in", {
       data: { userId: "newuser", password: "secret1", remember: false },
@@ -119,20 +119,20 @@ test.describe("sign up", () => {
     await page.goto("/petstore/signin");
     await fillSignUp(page, "firsttimer", "secret1", "secret1");
     await submitSignUp(page);
-    await page.getByLabel(/first name|given name/i).fill("First");
-    await page.getByLabel(/last name|family name/i).fill("Timer");
-    await page.getByLabel(/phone/i).fill("555-0101");
-    await page.getByLabel(/e-?mail/i).fill("first@example.com");
+    await page.getByLabel(/^(first|given) name:?$/i).fill("First");
+    await page.getByLabel(/^(last|family) name:?$/i).fill("Timer");
+    await page.getByLabel(/^(tele)?phone( number)?:?$/i).fill("555-0101");
+    await page.getByLabel(/^e-?mail( address)?:?$/i).fill("first@example.com");
     await page
-      .getByLabel(/address 1|street/i)
+      .getByLabel(/^(street( address)?|address( line)? 1):?$/i)
       .first()
       .fill("1 Main St");
-    await page.getByLabel(/city/i).fill("Palo Alto");
-    await page.getByLabel(/state/i).fill("CA");
-    await page.getByLabel(/zip|postal/i).fill("94303");
-    await page.getByLabel(/country/i).fill("USA");
-    await page.getByLabel(/card number/i).fill("4111111111111111");
-    await page.getByLabel(/card type/i).selectOption({ index: 0 });
+    await page.getByLabel(/^city:?$/i).fill("Palo Alto");
+    await page.getByLabel(/^state:?$/i).fill("CA");
+    await page.getByLabel(/^(zip|postal)( code)?:?$/i).fill("94303");
+    await page.getByLabel(/^country:?$/i).fill("USA");
+    await page.getByLabel(/^card number:?$/i).fill("4111111111111111");
+    await page.getByLabel(/^card type:?$/i).selectOption({ index: 0 });
     await page.getByRole("button", { name: /save|submit|create/i }).click();
     await page.goto("/petstore/item/EST-1");
     await page
