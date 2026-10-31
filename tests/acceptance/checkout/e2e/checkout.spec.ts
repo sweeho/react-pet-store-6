@@ -2,8 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function toCheckout(page: Page) {
   await page.goto("/petstore/signin");
-  await page.getByLabel(/user id/i).fill("j2ee");
-  await page.getByLabel(/password/i).fill("j2ee");
+  await page.getByLabel(/^user id:?$/i).fill("j2ee");
+  await page.getByLabel(/^password:?$/i).fill("j2ee");
   await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   await page.goto("/petstore/item/EST-1");
   await page
