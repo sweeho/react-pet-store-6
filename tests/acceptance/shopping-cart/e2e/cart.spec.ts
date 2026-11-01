@@ -167,11 +167,12 @@ test.describe("shopping cart", () => {
       .or(row(page, "EST-1").getByRole("link", { name: /add to cart/i }))
       .first()
       .click();
-    await expect(
-      row(page, /Large Angelfish|EST-1/)
-        .getByRole("spinbutton")
-        .or(row(page, /Large Angelfish|EST-1/).getByRole("textbox")),
-    ).toHaveValue("1");
+    // The click lands on the cart screen, and the cart itself, reopened, holds EST-1 x 1.
+    await expect(page).toHaveURL(/\/cart/);
+    await page.goto("/petstore/cart");
+    const line = itemRow(page, "EST-1");
+    await expect(line).toHaveCount(1);
+    await expect(line.getByRole("spinbutton").or(line.getByRole("textbox"))).toHaveValue("1");
   });
 
   // case: SWHR2-C-0097@v1
@@ -179,7 +180,15 @@ test.describe("shopping cart", () => {
     page,
   }) => {
     await page.goto("/");
-    const box = page.getByRole("searchbox").or(page.getByRole("textbox")).first();
+    // The search field is the text field inside the search form (a search landmark, or the form
+    // whose submit control is named Search), not any other text field on the home page.
+    const searchForm = page
+      .getByRole("search")
+      .or(
+        page.locator("form").filter({ has: page.getByRole("button", { name: /^\s*search\s*$/i }) }),
+      )
+      .first();
+    const box = searchForm.getByRole("searchbox").or(searchForm.getByRole("textbox")).first();
     await box.fill("Angelfish");
     await box.press("Enter");
     await row(page, /Small Angelfish|EST-2/)
@@ -187,11 +196,12 @@ test.describe("shopping cart", () => {
       .or(row(page, /Small Angelfish|EST-2/).getByRole("link", { name: /add to cart/i }))
       .first()
       .click();
-    await expect(
-      row(page, /Small Angelfish|EST-2/)
-        .getByRole("spinbutton")
-        .or(row(page, /Small Angelfish|EST-2/).getByRole("textbox")),
-    ).toHaveValue("1");
+    // The click lands on the cart screen, and the cart itself, reopened, holds EST-2 x 1.
+    await expect(page).toHaveURL(/\/cart/);
+    await page.goto("/petstore/cart");
+    const line = itemRow(page, "EST-2");
+    await expect(line).toHaveCount(1);
+    await expect(line.getByRole("spinbutton").or(line.getByRole("textbox"))).toHaveValue("1");
   });
 
   // case: SWHR2-C-0101@v1
