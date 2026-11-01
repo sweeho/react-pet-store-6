@@ -203,10 +203,24 @@ test.describe("shopping cart", () => {
     const placed = page.waitForResponse(
       (r) => r.request().method() === "POST" && /\/api\/orders$/.test(r.url()),
     );
-    await page
-      .getByRole("button", { name: /continue|submit|place|confirm/i })
-      .first()
-      .click();
+    const submit = page.getByRole("button", { name: /continue|submit|place|confirm/i }).first();
+    const final = /confirm|place/i.test(
+      ((await submit.textContent()) || (await submit.getAttribute("value"))) ?? "",
+    );
+    await submit.click();
+    // An optional confirm step (as in C-0174/C-0254): if the order is not placed by the first
+    // button, a confirm/place-order button is offered and taken.
+    if (!final) {
+      const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
+      const next = await Promise.race([
+        placed.then(() => "placed"),
+        confirm.waitFor().then(
+          () => "confirm",
+          () => "placed",
+        ),
+      ]);
+      if (next === "confirm") await confirm.click();
+    }
     const res = await placed;
     expect(res.status()).toBe(200);
     const { orderId } = (await res.json()) as { orderId: string };
