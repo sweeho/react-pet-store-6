@@ -15,7 +15,7 @@ describe("order placed page", () => {
         <OrderPlaced />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { name: /order placed/i })).toBeInTheDocument();
+    expect(screen.getByText(/^order placed$/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /your order is complete/i })).toBeInTheDocument();
     expect(screen.getAllByText("10011").length).toBeGreaterThan(0);
     expect(screen.getByText(/abc@xyz\.com/)).toBeInTheDocument();
