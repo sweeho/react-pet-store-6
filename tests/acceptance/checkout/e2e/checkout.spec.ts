@@ -76,8 +76,15 @@ async function toCheckout(page: Page, itemId = "EST-1") {
     });
   await signIn.getByLabel(/^user id:?$/i).fill("j2ee");
   await signIn.getByLabel(/^password:?$/i).fill("j2ee");
-  await signIn.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
-  // navigating before sign-in completes can abort the request and leave the visitor anonymous
+  // navigating before the sign-in request completes aborts it, losing its session cookie and
+  // leaving the visitor anonymous at checkout, so wait for the sign-in response itself
+  await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        new URL(r.url()).pathname === "/api/session/sign-in" && r.request().method() === "POST",
+    ),
+    signIn.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click(),
+  ]);
   await expect(page.getByText(/^sign out$/i).first()).toBeVisible();
   await page.goto(`/petstore/item/${itemId}`);
   // every Add to Cart control on the item page adds this item, so any one of them will do
