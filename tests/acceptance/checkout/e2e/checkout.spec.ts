@@ -43,52 +43,64 @@ async function toCheckout(page: Page, itemId = "EST-1") {
     .or(page.getByRole("link", { name: /add to cart/i }))
     .first()
     .click();
-  await page.getByRole("link", { name: /cart/i }).first().click();
-  // every Check Out control (cart button, header link) leads to the same checkout form
+  // the add lands on the cart (shopping cart); reopen it by its address rather than a "cart" link,
+  // which could equally be an Add to Cart control
+  await expect(page).toHaveURL(/\/petstore\/cart(\?|$)/);
+  await page.goto("/petstore/cart");
+  // the cart's own Check Out control, not a Checkout entry in the header or site navigation
   await page
-    .getByRole("button", { name: /^\s*(proceed to )?check ?out\s*$/i })
-    .or(page.getByRole("link", { name: /^\s*(proceed to )?check ?out\s*$/i }))
+    .locator(":is(a, button):not(header *):not(nav *):not([role=navigation] *)")
+    .filter({ hasText: /^\s*(proceed to )?check ?out\s*$/i })
     .first()
     .click();
 }
 
-// The account values the checkout form is pre-filled with, per field label.
-const PREFILL: [RegExp, string | RegExp][] = [
-  [/first name|given name/i, "ABC"],
-  [/last name|family name/i, "XYZ"],
-  [/address 1|street/i, "1 Main St"],
-  [/city/i, "Palo Alto"],
-  [/state/i, "CA"],
-  [/zip|postal/i, "94303"],
-  // the account stores the United States as USA; the form may label that option "United States"
-  [/country/i, /^(USA|United States)$/],
-  [/phone|telephone/i, "555-555-5555"],
-  [/e-?mail/i, "abc@xyz.com"],
+// The account values the checkout form is pre-filled with (C-0215: name, address, telephone and
+// e-mail), per field label. Labels are anchored, allowing only a "billing"/"shipping" prefix, so a
+// credit-card or other field whose label merely contains "state" or "city" is not picked up.
+const label = (name: string) =>
+  new RegExp(`^\\s*((billing|shipping)\\s+)?(${name})\\s*:?\\s*\\*?\\s*$`, "i");
+const PREFILL: [RegExp, string][] = [
+  [label("first name|given name"), "ABC"],
+  [label("last name|family name"), "XYZ"],
+  [label("address( line)?( 1)?|street( address)?"), "1 Main St"],
+  [label("city"), "Palo Alto"],
+  [label("state|state/province|province"), "CA"],
+  [label("zip|zip code|postal code"), "94303"],
+  [label("phone|telephone|telephone number|phone number"), "555-555-5555"],
+  [label("e-?mail|e-?mail address"), "abc@xyz.com"],
 ];
 
-// Submits the checkout form as shown, then confirms the order if a confirm step follows.
+// Outside the header and site navigation.
+const inPage = ":not(header *):not(nav *):not([role=navigation] *)";
+const complete = (page: Page) =>
+  page.getByRole("heading", { name: /your order is complete|order placed/i }).first();
+const serverError = (page: Page) => page.getByRole("heading", { name: /server error/i }).first();
+
+// Submits the checkout form as shown by clicking its visible submit control, then takes an
+// optional confirm step, until the order-complete or Server Error screen appears.
 async function submitCheckout(page: Page) {
-  const placed = page.waitForResponse(
-    (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
-  );
-  // the checkout form: the one holding a first-name field and a submit control (first match, so
-  // separate billing and shipping forms cannot trip strict mode)
-  const form = page
-    .locator("form")
-    .filter({ has: page.getByLabel(/^(first name|given name):?$/i) })
-    .filter({ has: page.locator("button:not([type]), button[type=submit], input[type=submit]") })
-    .first();
-  await form.evaluate((f) => (f as HTMLFormElement).requestSubmit());
-  const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
+  const control = (name: RegExp) =>
+    page
+      .getByRole("button", { name })
+      .and(page.locator(`*${inPage}:visible`))
+      .first();
+  const CONFIRM = /^\s*(confirm|place order)/i;
+  const submit = control(/^\s*(submit|continue|next|confirm|place order)/i);
+  // a submit control that already confirms the order is not followed by a confirm step
+  const confirms = CONFIRM.test((await submit.getAttribute("value")) ?? (await submit.innerText()));
+  await submit.click();
+  const confirm = control(CONFIRM);
   const next = await Promise.race([
-    placed.then(() => "placed"),
-    confirm.waitFor().then(
-      () => "confirm",
-      () => "placed",
-    ),
+    complete(page)
+      .waitFor()
+      .then(() => "done"),
+    serverError(page)
+      .waitFor()
+      .then(() => "done"),
+    ...(confirms ? [] : [confirm.waitFor().then(() => "confirm")]),
   ]);
   if (next === "confirm") await confirm.click();
-  return placed;
 }
 
 test.describe("checkout form", () => {
@@ -97,12 +109,13 @@ test.describe("checkout form", () => {
     page,
   }) => {
     await toCheckout(page);
-    // one field per label in the billing block and one in the shipping block: both hold the value
-    for (const [label, value] of PREFILL) {
-      const fields = page.getByLabel(label);
-      await expect(fields, `billing and shipping ${label}`).toHaveCount(2);
-      await expect(fields.nth(0)).toHaveValue(value);
-      await expect(fields.nth(1)).toHaveValue(value);
+    // Every field carrying the label (billing and, where the form shows it, shipping) holds the
+    // account value. Fields need not be on screen together: a shipping block behind a "ship to a
+    // different address" step still has to carry the pre-filled values.
+    for (const [name, value] of PREFILL) {
+      const fields = page.getByLabel(name);
+      await expect(fields.first(), `${name}`).toBeAttached();
+      for (const field of await fields.all()) await expect(field, `${name}`).toHaveValue(value);
     }
   });
 
@@ -111,14 +124,24 @@ test.describe("checkout form", () => {
     page,
   }) => {
     await toCheckout(page);
-    const { orderId } = (await (await submitCheckout(page)).json()) as { orderId: string };
+    await submitCheckout(page);
 
-    // The order went ahead: it is stored (design.md, Data), billing details on the
-    // op_purchase_orders header, shipping details on its op_po_contacts record. Each pre-filled
-    // value must be held by a column named for its field, not just anywhere in the row.
-    const row = (table: string) => sql(`select * from ${table} where order_id = ?`, orderId)[0];
-    await expect.poll(() => row("op_purchase_orders"), { timeout: 10_000 }).toBeTruthy();
-    await expect.poll(() => row("op_po_contacts"), { timeout: 10_000 }).toBeTruthy();
+    // The order went ahead: the shopper sees the order-complete screen with the order id, an id
+    // from the "1001" sequence (SWHR2-R-0006).
+    await expect(complete(page)).toBeVisible();
+    const shown = (await page.locator("main").or(page.locator("body")).first().innerText()).match(
+      /\b1001\d+\b/,
+    );
+    expect(shown, "order id on the order-complete screen").not.toBeNull();
+    const orderId = shown![0];
+
+    // No screen shows a stored order's billing and shipping details, so they are read from the
+    // order store design.md (Data) documents: billing on the order header, shipping on its one
+    // contact record (order_id is that record's primary key, so there is exactly one).
+    const rows = (table: string) => sql(`select * from ${table} where order_id = ?`, orderId);
+    await expect.poll(() => rows("op_purchase_orders").length, { timeout: 10_000 }).toBe(1);
+    await expect.poll(() => rows("op_po_contacts").length, { timeout: 10_000 }).toBe(1);
+    const row = (table: string) => rows(table)[0];
     const fields: [RegExp, string | RegExp][] = [
       [/(given|first)_?name/i, "ABC"],
       [/(family|last)_?name/i, "XYZ"],
