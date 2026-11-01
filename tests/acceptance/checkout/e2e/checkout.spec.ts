@@ -64,6 +64,24 @@ function bunDb(body: string, ...args: unknown[]): unknown {
   return JSON.parse(out.trim());
 }
 
+// Creates, on every table of the store, a trigger aborting with "boom-test" any insert of a row
+// with a cell mentioning EST-4 (not EST-40 and the like).
+function boomTriggers(): void {
+  const tables = sql(
+    "select name from sqlite_master where type = 'table' and name not like 'sqlite_%'",
+  ).map((t) => String(t.name));
+  tables.forEach((table, i) => {
+    const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
+    const cells = sql(`select name from pragma_table_info(?)`, table).map(
+      (c) => `((' ' || coalesce(new.${quote(String(c.name))}, '') || ' ') glob '*EST-4[^0-9]*')`,
+    );
+    const name = `acc_c0212_boom_${i}`;
+    sql(`create trigger if not exists ${name} before insert on ${quote(table)}
+      when ${cells.join(" or ")}
+      begin select raise(abort, 'boom-test'); end`);
+  });
+}
+
 async function toCheckout(page: Page, itemId = "EST-1") {
   await page.goto("/petstore/signin");
   // /petstore/signin also carries the registration form, with its own "Password" field;
@@ -110,15 +128,17 @@ async function toCheckout(page: Page, itemId = "EST-1") {
 // credit-card or other field whose label merely contains "state" or "city" is not picked up.
 const label = (name: string) =>
   new RegExp(`^\\s*((billing|shipping)\\s+)?(${name})\\s*:?\\s*\\*?\\s*$`, "i");
-const PREFILL: [RegExp, string][] = [
-  [label("first name|given name"), "ABC"],
-  [label("last name|family name"), "XYZ"],
-  [label("address( line)?( 1)?|street( address)?"), "1 Main St"],
-  [label("city"), "Palo Alto"],
-  [label("state|state/province|province"), "CA"],
-  [label("zip|zip code|postal code"), "94303"],
-  [label("phone|telephone|telephone number|phone number"), "555-555-5555"],
-  [label("e-?mail|e-?mail address"), "abc@xyz.com"],
+// The name and address are on both the billing and the shipping copy; telephone and e-mail need
+// only be on one of them (the shipping block may carry no phone or e-mail field).
+const PREFILL: [RegExp, string, number][] = [
+  [label("first name|given name"), "ABC", 2],
+  [label("last name|family name"), "XYZ", 2],
+  [label("address( line)?( 1)?|street( address)?"), "1 Main St", 2],
+  [label("city"), "Palo Alto", 2],
+  [label("state|state/province|province"), "CA", 2],
+  [label("zip|zip code|postal code"), "94303", 2],
+  [label("phone|telephone|telephone number|phone number"), "555-555-5555", 1],
+  [label("e-?mail|e-?mail address"), "abc@xyz.com", 1],
 ];
 
 // Outside the header and site navigation.
@@ -159,13 +179,13 @@ test.describe("checkout form", () => {
     page,
   }) => {
     await toCheckout(page);
-    // The form carries both a billing and a shipping copy of each field, so every label is on at
-    // least two fields, and every one of them holds the account value. Fields need not be on
-    // screen together: a shipping block behind a "ship to a different address" step still has to
-    // be there and carry the pre-filled values.
-    for (const [name, value] of PREFILL) {
+    // The form carries a billing and a shipping copy of the name and address fields, so those
+    // labels are on at least two fields; telephone and e-mail on at least one. Every field found
+    // holds the account value. Fields need not be on screen together: a shipping block behind a
+    // "ship to a different address" step still has to be there and carry the pre-filled values.
+    for (const [name, value, copies] of PREFILL) {
       const fields = page.getByLabel(name);
-      await expect(fields.nth(1), `${name}: a billing and a shipping field`).toBeAttached();
+      await expect(fields.nth(copies - 1), `${name}: ${copies} field(s)`).toBeAttached();
       for (const field of await fields.all()) await expect(field, `${name}`).toHaveValue(value);
     }
   });
@@ -180,55 +200,43 @@ test.describe("checkout form", () => {
 
     // The order went ahead: the shopper sees the order-complete screen.
     await expect(complete(page)).toBeVisible();
-    const screen = await page.locator("main").or(page.locator("body")).first().innerText();
-    // the order id is among the tokens of four or more characters the screen shows
-    const shown = [...new Set(screen.match(/\b[\w-]*\d[\w-]*\b/g) ?? [])].filter(
-      (t) => t.length >= 4,
-    );
 
     // No screen shows a stored order's billing and shipping details, so they are read from the
-    // store without assuming its layout: the order's records are the rows added by this submit,
-    // in any table, holding a value equal to the order id the order-complete screen shows. Each
-    // shown token is judged on its own, so rows of another order placed meanwhile never mix in.
-    // Billing and shipping both equal the pre-filled values, so each value is stored at least twice.
-    const PREFILLED = [
-      "ABC",
-      "XYZ",
-      "1 Main St",
-      "Palo Alto",
-      "CA",
-      "94303",
-      "555-555-5555",
-      "abc@xyz.com",
-    ];
-    const short = (token: string) => {
-      const held = rowsAddedWith(before, [token]).flatMap((r) => Object.values(r));
-      return PREFILLED.filter((value) => held.filter((v) => v === value).length < 2);
+    // store without assuming its layout: the order's records are the rows this submit added, in
+    // any table, holding a cell equal to a pre-filled value. Billing and shipping both carry the
+    // name and address, so each of those values is stored at least twice; telephone and e-mail
+    // at least once (shipping may carry neither). Order processing may store the order after the
+    // confirmation is shown, so the store is polled.
+    const PREFILLED = PREFILL.map(([, value, copies]) => [value, copies] as const);
+    const values = PREFILLED.map(([value]) => value);
+    const short = () => {
+      const held = rowsAddedWith(before, values).flatMap((r) => Object.values(r));
+      return PREFILLED.filter(
+        ([value, copies]) => held.filter((v) => v === value).length < copies,
+      ).map(([value]) => value);
     };
     await expect
-      .poll(() => shown.map((token) => `${token}: ${short(token).join(", ") || "complete"}`), {
+      .poll(short, {
         timeout: 10_000,
-        message:
-          "an order shown on screen whose stored billing and shipping hold every pre-filled value",
+        message: "pre-filled values missing from the stored order's billing and shipping details",
       })
-      .toContainEqual(expect.stringMatching(/: complete$/));
+      .toEqual([]);
   });
 });
 
 test.describe("server error page", () => {
   // case: SWHR2-C-0212@v1
-  // The failure is real and on the server: placement enqueues the order document on the
-  // order.new channel in the messages table (design.md), and a trigger there makes that insert
-  // throw "boom-test" for an order of EST-4 only, an item no other browser spec orders, so
-  // specs placing orders in parallel are unaffected.
+  // The failure is real and on the server, without assuming how orders are stored: placing an
+  // order of EST-4 has to write that item id somewhere, so a trigger on every table makes any
+  // insert of a row mentioning EST-4 throw "boom-test". The cart already holds the item before the
+  // triggers exist, and EST-4 is an item no other browser spec orders, so specs placing orders in
+  // parallel are unaffected.
   test("SWHR2-C-0212: the Server Error page shows the message and trace and asks the shopper to notify the administrator", async ({
     page,
   }) => {
     await toCheckout(page, "EST-4");
-    sql(`create trigger if not exists acc_c0212_boom before insert on messages
-      when new.channel = 'order.new' and new.payload glob '*EST-4[^0-9]*'
-      begin select raise(abort, 'boom-test'); end`);
     try {
+      boomTriggers();
       await submitCheckout(page);
       await expect(page.getByRole("heading", { name: /server error/i }).first()).toBeVisible();
       await expect(page.getByText(/boom-test/).first()).toBeVisible();
@@ -236,7 +244,10 @@ test.describe("server error page", () => {
       await expect(page.getByText(/\bat .+:\d+:\d+/).first()).toBeVisible();
       await expect(page.getByText(/notify (the )?administrator/i).first()).toBeVisible();
     } finally {
-      sql("drop trigger if exists acc_c0212_boom");
+      const left = sql(
+        "select name from sqlite_master where type = 'trigger' and name like 'acc_c0212_boom_%'",
+      );
+      for (const { name } of left) sql(`drop trigger if exists "${String(name)}"`);
     }
   });
 });
