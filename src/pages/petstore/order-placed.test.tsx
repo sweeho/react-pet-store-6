@@ -21,7 +21,7 @@ describe("order placed page", () => {
     expect(screen.getByText(/abc@xyz\.com/)).toBeInTheDocument();
   });
 
-  it("[SWHR2-C-0101] exposes the Order placed title as the page heading", () => {
+  it("[SWHR2-C-0101] exposes the order-complete heading as the single page heading", () => {
     render(
       <MemoryRouter
         initialEntries={[{ pathname: "/petstore/order-placed", state: { orderId: "10011" } }]}
@@ -29,6 +29,8 @@ describe("order placed page", () => {
         <OrderPlaced />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { level: 1, name: /^order placed$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: /your order is complete/i }),
+    ).toBeInTheDocument();
   });
 });

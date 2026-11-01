@@ -45,7 +45,7 @@ export default function PetstoreOrderPlaced() {
     <div>
       <div className="mb-6 flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{t.placedTitle}</h1>
+          <p className="text-2xl font-semibold">{t.placedTitle}</p>
           <p className="text-muted-foreground mt-1 text-sm">{t.placedSubtitle}</p>
         </div>
         <Link to="/petstore" className={buttonVariants()}>
@@ -59,7 +59,7 @@ export default function PetstoreOrderPlaced() {
               <Check aria-hidden="true" className="size-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold">{t.complete}</h2>
+              <h1 className="text-base font-semibold">{t.complete}</h1>
               <p className="text-muted-foreground mt-1 text-sm">
                 {before}
                 {state.email ? <b className="text-foreground font-medium">{state.email}</b> : null}
