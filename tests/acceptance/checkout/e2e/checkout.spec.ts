@@ -69,7 +69,9 @@ async function submitCheckout(page: Page) {
   const placed = page.waitForResponse(
     (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
   );
-  const form = page.locator("form").filter({ has: page.getByLabel(/first name|given name/i) });
+  const form = page
+    .locator("form")
+    .filter({ has: page.getByLabel(/^(first name|given name):?$/i) });
   await form.evaluate((f) => (f as HTMLFormElement).requestSubmit());
   const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
   const next = await Promise.race([
