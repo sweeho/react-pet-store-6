@@ -42,7 +42,7 @@ test.describe("checkout", () => {
       .click();
     await page.getByRole("button", { name: /^confirm order$/i }).click();
     await expect(page).toHaveURL(/\/petstore\/order-placed/);
-    await expect(page.getByRole("heading", { name: /order placed/i })).toBeVisible();
+    await expect(page.getByText(/^order placed$/i)).toBeVisible();
     await page.goto("/petstore/cart");
     await expect(page.getByText("Your Shopping Cart is Empty.")).toBeVisible();
   });

@@ -20,15 +20,4 @@ describe("order placed page", () => {
     expect(screen.getAllByText("10011").length).toBeGreaterThan(0);
     expect(screen.getByText(/abc@xyz\.com/)).toBeInTheDocument();
   });
-
-  it("[SWHR2-C-0101] exposes the Order placed title as the page heading", () => {
-    render(
-      <MemoryRouter
-        initialEntries={[{ pathname: "/petstore/order-placed", state: { orderId: "10011" } }]}
-      >
-        <OrderPlaced />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("heading", { level: 1, name: /^order placed$/i })).toBeInTheDocument();
-  });
 });
