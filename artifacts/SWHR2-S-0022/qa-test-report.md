@@ -72,14 +72,6 @@ Observation (not a defect): the cart screen includes a "Browse the catalog / Bac
 
 Not measured: `@vitest/coverage-v8` is not installed (`vitest run --coverage` fails with MISSING DEPENDENCY) and the project declares no coverage command.
 
-## Issues Found
-
-- I1: acceptance case SWHR2-C-0090 (empty-cart order shows error page) fails because `routes/api/orders/index.post` does not exist. This is explicitly deferred to the checkout capability in `artifacts/SWHR2-S-0022/SWHR2-T-0276/summary.md`. Not a defect of this sprint; not filed.
-- I2: checkout page (`/petstore/checkout`) does not exist, so Check Out leads to a missing page until the checkout capability ships. Same deferral.
-- I3: environment: Playwright preflight expects Chromium revision 1155, the container ships 1223. Worked around by symlink outside the repo.
-
-No entries in `integration-defects-resolution.md`; no DEFECT tickets filed.
-
 ## Design fidelity
 
 Reference: `artifacts/SWHR2-S-0022/design/mockup-shopping-cart.html` (SWHR2-MCK-22) and `mockup-shopping-cart-empty.html` (SWHR2-MCK-23), 1440×900.
@@ -93,6 +85,14 @@ DESIGN-VERDICT: SWHR2-MCK-22 differs — cart table, Update Cart, total and Chec
   DESIGN-VERDICT: SWHR2-MCK-23 differs — empty message and actions present; layout of the empty frame differs
 - RESIDUAL: SWHR2-MCK-23 empty frame — mockup: cart icon, message as heading and a hint line, bordered white frame; built: inbox icon, "Shopping cart" heading with the message below, grey filled frame
 - RESIDUAL: SWHR2-MCK-23 shell — same shell differences as MCK-22
+
+## Issues Found
+
+- I1: acceptance case SWHR2-C-0090 (empty-cart order shows error page) fails because `routes/api/orders/index.post` does not exist. This is explicitly deferred to the checkout capability in `artifacts/SWHR2-S-0022/SWHR2-T-0276/summary.md`. Not a defect of this sprint; not filed.
+- I2: checkout page (`/petstore/checkout`) does not exist, so Check Out leads to a missing page until the checkout capability ships. Same deferral.
+- I3: environment: Playwright preflight expects Chromium revision 1155, the container ships 1223. Worked around by symlink outside the repo.
+
+No entries in `integration-defects-resolution.md`; no DEFECT tickets filed.
 
 ## Regression guards
 
