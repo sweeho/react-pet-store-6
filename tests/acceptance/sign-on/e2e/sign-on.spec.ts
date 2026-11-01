@@ -17,10 +17,23 @@ const addToCart = (p: Page) =>
 const itemRow = (p: Page, id: string) =>
   p.getByRole("row").filter({ has: p.locator(`a[href$="/item/${id}"]`) });
 
+/**
+ * The sign-in form. /petstore/signin also carries the registration form, which has its own
+ * "Password" field, so page-level label lookups match twice; the registration form is the
+ * one with a repeat-password field.
+ */
+const signInForm = (p: Page) =>
+  p
+    .locator("form")
+    .filter({ has: p.getByLabel(/^password:?$/i) })
+    .filter({ hasNot: p.getByLabel(/(repeat(ed)?|confirm|re-?enter|verify)( your)? password/i) });
+const userIdField = (p: Page) => signInForm(p).getByLabel(/^user ?id:?$/i);
+
 async function fillLogin(page: Page, user: string, pw: string) {
-  await page.getByLabel(/^user ?id:?$/i).fill(user);
-  await page.getByLabel(/^password:?$/i).fill(pw);
-  await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
+  const form = signInForm(page);
+  await form.getByLabel(/^user ?id:?$/i).fill(user);
+  await form.getByLabel(/^password:?$/i).fill(pw);
+  await form.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
 }
 
 async function signInCustomer(page: Page) {
@@ -41,11 +54,11 @@ test.describe("sign-on", () => {
       .getByRole("button", { name: /check ?out/i })
       .or(page.getByRole("link", { name: /check ?out/i }))
       .click();
-    await expect(page.getByLabel(/^user ?id:?$/i)).toBeVisible();
+    await expect(userIdField(page)).toBeVisible();
     await fillLogin(page, "j2ee", "j2ee");
     // The shopper continues to checkout: the shipping and billing form, with no sign-in prompt.
     await expect(page).toHaveURL(/checkout/);
-    await expect(page.getByLabel(/^user ?id:?$/i)).toHaveCount(0);
+    await expect(userIdField(page)).toHaveCount(0);
     await expect(page.getByLabel(/^first name:?$/i).first()).toBeVisible();
   });
 
@@ -55,7 +68,7 @@ test.describe("sign-on", () => {
   }) => {
     await page.goto("/");
     await page.getByRole("link", { name: /^account$/i }).click();
-    await expect(page.getByLabel(/^user ?id:?$/i)).toBeVisible();
+    await expect(userIdField(page)).toBeVisible();
   });
 
   // case: SWHR2-C-0254@v1
@@ -70,7 +83,7 @@ test.describe("sign-on", () => {
       .getByRole("button", { name: /check ?out/i })
       .or(page.getByRole("link", { name: /check ?out/i }))
       .click();
-    await expect(page.getByLabel(/^user ?id:?$/i)).toHaveCount(0);
+    await expect(userIdField(page)).toHaveCount(0);
     await expect(page.getByLabel(/^first name:?$/i).first()).toBeVisible();
   });
 
@@ -85,11 +98,11 @@ test.describe("sign-on", () => {
       .or(page.getByRole("link", { name: /log ?out/i }))
       .click();
     await page.goto("/admin");
-    await expect(page.getByLabel(/^user ?id:?$/i)).toBeVisible();
+    await expect(userIdField(page)).toBeVisible();
     await page.goto("/supplier");
-    await expect(page.getByLabel(/^user ?id:?$/i)).toBeVisible();
+    await expect(userIdField(page)).toBeVisible();
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
-    await expect(page.getByLabel(/^user ?id:?$/i)).toHaveCount(0);
+    await expect(userIdField(page)).toHaveCount(0);
   });
 
   // case: SWHR2-C-0256@v1
@@ -109,7 +122,7 @@ test.describe("sign-on", () => {
     await page.goto("/supplier");
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
     await expect(page.getByText(/sign out of (the )?admin/i)).toHaveCount(0);
-    await expect(page.getByLabel(/^user ?id:?$/i)).toHaveCount(0);
+    await expect(userIdField(page)).toHaveCount(0);
   });
 
   // case: SWHR2-C-0257@v1
@@ -117,9 +130,11 @@ test.describe("sign-on", () => {
     page,
   }) => {
     await page.goto("/admin");
-    await expect(page.getByLabel(/^user ?id:?$/i)).toBeVisible();
-    await expect(page.getByLabel(/^password:?$/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /sign ?in|log ?in|submit/i })).toBeVisible();
+    await expect(userIdField(page)).toBeVisible();
+    await expect(signInForm(page).getByLabel(/^password:?$/i)).toBeVisible();
+    await expect(
+      signInForm(page).getByRole("button", { name: /sign ?in|log ?in|submit/i }),
+    ).toBeVisible();
   });
 
   // case: SWHR2-C-0258@v1
