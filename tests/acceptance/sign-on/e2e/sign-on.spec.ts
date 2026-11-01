@@ -286,6 +286,18 @@ test.describe("sign-on", () => {
     ).toBeVisible();
     await expect(page.getByText(/you are signed out/i)).toHaveCount(0);
     await expect(bodyLink(page, /sign ?in|log ?in|サインイン|ログイン/i).first()).toBeVisible();
+    // the shopper is no longer signed on: the account page asks for sign-in again,
+    // and an account edit is refused
+    // (the session is Japanese, so look for the sign-in password field, not an English label)
+    await page.goto("/petstore/account");
+    await expect(page.locator('input[type="password"]').first()).toBeVisible();
+    await expect(
+      page.getByLabel(/^(first name|given name|名|ファーストネーム)[:：]?$/i),
+    ).toHaveCount(0);
+    const edit = await page.request.put("/api/account", {
+      data: { firstName: "Intruder", lastName: "XYZ", email: "intruder@xyz.com" },
+    });
+    expect(edit.status()).toBe(401);
     // the new session is still Japanese: an item page prices in yen, not dollars
     await page.goto("/petstore/item/EST-1");
     await expect(page.getByText(/[¥￥]\s?\d/).first()).toBeVisible();
