@@ -6,6 +6,25 @@ Change: `swhr2-i-0008-checkout-and-order-placemen` (proposal, design, `specs/che
 
 A signed-on customer presses Check Out, sees the billing and shipping form pre-filled from their account, submits it, and gets an order id from the "1001" sequence; the order document is queued on `order.new` in the same transaction, the cart is emptied, and the Order Placed screen shows the id. Order processing can decode that document and store the order atomically and look it up by id. Implements all 11 requirements of the delta spec (SWHR2-R-0003 … SWHR2-R-0052) and every line of `tasks.md`, in group order.
 
+## Prior work to carry forward
+
+This is the third attempt at this capability. Sprints SWHR2-S-0023 and SWHR2-S-0024 were cancelled before landing. The complete earlier implementation, SWHR2-T-0284 (commit `91e8b90`, itself carried over from `41e1140`), is on branch `origin/vortex/sprint/swhr2-s-0024-d5762589`. It is about 3,600 lines over the same files this plan owns: `services/{ids,documents/purchase-order,messaging/index,orders/receive,orders/checkout}.ts`, both routes, `checkout.tsx`, `confirm-order.tsx`, `order-placed.tsx`, the three locale files and `drizzle/0005_wet_scarecrow.sql`. Start from it (`git diff origin/dev origin/vortex/sprint/swhr2-s-0024-d5762589 -- services routes src db drizzle e2e package.json`), then reconcile it with this plan, the decisions in design.md and the locked suite on this branch, rather than rebuilding. If its module names differ from the fixed contracts below (for example `services/messaging/index.ts` against `enqueue.ts`), the contracts and the locked suite win. Regenerate the migration against this branch's `drizzle/` journal rather than copying the snapshot blindly.
+
+The acceptance branch `origin/vortex/acceptance/SWHR2-N-0001` holds a newer `tests/acceptance/checkout/e2e/checkout.spec.ts` (commit `f24b0af`) than the locked copy here. Build to the behaviour (labelled fields, one header and one contact row per order, a trigger-based C-0212 failure), not to one version's selectors.
+
+## Deferred cases owned here
+
+Six approved cases from earlier capabilities were deferred to this brief because they need checkout. They are linked to this ticket and must pass:
+
+- SWHR2-C-0089 (shopping-cart): Check Out from a non-empty cart opens order information entry.
+- SWHR2-C-0090 (shopping-cart): an empty-cart order shows the empty-cart error page and creates no `op_purchase_orders` or `messages` row.
+- SWHR2-C-0101 (shopping-cart): placing an order empties the cart.
+- SWHR2-C-0174 (customer-account): sign up, enter account information, then buy and get a 1001-series id.
+- SWHR2-C-0252 (sign-on): a visitor who is not signed in is sent to sign in before placing an order.
+- SWHR2-C-0254 (sign-on): a signed-in customer reaches the billing and shipping form without a second sign-in.
+
+Their tests are in `tests/acceptance/{shopping-cart,customer-account,sign-on}/`.
+
 ## Steps
 
 1. **Data model** (tasks 1.1–1.6; design _Data_, SD1, SD2, SD8). Add to `db/schema.ts`: `id_sequences`, `op_purchase_orders` (billing fields on the header in columns named for the field, e.g. `bill_given_name`, `bill_street1`, `bill_phone`), `op_po_contacts` (shipping), `op_po_cards`, `op_po_line_items`, plus `messages` and `op_order_workflow` exactly as change `swhr2-i-0011-order-fulfilment-and-invoic` describes them. Generate one migration into `drizzle/` and commit it.
@@ -46,4 +65,4 @@ Approved mockups in `artifacts/SWHR2-S-0025/design/` (see `MANIFEST.md`), all at
 
 ## Definition of Done
 
-AC-1 … AC-16 on the ticket, each met by its cited case (SWHR2-C-0212 … SWHR2-C-0227) in the locked suite. In addition: the existing suites stay green, including SWHR2-C-0086 (cart Check Out link) and SWHR2-C-0092 (server page says server error); the new migration applies to a fresh database; every `tasks.md` box is done.
+AC-1 … AC-16 on the ticket, each met by its cited case (SWHR2-C-0212 … SWHR2-C-0227) in the locked suite, plus the six deferred cases above. In addition: the existing suites stay green, including SWHR2-C-0086 (cart Check Out link) and SWHR2-C-0092 (server page says server error); the new migration applies to a fresh database; every `tasks.md` box is done.

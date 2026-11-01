@@ -137,6 +137,8 @@ Codebase read on `vortex/sprint/swhr2-s-0025-0d95e83e` at planning time. One FEA
 - **Sign-on guard** `services/session/guards.ts` `requireCustomer(event)` → 401 `SignOnRequired`. The account pre-fill source is `services/customers/http.ts` `customerView(userId)` (used by `routes/api/account/index.get.ts`).
 - **Screens**: `src/pages/petstore/cart.tsx` already links Check Out to `/petstore/checkout` (case SWHR2-C-0086). `src/pages/petstore/error/server.tsx` and `empty-cart.tsx` exist. The server page shows a generic "Server error" text with no message, trace or administrator request.
 - **Locked acceptance suite** `tests/acceptance/checkout/` (`unit.test.ts`, `orders.test.ts`, `e2e/checkout.spec.ts`, `harness.ts`) cites all 16 approved cases and fixes the module paths and shapes listed under _Fixed interface contracts_ in the PLAN.
+- **Prior attempts.** Sprints SWHR2-S-0023 and SWHR2-S-0024 were cancelled. A full earlier implementation, SWHR2-T-0284, is on `origin/vortex/sprint/swhr2-s-0024-d5762589` and never reached `dev`. The FEATURE carries it forward (see its PLAN.md).
+- **Deferred cases.** SWHR2-C-0089, -0090, -0101 (shopping-cart), SWHR2-C-0174 (customer-account) and SWHR2-C-0252, -0254 (sign-on) were deferred to this brief and are owned by the FEATURE.
 - **No XML library** is installed; `fast-xml-parser` is a new dependency, as this design assumes.
 
 ## Spec discrepancies
