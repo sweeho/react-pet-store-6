@@ -118,11 +118,12 @@ test.describe("sign-on", () => {
     await expect(page.getByLabel(fields[0][0]).first()).toBeVisible();
     for (const [label, value] of fields)
       for (const input of await page.getByLabel(label).all()) await input.fill(value);
-    await page
-      .getByRole("button", { name: /continue|submit|next/i })
-      .first()
-      .click();
-    // The form is accepted: it gives way to the next order step, with no sign-in screen.
+    const submit = page
+      .getByRole("button", { name: /^\s*(submit|continue|next|place (your )?order)/i })
+      .first();
+    await submit.click();
+    // The form is accepted: it gives way to the next order step (a confirm step if one is
+    // offered, otherwise the order-complete screen), with no sign-in screen.
     await expect(page.getByLabel(fields[0][0])).toHaveCount(0);
     await expect(page).not.toHaveURL(/\/petstore\/checkout\/?(\?|#|$)/);
     await expect(userIdField(page)).toHaveCount(0);
@@ -131,7 +132,11 @@ test.describe("sign-on", () => {
       page
         .getByRole("button", { name: /confirm|place (your )?order/i })
         .or(page.getByRole("link", { name: /confirm|place (your )?order/i }))
-        .or(page.getByText(/thank you|order (has been )?(placed|submitted|received)/i))
+        .or(
+          page.getByText(
+            /thank you|order (has been )?(placed|submitted|received)|your order is complete/i,
+          ),
+        )
         .first(),
     ).toBeVisible();
   });
