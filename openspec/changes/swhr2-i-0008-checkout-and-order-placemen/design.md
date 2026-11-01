@@ -126,3 +126,50 @@ The order-processing tables keep no foreign key into the storefront group (data-
 - `fast-xml-parser` (pure JavaScript, runs under Bun) to build and parse the `PurchaseOrder` document with element order preserved. This dependency is assumed, because no XML library is in the pinned stack.
 - The asynchronous hand-off goes through the persisted outbox table instead of a message broker (PRD constraints).
 - Tests: unit tests for `nextId` and the codec (round trip, both rejection messages); route integration tests for empty cart, unsigned visitor, sequential ids and the cart cleared after placement; a test that a failing card insert leaves no order rows.
+
+## Planning findings (sprint SWHR2-S-0025)
+
+Codebase read on `vortex/sprint/swhr2-s-0025-0d95e83e` at planning time. One FEATURE, SWHR2-T-0288, owns this whole change; its plan is `artifacts/SWHR2-S-0025/SWHR2-T-0288/PLAN.md`.
+
+- **Schema** is one file, `db/schema.ts` (`drizzle.config.ts` points at it). It already holds the customer account tables: `contact_info` (`given_name`, `family_name`, `telephone`, `email`, `address_id`), `addresses` (`street1`, `street2`, `city`, `state`, `zip`, `country`) and `customer_accounts` (`card_number`, `card_type`, `card_expiry_month`, `card_expiry_year`). There are no order, sequence, `messages` or `op_order_workflow` tables yet. Migrations `0000`–`0004` are in `drizzle/`.
+- **Cart** `services/cart.ts`: in-memory, keyed by session id. `lines(cart, locale)` prices lines from the catalog `listPrice` (integer hundredths), and `clearCart(sessionId)` already exists for placement.
+- **Failures** `services/errors.ts`: `AppFailure` → `OrderFailure` (422) → `EmptyCartOrder` already exist. `guardRoute` answers every failure with a `FailureReply { kind, kinds, message, trace }`. `src/errors/routeFailure.ts` maps `EmptyCartOrder` to `/petstore/error/empty-cart` and anything unmapped to `/petstore/error/server`.
+- **Sign-on guard** `services/session/guards.ts` `requireCustomer(event)` → 401 `SignOnRequired`. The account pre-fill source is `services/customers/http.ts` `customerView(userId)` (used by `routes/api/account/index.get.ts`).
+- **Screens**: `src/pages/petstore/cart.tsx` already links Check Out to `/petstore/checkout` (case SWHR2-C-0086). `src/pages/petstore/error/server.tsx` and `empty-cart.tsx` exist. The server page shows a generic "Server error" text with no message, trace or administrator request.
+- **Locked acceptance suite** `tests/acceptance/checkout/` (`unit.test.ts`, `orders.test.ts`, `e2e/checkout.spec.ts`, `harness.ts`) cites all 16 approved cases and fixes the module paths and shapes listed under _Fixed interface contracts_ in the PLAN.
+- **No XML library** is installed; `fast-xml-parser` is a new dependency, as this design assumes.
+
+## Spec discrepancies
+
+Recorded, not edited into the spec. Each is also a comment on SWHR2-T-0288.
+
+- **SD1 Outbox and workflow tables belong to a later change.** This design enqueues on `order.new` in the `messages` table and the locked case SWHR2-C-0220 also reads `op_order_workflow`, but both tables (and `services/messaging/`) are defined by change `swhr2-i-0011-order-fulfilment-and-invoic`, which has not shipped. Resolution in planning: this FEATURE creates `messages` and `op_order_workflow` in exactly the column shape that change's design states, plus `enqueue(tx, channel, payload)`, and nothing else from it (no worker plugin, no transitions). The later change reuses them.
+- **SD2 Schema file layout.** This design names `db/schema/storefront.ts` and `db/schema/order-processing.ts`; the repository has a single `db/schema.ts`. The new tables go in `db/schema.ts`.
+- **SD3 Server Error page content.** The existing `src/pages/petstore/error/server.tsx` says "Server error" with a retry message; SWHR2-R-0003 requires the message, the trace and a request to notify the administrator. The page is changed in place; case SWHR2-C-0092 (matches /server error/i) keeps passing.
+- **SD4 Line numbering.** Task 4.3 numbers placed order lines from 0 (legacy). The acceptance harness builds documents with lines numbered from 1. No scenario fixes the base; the codec must preserve whatever number it is given, and placement numbers from 0 per task 4.3.
+- **SD5 Country value.** The legacy form's option value is "United States" while the account stores "USA". The acceptance e2e accepts either. The form's country list uses "USA" as the value so a stored US address preselects (fixes the legacy mismatch, legacy defect noted in _Screens_).
+- **SD6 Undecided task wording.** Tasks 4.6, 5.3 and 6.2 refer to decisions ("as decided") that no document records. Planning decisions PD1–PD3 below settle them.
+- **SD7 Stale proposal text.** `proposal.md` says 27 draft requirements and none approved; the delta spec carries the 11 approved requirements SWHR2-R-0003 … SWHR2-R-0052 with ids.
+- **SD8 Billing contact storage.** This design lists "the billing contact and address fields" on `op_purchase_orders` while the legacy `getData` copies the shipping contact to both (D6). The locked e2e (SWHR2-C-0216) requires billing values on the header in columns named for each field and shipping values on `op_po_contacts`; the design is followed, D6 is not reproduced.
+
+## Planning decisions
+
+- **PD1 Payment card (task 4.6, legacy D1/D2).** The order carries the card on the customer's account (`customer_accounts`), with `expiryDate` written as `MM/YYYY`. The hard-coded demo card is not reproduced. Cards are stored, never charged.
+- **PD2 Unreadable order date (task 5.3, legacy D7).** `fromXml` rejects a document whose `OrderDate` is not `yyyy-MM-dd` with an error; it never substitutes the processing date.
+- **PD3 Card expiry read (task 6.2).** Reading month and year from `"<month>/<year>"` text returns them as integers; text that does not match yields no month and year (no 01/2010 fallback).
+- **PD4 One unit of work at placement (task 5.5, legacy D4).** `nextId`, the `order.new` enqueue and nothing else run in one SQLite transaction; the cart is cleared only after it commits. A failure rolls back the id and the message, leaves the cart intact and answers 500 `AppFailure`, which the SPA routes to the Server Error page carrying message and trace.
+- **PD5 Order Placed screen.** PRD open question 6 is settled by the approved mockup SWHR2-MCK-25: a confirmation screen showing the order id and the confirmation e-mail address.
+- **PD6 Receipt scope.** `services/orders/receive.ts` decodes and stores the order only. Starting the workflow in PENDING and auto-approval belong to change `swhr2-i-0009-order-approval`; no `op_order_workflow` row is written here (SWHR2-C-0220 asserts there is none).
+
+## Phases
+
+Worked in order by SWHR2-T-0288, following the task groups:
+
+1. **Data model** (group 1): the new tables in `db/schema.ts` (SD1, SD2) and one generated drizzle migration.
+2. **Order id issue** (group 2): `services/ids.ts`.
+3. **Document codec** (groups 5.1–5.3, 6.2): `services/documents/purchase-order.ts`, adding `fast-xml-parser`.
+4. **Placement and hand-off** (groups 4, 5.4–5.5): `services/messaging/enqueue.ts`, `routes/api/checkout/index.get.ts`, `routes/api/orders/index.post.ts`.
+5. **Receipt** (groups 5.6–5.7, 6.1): `services/orders/receive.ts` with `createPurchaseOrder` and `getPurchaseOrder`.
+6. **Screens** (group 3, 4.7–4.8): checkout form, Order Placed screen, Server Error page update, locale strings in `src/locales/{en_US,ja_JP,zh_CN}/`.
+7. **Test harness** (group 7): unit tests beside each new service, route integration tests under `routes/api/` (server Vitest project), UI tests beside each page, and an e2e spec `e2e/checkout.spec.ts` for the sign-in → cart → checkout → Order Placed journey. The locked suite in `tests/acceptance/checkout/` is run, never edited.
+8. **CI**: no workflow change is needed; the existing workflow (`.github/workflows/ci.yml`) already runs lint, type-check, unit, e2e and the acceptance steps on pull requests to `vortex/**` branches. The new migration must apply cleanly on a fresh database, which the e2e global setup exercises.
