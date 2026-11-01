@@ -91,7 +91,7 @@ async function submitCheckout(page: Page) {
 
 test.describe("checkout form", () => {
   // case: SWHR2-C-0215@v1
-  test("SWHR2-C-0215: the billing and shipping form is pre-filled from the signed-in customer's account", async ({
+  test("[SWHR2-C-0215] the billing and shipping form is pre-filled from the signed-in customer's account", async ({
     page,
   }) => {
     await toCheckout(page);
@@ -105,7 +105,7 @@ test.describe("checkout form", () => {
   });
 
   // case: SWHR2-C-0216@v1
-  test("SWHR2-C-0216: submitting the pre-filled form unchanged places the order with the pre-filled details", async ({
+  test("[SWHR2-C-0216] submitting the pre-filled form unchanged places the order with the pre-filled details", async ({
     page,
   }) => {
     await toCheckout(page);
