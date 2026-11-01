@@ -106,7 +106,7 @@ describe("checkout page", () => {
 
   it("[SWHR2-C-0254] accepts typed values (State is a text field) with no sign-in step", async () => {
     const fetchMock = mount();
-    const states = await screen.findAllByLabelText(/^state or province$/i);
+    const states = await screen.findAllByLabelText(/^state$/i);
     fireEvent.change(states[1], { target: { value: "NY" } });
     fireEvent.click(next());
     await screen.findAllByText("10011");

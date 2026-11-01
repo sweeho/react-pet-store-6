@@ -168,10 +168,8 @@ export default function PetstoreCheckout() {
     COUNTRIES.some(([v]) => v === current) ? COUNTRIES : [...COUNTRIES, [current, current]];
 
   const section = (side: Side, title: string, sub: string) => (
-    <section className="bg-background rounded-lg border p-4" aria-labelledby={`${side}-title`}>
-      <h2 id={`${side}-title`} className="text-base font-semibold">
-        {title}
-      </h2>
+    <section className="bg-background rounded-lg border p-4">
+      <h2 className="text-base font-semibold">{title}</h2>
       <p className="text-muted-foreground mt-0.5 mb-4 text-xs">{sub}</p>
       <div className="grid grid-cols-2 gap-3">
         {ROWS.map(({ field, full, mono }) => {
