@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { purchaseOrder } from "../orders/harness.test";
-import { fromXml, toXml } from "./purchase-order";
+import { fromXml, parseExpiry, toXml } from "./purchase-order";
 
 describe("purchase order document", () => {
   it("[SWHR2-C-0221] round-trips with root PurchaseOrder and the card elements in order", () => {
@@ -35,5 +35,17 @@ describe("purchase order document", () => {
   it("[SWHR2-C-0223] rejects a non-CreditCard element in the card position", () => {
     const xml = toXml(purchaseOrder("10011")).replace(/CreditCard/g, "DebitCard");
     expect(() => fromXml(xml)).toThrow("CreditCard element expected.");
+  });
+});
+
+describe("card expiry text", () => {
+  it("reads month and year from <month>/<year>", () => {
+    expect(parseExpiry("12/2005")).toEqual({ month: 12, year: 2005 });
+    expect(parseExpiry("3/2031")).toEqual({ month: 3, year: 2031 });
+  });
+
+  it("yields no month and year for text of another shape, with no default", () => {
+    for (const t of ["", "Duke Express", "13/2005", "12-2005", "12/05"])
+      expect(parseExpiry(t)).toBeNull();
   });
 });
