@@ -23,9 +23,17 @@ function sql(statement: string, ...params: string[]): Record<string, unknown> | 
 
 async function toCheckout(page: Page) {
   await page.goto("/petstore/signin");
-  await page.getByLabel(/^user id:?$/i).fill("j2ee");
-  await page.getByLabel(/^password:?$/i).fill("j2ee");
-  await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
+  // /petstore/signin also carries the registration form, with its own "Password" field;
+  // the sign-in form is the one without a repeat-password field.
+  const signIn = page
+    .locator("form")
+    .filter({ has: page.getByLabel(/^password:?$/i) })
+    .filter({
+      hasNot: page.getByLabel(/^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i),
+    });
+  await signIn.getByLabel(/^user id:?$/i).fill("j2ee");
+  await signIn.getByLabel(/^password:?$/i).fill("j2ee");
+  await signIn.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   await page.goto("/petstore/item/EST-1");
   await page
     .getByRole("button", { name: /add to cart/i })
