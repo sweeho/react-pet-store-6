@@ -65,6 +65,9 @@ jobs:
       # and stays red until the Build phase makes it pass.
       # TODO: remove continue-on-error once the Build phase has made the suite green.
       - name: Acceptance tests
+        # Runs even when an earlier step failed: the merge gate reads each ticket's locked
+        # tests from this run, and a skipped step leaves it nothing to read.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         timeout-minutes: 10
         run: bun run test:acceptance --reporter=default --reporter=junit --outputFile.junit=.vortex-results/acceptance/junit.xml
@@ -80,6 +83,9 @@ jobs:
 
       # TODO: remove continue-on-error once the Build phase has made the acceptance suite green.
       - name: Acceptance E2E tests
+        # Runs even when an earlier step failed: the merge gate reads each ticket's locked
+        # tests from this run, and a skipped step leaves it nothing to read.
+        if: ${{ !cancelled() }}
         continue-on-error: true
         timeout-minutes: 10
         run: bun run test:acceptance:e2e
