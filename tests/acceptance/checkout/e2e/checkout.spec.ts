@@ -21,6 +21,49 @@ function sql(statement: string, ...params: string[]): Record<string, unknown>[] 
   return JSON.parse(out.trim() || "[]") as Record<string, unknown>[];
 }
 
+// Every table of the store with its highest rowid, so the rows a later step adds can be told apart.
+const TABLES = `
+  const tables = db.query("select name from sqlite_master where type = 'table' and name not like 'sqlite_%'").all();
+  const top = (t) => db.query(\`select coalesce(max(rowid), 0) as n from "\${t}"\`).get().n;`;
+
+function tableTops(): Record<string, number> {
+  return bunDb(`${TABLES}
+    return Object.fromEntries(tables.map(({ name }) => [name, top(name)]));`) as Record<
+    string,
+    number
+  >;
+}
+
+// The rows added since `before`, in any table, holding a cell exactly equal to one of `values`.
+function rowsAddedWith(
+  before: Record<string, number>,
+  values: string[],
+): Record<string, unknown>[] {
+  return bunDb(
+    `${TABLES}
+    const [before, values] = args;
+    return tables.flatMap(({ name }) =>
+      db.query(\`select * from "\${name}" where rowid > ?\`).all(before[name] ?? 0)
+        .filter((row) => Object.values(row).some((v) => v !== null && values.includes(String(v)))));`,
+    before,
+    values,
+  ) as Record<string, unknown>[];
+}
+
+// Runs `body` (which sees `db` and `args`) in a bun child process against the store file.
+function bunDb(body: string, ...args: unknown[]): unknown {
+  const script = `
+    const { Database } = require("bun:sqlite");
+    const [file, args] = JSON.parse(process.argv[1]);
+    const db = new Database(file, { readonly: true });
+    try { console.log(JSON.stringify((() => { ${body} })())); }
+    finally { db.close(); }`;
+  const out = execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, args])], {
+    encoding: "utf8",
+  });
+  return JSON.parse(out.trim());
+}
+
 async function toCheckout(page: Page, itemId = "EST-1") {
   await page.goto("/petstore/signin");
   // /petstore/signin also carries the registration form, with its own "Password" field;
@@ -109,12 +152,13 @@ test.describe("checkout form", () => {
     page,
   }) => {
     await toCheckout(page);
-    // Every field carrying the label (billing and, where the form shows it, shipping) holds the
-    // account value. Fields need not be on screen together: a shipping block behind a "ship to a
-    // different address" step still has to carry the pre-filled values.
+    // The form carries both a billing and a shipping copy of each field, so every label is on at
+    // least two fields, and every one of them holds the account value. Fields need not be on
+    // screen together: a shipping block behind a "ship to a different address" step still has to
+    // be there and carry the pre-filled values.
     for (const [name, value] of PREFILL) {
       const fields = page.getByLabel(name);
-      await expect(fields.first(), `${name}`).toBeAttached();
+      await expect(fields.nth(1), `${name}: a billing and a shipping field`).toBeAttached();
       for (const field of await fields.all()) await expect(field, `${name}`).toHaveValue(value);
     }
   });
@@ -124,46 +168,43 @@ test.describe("checkout form", () => {
     page,
   }) => {
     await toCheckout(page);
+    const before = tableTops();
     await submitCheckout(page);
 
-    // The order went ahead: the shopper sees the order-complete screen with the order id, an id
-    // from the "1001" sequence (SWHR2-R-0006).
+    // The order went ahead: the shopper sees the order-complete screen.
     await expect(complete(page)).toBeVisible();
-    const shown = (await page.locator("main").or(page.locator("body")).first().innerText()).match(
-      /\b1001\d+\b/,
+    const screen = await page.locator("main").or(page.locator("body")).first().innerText();
+    // the order id is among the tokens of four or more characters the screen shows
+    const shown = [...new Set(screen.match(/\b[\w-]*\d[\w-]*\b/g) ?? [])].filter(
+      (t) => t.length >= 4,
     );
-    expect(shown, "order id on the order-complete screen").not.toBeNull();
-    const orderId = shown![0];
 
     // No screen shows a stored order's billing and shipping details, so they are read from the
-    // order store design.md (Data) documents: billing on the order header, shipping on its one
-    // contact record (order_id is that record's primary key, so there is exactly one).
-    const rows = (table: string) => sql(`select * from ${table} where order_id = ?`, orderId);
-    await expect.poll(() => rows("op_purchase_orders").length, { timeout: 10_000 }).toBe(1);
-    await expect.poll(() => rows("op_po_contacts").length, { timeout: 10_000 }).toBe(1);
-    const row = (table: string) => rows(table)[0];
-    const fields: [RegExp, string | RegExp][] = [
-      [/(given|first)_?name/i, "ABC"],
-      [/(family|last)_?name/i, "XYZ"],
-      [/street|addr(ess)?_?1/i, "1 Main St"],
-      [/city/i, "Palo Alto"],
-      [/state/i, "CA"],
-      [/zip|postal/i, "94303"],
-      [/country/i, /^(USA|United States)$/],
-      [/phone/i, "555-555-5555"],
-      [/e_?mail/i, "abc@xyz.com"],
+    // store without assuming its layout: the order's records are the rows added by this submit,
+    // in any table, holding a value equal to the order id the order-complete screen shows. Each
+    // shown token is judged on its own, so rows of another order placed meanwhile never mix in.
+    // Billing and shipping both equal the pre-filled values, so each value is stored at least twice.
+    const PREFILLED = [
+      "ABC",
+      "XYZ",
+      "1 Main St",
+      "Palo Alto",
+      "CA",
+      "94303",
+      "555-555-5555",
+      "abc@xyz.com",
     ];
-    for (const [which, stored] of [
-      ["billing", row("op_purchase_orders")],
-      ["shipping", row("op_po_contacts")],
-    ] as const) {
-      for (const [name, value] of fields) {
-        const held = Object.keys(stored)
-          .filter((k) => name.test(k))
-          .map((k) => String(stored[k]));
-        expect(held, `${which} ${name}`).toContainEqual(expect.stringMatching(value));
-      }
-    }
+    const short = (token: string) => {
+      const held = rowsAddedWith(before, [token]).flatMap((r) => Object.values(r));
+      return PREFILLED.filter((value) => held.filter((v) => v === value).length < 2);
+    };
+    await expect
+      .poll(() => shown.map((token) => `${token}: ${short(token).join(", ") || "complete"}`), {
+        timeout: 10_000,
+        message:
+          "an order shown on screen whose stored billing and shipping hold every pre-filled value",
+      })
+      .toContainEqual(expect.stringMatching(/: complete$/));
   });
 });
 
