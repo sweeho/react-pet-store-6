@@ -98,3 +98,16 @@ testEvidence:
     unit: build-and-test
     integration: build-and-test
     e2e: build-and-test
+  # How a ticket's locked acceptance tests (tests/acceptance/**) run: one suite per
+  # command; {files} is replaced by the locked files to run. The browser command
+  # writes its JUnit report when CI is set (playwright.acceptance.config.ts).
+  acceptance:
+    suites:
+      - kind: unit
+        command: "bun run test:acceptance --reporter=default --reporter=junit --outputFile.junit=.vortex-results/acceptance/junit.xml {files}"
+        junitPath: .vortex-results/acceptance/junit.xml
+        testGlobs: ["tests/acceptance/**/*.test.ts", "tests/acceptance/**/*.test.tsx"]
+      - kind: browser
+        command: "bun run test:acceptance:e2e {files}"
+        junitPath: .vortex-results/acceptance/e2e-junit.xml
+        testGlobs: ["tests/acceptance/**/e2e/**/*.spec.ts"]

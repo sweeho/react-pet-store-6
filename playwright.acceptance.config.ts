@@ -29,6 +29,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "on-first-retry",
+    // An agent container's small /dev/shm hangs Chromium; use /tmp instead.
+    launchOptions: { args: ["--disable-dev-shm-usage"] },
   },
   projects: [
     {
