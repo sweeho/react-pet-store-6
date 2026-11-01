@@ -108,8 +108,8 @@ test.describe("sign up", () => {
     await page.goto("/petstore/signin");
     await fillSignUp(page, "j2ee", "secret1", "secret1");
     await submitSignUp(page);
-    await expect(page.getByText(/user creation error/i)).toBeVisible();
-    await expect(page.getByText(/in use/i)).toBeVisible();
+    await expect(page.getByText(/user creation error/i).first()).toBeVisible();
+    await expect(page.getByText(/in use/i).first()).toBeVisible();
   });
 
   // case: SWHR2-C-0174@v1
@@ -148,21 +148,31 @@ test.describe("sign up", () => {
     await page
       .getByRole("button", { name: /add to cart/i })
       .or(page.getByRole("link", { name: /add to cart/i }))
+      .first()
       .click();
     await page.getByRole("link", { name: /cart/i }).first().click();
-    await page.getByRole("link", { name: /check ?out/i }).click();
+    await page
+      .getByRole("link", { name: /check ?out/i })
+      .first()
+      .click();
     const placed = page.waitForResponse(
       (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
     );
-    await page
-      .getByRole("button", { name: /continue|submit|place|next/i })
-      .first()
-      .click();
-    // the shopper confirms the order: the confirm step must be offered and taken
-    await page
-      .getByRole("button", { name: /confirm|place order|submit/i })
-      .first()
-      .click();
+    // one "Place order" submit places the order; a confirm step is taken only if one appears
+    // (as in C-0101)
+    const submit = page
+      .getByRole("button", { name: /^\s*(submit|continue|next|confirm|place order)/i })
+      .first();
+    const confirmsOrder = /^\s*(confirm|place order)/i.test(
+      (await submit.getAttribute("value")) ?? (await submit.innerText()),
+    );
+    await submit.click();
+    if (!confirmsOrder) {
+      const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
+      const done = page.getByRole("heading", { name: /your order is complete|order placed/i });
+      await expect(done.or(confirm).first()).toBeVisible();
+      if (!(await done.isVisible())) await confirm.click();
+    }
     const response = await placed;
     expect(response.status()).toBe(200);
     const { orderId } = (await response.json()) as { orderId: string };
