@@ -26,7 +26,9 @@ const signInForm = (p: Page) =>
   p
     .locator("form")
     .filter({ has: p.getByLabel(/^password:?$/i) })
-    .filter({ hasNot: p.getByLabel(/(repeat(ed)?|confirm|re-?enter|verify)( your)? password/i) });
+    .filter({
+      hasNot: p.getByLabel(/^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i),
+    });
 const userIdField = (p: Page) => signInForm(p).getByLabel(/^user ?id:?$/i);
 
 async function fillLogin(page: Page, user: string, pw: string) {
