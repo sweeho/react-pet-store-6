@@ -18,7 +18,7 @@ const definition: ScreenDefinition = {
   street1: "Street address",
   street2: "Address line 2 (optional)",
   city: "City",
-  state: "State or province",
+  state: "State",
   zip: "Postal code",
   country: "Country",
   cardTitle: "Payment card",
