@@ -126,3 +126,67 @@ The order-processing tables keep no foreign key into the storefront group (data-
 - `fast-xml-parser` (pure JavaScript, runs under Bun) to build and parse the `PurchaseOrder` document with element order preserved. This dependency is assumed, because no XML library is in the pinned stack.
 - The asynchronous hand-off goes through the persisted outbox table instead of a message broker (PRD constraints).
 - Tests: unit tests for `nextId` and the codec (round trip, both rejection messages); route integration tests for empty cart, unsigned visitor, sequential ids and the cart cleared after placement; a test that a failing card insert leaves no order rows.
+
+## Planning — SWHR2-S-0023
+
+One FEATURE, **SWHR2-T-0281** (carried forward as **SWHR2-T-0284**, see Re-plan below), owns every task group (1 to 7) in order. No SPIKE: Q1 is settled by the approved Server Error mockup and SWHR2-R-0003, Q2 is out of scope, and Q3 is settled as a prefix by SWHR2-R-0006. No enabling TASK: the outbox and worker the locked suite needs (SD2) share files with the FEATURE, so a separate ticket would only serialise the same agent's work.
+
+### Measured code state (sprint branch at `decd492`)
+
+- `db/schema.ts` is the only schema file (`drizzle.config.ts` → `./db/schema.ts`). The last migration is `drizzle/0004_watery_jasper_sitwell.sql`. No order, sequence, `messages` or workflow table exists.
+- `services/errors.ts` already has `AppFailure`, `OrderFailure`, `EmptyCartOrder` (422), `failureReply` → `{ kind, kinds, message, trace }` and `guardRoute`. `src/errors/routeFailure.ts` maps kinds to pages, and an unmapped kind goes to the Server Error page.
+- `src/pages/petstore/error/server.tsx` and `empty-cart.tsx` exist as stubs from shopping-cart. `server.tsx` shows neither the message nor the trace, and does not ask the shopper to notify the administrator, so it does not meet SWHR2-R-0003.
+- `src/pages/petstore/cart.tsx:188` links Check Out to `/petstore/checkout`, a page that does not exist yet. There is no `routes/api/orders/` and no `routes/api/checkout`.
+- `services/cart.ts` provides `cartFor(sessionId)`, `lines(cart, locale)`, `total` and `clearCart(sessionId)`. `services/session/guards.ts#requireCustomer` gives the 401 `SignOnRequired`.
+- `services/customers/index.ts#getCustomer(userId)` and `contactSnapshot(contactId)` return the account contact as `givenName, familyName, telephone, email` with address `street1, street2, city, state, zip, country`.
+- No XML library is installed, and nothing exists under `plugins/` or `services/messaging/`.
+- Locked acceptance suite `tests/acceptance/checkout/` (`harness.ts`, `unit.test.ts`, `orders.test.ts`, `e2e/checkout.spec.ts`) fixes these module paths: `services/ids#nextId`, `services/documents/purchase-order#{toXml,fromXml}`, `services/orders/receive#{createPurchaseOrder,getPurchaseOrder}` and `routes/api/orders/index.post`. Three shopping-cart cases (C-0089, C-0090, C-0101), two sign-on cases (C-0252, C-0254) and one customer-account case (C-0174) were deferred here and also depend on this change.
+
+### Interface contracts fixed by the locked suite
+
+- `POST /api/orders` body `{ billing, shipping }`. Each side is `{ givenName, familyName, street, city, state, country, zip, email, phone }`. The reply is 200 `{ orderId }`, 401 `SignOnRequired`, 422 `EmptyCartOrder`, or 500 `AppFailure` with `message` and `trace`.
+- `nextId(prefix: string): string | Promise<string>`. A null or empty prefix throws and leaves `id_sequences` unchanged. It throws an `Error` when the store is closed or the sequence insert aborts. The table is `id_sequences(prefix text pk, next_value integer not null)`, and an issue increments `next_value` by 1.
+- `PurchaseOrder` value: `{ orderId, userId, email, locale, orderDate (epoch ms), total (hundredths), billing, shipping, card: { cardNumber, cardType, expiryDate }, lines: [{ lineNumber, categoryId, productId, itemId, quantity, unitPrice (hundredths) }] }`. `fromXml(toXml(po))` must deep-equal `po`.
+- `createPurchaseOrder(db | tx, po)` throws on a duplicate id or any failed insert and keeps nothing. `getPurchaseOrder(orderId)` returns the order.
+- Tables: `op_purchase_orders`, `op_po_contacts` (shipping contact, columns include the address values), `op_po_cards`, `op_po_line_items` (`item_id`, `quantity`, `quantity_shipped`), `messages` (`channel`, `payload`, `status`), and `op_order_workflow` (`order_id`, `status`).
+
+### Decisions
+
+- **P1 Schema in `db/schema.ts`.** The tables go into the existing single schema file with one new migration, not into `db/schema/storefront.ts` / `order-processing.ts` (SD1).
+- **P2 Minimal outbox and worker built here, in order-fulfilment's shape.** The FEATURE adds the `messages` table with the columns change `swhr2-i-0011-order-fulfilment-and-invoic` defines (`id, channel, subscriber, payload, status, attempts, available_at, created_at`). It also adds `services/messaging/` with `enqueue(tx, channel, payload)` and `plugins/message-worker.ts`, which delivers `order.new` to `services/orders/receive`. Order-fulfilment later extends this code and does not rewrite it (SD2). The worker starts only with the Nitro server, so route tests see the message `pending`, as C-0220 requires.
+- **P3 Receipt starts the workflow in PENDING.** `op_order_workflow(order_id pk, status)` is created in order-fulfilment's shape. Receipt inserts `PENDING` in the same transaction as the order. Auto-approval and the approval tool belong to `swhr2-i-0009-order-approval`.
+- **P4 The card on the order is the customer's account card**, not the legacy hard-coded demo card (D1, task 4.6). Expiry is written as `MM/YYYY` text. When reading, a value that does not match `<month>/<year>` leaves month and year unset; no 01/2010 substitution (task 6.2, D2). Number, type and expiry go to the stored card in that order.
+- **P5 An unparseable order date rejects the document** (task 5.3). The processing date is never substituted (D7).
+- **P6 Placement transaction.** `nextId` and `enqueue` run in one synchronous `db.transaction`, following the decision that data operations join the caller's transaction. The cart is cleared only after that transaction commits (task 5.5). Any throw, including the C-0212 mock that makes `nextId` throw, leaves through `guardRoute` as a 500 `AppFailure`.
+- **P7 Order Placed screen is in scope.** The Order Placed mockup SWHR2-MCK-25 is approved, task 4.7 builds it, and C-0216 and C-0101 assert that the order id is shown. Route: `/petstore/order-placed`, with the order id and e-mail passed in navigation state.
+- **P8 Country value `USA`, labelled "United States".** The country option value matches what the account stores, so pre-fill selects it.
+- **P9 XML.** Add the `fast-xml-parser` dependency as the target design assumes. A hand-written serialiser is acceptable if it keeps element order and passes the round trip.
+
+### Phases
+
+1. Data model and migration (group 1).
+2. Id issue (group 2).
+3. Document codec (groups 5.1–5.3, 6).
+4. Receipt, outbox and worker (5.4–5.7, P2, P3).
+5. Placement route and `GET /api/checkout` (group 4).
+6. Screens: checkout form, Order Placed, empty-cart and Server Error pages, built to the approved mockups (groups 3, 4.7, 4.8).
+7. **Test harness.** Colocated unit, route and UI tests (group 7) follow the AGENTS.md table: route tests under `routes/**` run in the vitest `server` project. Add `e2e/checkout.spec.ts` for the browser flow. The locked suite `tests/acceptance/checkout/` and the shopping-cart cases C-0089, C-0090 and C-0101 must pass unmodified.
+8. **CI.** No workflow change is needed: the existing CI already runs lint, typecheck, unit and E2E on `vortex/**` pushes and pull requests. The new migration must apply cleanly on a fresh in-memory database, because CI starts from one.
+
+### Spec discrepancies
+
+- **SD1** The target design puts tables in `db/schema/storefront.ts` and `db/schema/order-processing.ts`, but the repository has the single `db/schema.ts`, and `drizzle.config.ts` reads only that file. Resolved by P1.
+- **SD2** The target design says the `messages` table and its worker come from order-fulfilment (`swhr2-i-0011-order-fulfilment-and-invoic`, a later sprint). The locked checkout suite already needs them: C-0220 queries `messages` and `op_order_workflow`, and C-0215 and C-0216 poll `op_purchase_orders` after a browser placement, which needs a running consumer. Resolved by P2 and P3.
+- **SD3** The proposal and PRD open question 6 treat the Order Placed screen as unconfirmed, while tasks.md 4.7 and approved mockup SWHR2-MCK-25 include it. Resolved by P7.
+- **SD4** Tasks 4.6, 5.3 and 6.2 refer to "the decided" card, date and expiry rules, but no decision is recorded. Resolved by P4 and P5 as planning decisions; the Business Owner may revise them.
+- **SD5** The spec counts ten contact fields per section. The locked suite's body carries nine (`street` with no `street2`, and `phone` where the account has `telephone`). The form keeps an optional second address line, and the route maps the account names to the order names.
+- **SD6** The existing `server.tsx` stub (heading "Server error", "Please try again") contradicts SWHR2-R-0003 and SWHR2-MCK-27. It is rebuilt here.
+- **SD7** Task 3.3 offers fixed state lists, but deferred sign-on case C-0254 types into the State field (`fill`), which fails on a `<select>`. The State field is a text input that offers the fixed list as suggestions (for example a `datalist`). C-0254 also requires that submitting leaves `/petstore/checkout` (the Order Placed route, P7).
+
+## Re-plan — SWHR2-S-0024
+
+Sprint SWHR2-S-0023 was cancelled while SWHR2-T-0281 was in review. The merge gate then merged T-0281's implementation into the cancelled sprint's branch, as commit `41e1140` on `vortex/sprint/swhr2-s-0023-4fc9b4f3` (PR #68), and marked the ticket DONE. That branch never landed, so this sprint's branch (cut from `dev` at `c6463b9`) holds none of the implementation.
+
+- **R1 Carry over, do not rebuild.** FEATURE **SWHR2-T-0284** owns every task group and delivers it by carrying `41e1140` onto this sprint's branch. The decisions, contracts and phases in the S-0023 planning section above stand unchanged. Measured at planning, the commit applies to this branch without conflicts. The locked acceptance suite is byte-identical on both branches (v67), and the commit edits no file under `tests/`.
+- **R2 T-0281 is cancelled.** It is the second FEATURE on this brief, and its DONE status describes a branch that never landed. Its tasks.md tags are retagged to T-0284.
+- **SD8** T-0281's merge gate returned the ticket twice for e2e cases (C-0101, C-0212, C-0215, C-0216) that passed in the replay but failed in CI. The final merge passed. If the carried-over code goes red in CI on this branch, those four are the first place to look.
