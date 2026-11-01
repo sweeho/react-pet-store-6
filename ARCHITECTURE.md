@@ -33,6 +33,7 @@ See [PRODUCT.md](./PRODUCT.md) for what this is, [DESIGN.md](./DESIGN.md) for th
 ├── shared/                # Code imported by BOTH the SPA and the server (e.g. shared/i18n/)
 ├── routes/api/            # Backend routes, file-based (+ *.test.ts)
 ├── middleware/             # Runs before every route handler, in file-name order
+├── plugins/                # Nitro plugins started with the server (message-worker.ts: the outbox worker)
 ├── services/               # Server-side domain helpers called by routes (e.g. services/locale.ts)
 ├── db/                      # Drizzle schema.ts + client.ts (sqlite connection, migrate, seed)
 ├── drizzle/                  # Generated SQL migrations (drizzle-kit generate), committed
@@ -81,6 +82,9 @@ Routes decide access explicitly through the guards in `services/session/guards.t
   - The profile holds the preferred language, an optional favourite category, and the MyList and banner flags.
   - `services/customers/` is the only writer, and it creates the whole set in one transaction. Checkout reads contact and address data through the same service. Spec: `openspec/specs/customer-account/` once change `swhr2-i-0006-customer-account-and-profil` archives.
 
+- Orders: checkout issues order ids from `id_sequences (prefix, next_value)` through `services/ids.ts` ("1001" → 10011, 10012, …). Order processing owns the `op_*` tables: `op_purchase_orders` (keyed by order id) with its cascade-deleted `op_po_contacts`, `op_po_cards` and `op_po_line_items`, plus `op_order_workflow` (one status row per order). These tables hold no foreign key into the storefront tables, so an order keeps its own copy of contact and card data. Spec: `openspec/specs/checkout/` once change `swhr2-i-0008-checkout-and-order-placemen` archives.
+- Messages: asynchronous hand-off between steps (new order, approval, supplier order, invoice, e-mail) is a row in the `messages` outbox, keyed by `channel`. A producer calls `services/messaging/` `enqueue(tx, channel, payload)` inside its own transaction, so the message commits or rolls back with its state change. `plugins/message-worker.ts` polls due rows and runs each handler and the row's delivery mark in one transaction, retrying on failure.
+
 - `bun run db:generate` — after editing `db/schema.ts`, generates a new migration into `drizzle/` (via `drizzle-kit`, config in `drizzle.config.ts`)
 - `bun run db:studio` — browse the db in Drizzle Studio
 - The db file itself is `sqlite.db` at the project root (gitignored, created on first run); `drizzle/` migrations are committed
@@ -93,7 +97,7 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 ## Deployment
 
 - `ecosystem.config.js` (PM2) runs the real build: `.output/server/index.mjs`, under Bun (`interpreter: "bun"`) — required by `db/client.ts`'s `bun:sqlite` import. `nitro.service` (systemd) is the non-PM2 equivalent, same requirement.
-- The server runs as exactly one process (`instances: 1`): the session store, the cart and the catalog page cache live in that process's memory. Scaling out needs a shared store for all three first.
+- The server runs as exactly one process (`instances: 1`): the session store, the cart and the catalog page cache live in that process's memory, and the outbox worker runs in it. Scaling out needs a shared store for the first three and a claim step for the worker first.
 - `Dockerfile`/`docker-compose.yml` build a static `dist/` served by nginx — don't rely on them for the Nitro/DB-backed API without fixing first (they never run `.output/server/index.mjs`)
 
 ## Key Decisions
@@ -111,3 +115,4 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 - **Sessions are area-scoped and server-owned.** Storefront, administration and supplier sessions use separate cookies, credentials and idle limits, and a live administration session blocks supplier sign-in. Rationale: the areas must not share a sign-on (SWHR2-R-0029/0030). Authored in change `swhr2-i-0005-sign-on-and-access-control` (design.md, Session middleware; Area separation).
 - **Data operations join the caller's transaction or open their own.** A service write that another change may need to combine takes an optional Drizzle `tx`, runs inside it when given, and otherwise calls `db.transaction` itself. Transaction bodies are synchronous, because `bun:sqlite` transactions do not span an `await`. Rationale: checkout must write order, contact and address data as one unit (SWHR2-R-0057, SWHR2-R-0060). Authored in change `swhr2-i-0006-customer-account-and-profil` (design.md, Planning P2).
 - **Request failures are typed kinds routed through one error-page table.** A new failure is an `AppFailure` subclass naming its parent kind, and a new error page is one entry in `src/errors/routeFailure.ts`, never a per-page error mapping. Rationale: a page for a general kind must catch every kind under it, and an unmapped failure must reach the Server Error page (SWHR2-R-0116). Authored in change `swhr2-i-0007-shopping-cart` (design.md, Target design → Failure routing; Planning P3/P4).
+- **Asynchronous hand-off goes through the `messages` outbox and the in-process worker, never a broker or a direct call.** A step that hands work on enqueues inside its own transaction and returns, and the consumer is a worker handler. Rationale: the shopper's request must not wait on order processing (SWHR2-R-0049), and delivery must survive a restart without a separate broker. Authored in change `swhr2-i-0008-checkout-and-order-placemen` (design.md, Planning P2), in the shape change `swhr2-i-0011-order-fulfilment-and-invoic` extends.
