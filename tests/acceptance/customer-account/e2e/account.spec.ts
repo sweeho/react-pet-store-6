@@ -160,7 +160,7 @@ test.describe("My List panel and pet-tips banner", () => {
     await page.goto("/petstore/category/FISH");
     const panel = page.getByTestId("my-list");
     const links = panel.getByRole("link");
-    expect(await links.count()).toBeGreaterThan(0);
+    await expect(links.first()).toBeVisible();
     for (const href of await links.evaluateAll((els) => els.map((e) => e.getAttribute("href")))) {
       expect(href).toMatch(/\/petstore\/product\/AV-/);
     }
