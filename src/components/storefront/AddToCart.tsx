@@ -10,6 +10,10 @@ export default function AddToCart({ itemId, size }: { itemId: string; size?: "sm
   const { locale } = useLocale();
   const screen = useScreen("catalog", locale);
   const navigate = useNavigate();
+  // The click opens the cart screen, so load its route module ahead of it.
+  useEffect(() => {
+    void import("@/pages/petstore/cart").catch(() => undefined);
+  }, []);
   const [state, setState] = useState<"idle" | "failed">("idle");
   if ("error" in screen) return screen.error;
   const t = screen.definition;
