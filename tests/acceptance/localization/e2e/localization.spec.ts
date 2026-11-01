@@ -10,8 +10,8 @@ const addBtn = (p: Page) =>
 
 async function signIn(page: Page) {
   await page.goto("/petstore/signin");
-  await page.getByLabel(/user id/i).fill("j2ee");
-  await page.getByLabel(/password/i).fill("j2ee");
+  await page.getByLabel(/^user id:?$/i).fill("j2ee");
+  await page.getByLabel(/^password:?$/i).fill("j2ee");
   await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   await expect(page.getByText(/^sign out$/i)).toBeVisible();
 }
@@ -104,7 +104,7 @@ test.describe("localization", () => {
       .or(page.getByRole("link", { name: /check ?out/i }))
       .click();
     await page
-      .getByLabel(/first name|given name/i)
+      .getByLabel(/^(first name|given name):?$/i)
       .first()
       .fill("山田太郎");
     await page

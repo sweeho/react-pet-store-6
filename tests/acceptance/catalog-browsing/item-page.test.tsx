@@ -32,7 +32,10 @@ describe("item detail page", () => {
     expect(screen.getByText(/16\.50/)).toBeInTheDocument();
     expect(screen.getByText(/Your Price/i)).toBeInTheDocument();
     expect(screen.getByText(/10\.00/)).toBeInTheDocument();
-    expect(screen.getAllByRole("img").length).toBeGreaterThan(0);
+    // the item's own image, not just any image on the page
+    expect(screen.getAllByRole("img").map((img) => img.getAttribute("src"))).toContain(
+      "/images/fish1.jpg",
+    );
     expect(screen.getByRole("button", { name: /add to cart/i })).toBeInTheDocument();
   });
 });

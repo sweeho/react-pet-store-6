@@ -51,8 +51,12 @@ test.describe("sales reporting tool", () => {
     await tab(page, /sales/i).click();
     for (const chart of [/pie/i, /bar/i]) {
       await tab(page, chart).click();
-      await expect(page.getByLabel(/start/i).first()).toHaveValue(DATE("01/01/2001", "2001-01-01"));
-      await expect(page.getByLabel(/end/i).first()).toHaveValue(DATE("12/31/2002", "2002-12-31"));
+      await expect(page.getByLabel(/^(start|from)( date)?:?$/i).first()).toHaveValue(
+        DATE("01/01/2001", "2001-01-01"),
+      );
+      await expect(page.getByLabel(/^(end|to)( date)?:?$/i).first()).toHaveValue(
+        DATE("12/31/2002", "2002-12-31"),
+      );
     }
   });
 

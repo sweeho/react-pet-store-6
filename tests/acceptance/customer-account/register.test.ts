@@ -48,6 +48,8 @@ describe("registration", () => {
     expect(r.status).toBeLessThan(300);
     expect(JSON.stringify(r.body)).not.toContain("UserExists");
     expect(count(app.client, "signon_users", "user_id = 'j2ee'")).toBe(1);
+    expect((await signIn(app, "j2ee", "secret1")).status).toBe(200);
+    expect((await signIn(app, "j2ee", "wrong99")).status).toBe(401);
   });
 
   // case: SWHR2-C-0156@v1

@@ -1,10 +1,13 @@
 // @vitest-environment node
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
+
 import { H3Event } from "nitro/h3";
 import { describe, expect, it } from "vitest";
 
 import { call } from "../shopping-cart/harness";
 import { seeder } from "../catalog-browsing/harness";
-import { loadApp, seedCustomer } from "../sign-on/harness";
+import { call as signOn, cookieValue, loadApp, seedCustomer } from "../sign-on/harness";
 
 type App = Awaited<ReturnType<typeof loadApp>>;
 
@@ -146,34 +149,63 @@ describe("request decoding", () => {
   // case: SWHR2-C-0032@v1
   it("SWHR2-C-0032: after sign-on every handler of a request sees 山田太郎 decoded as UTF-8", async () => {
     const app: App = await loadApp();
-    const mw = await encoding();
-    const event = formEvent("/api/account/register", {
-      userId: "山田太郎",
-      password: "pw-1234",
-      passwordRepeat: "pw-1234",
-      remember: "false",
+    await seedCustomer(app.client, "j2ee", "j2ee");
+    await seedCustomer(app.client, "山田太郎", "pw-5678");
+    const signed = await signOn(app, `${ROUTES}/session/sign-in.post`, {
+      method: "POST",
+      url: "/api/session/sign-in",
+      json: { userId: "j2ee", password: "j2ee", remember: false },
     });
-    await mw(event);
-    await app.session(event);
-    // two real handlers read the one request's userId, one after the other
-    const run = async (route: string) => {
-      const handler = (await import(`${ROUTES}/${route}`)).default as (
-        e: H3Event,
-      ) => Promise<unknown>;
-      const out = await handler(event);
-      return out instanceof Response ? out.status : event.res.status || 200;
-    };
-    expect(await run("account/register.post")).toBeLessThan(300);
-    expect(
-      app.client.query("select count(*) c from signon_users where user_id = '山田太郎'").get(),
-    ).toEqual({ c: 1 });
-    expect(await run("session/sign-in.post")).toBe(200);
+    expect(signed.status).toBe(200);
+    const sid = cookieValue(signed.setCookies, "ps_sid");
+    expect(sid, "sign-on issues a ps_sid session cookie").toBeDefined();
+    // the signed-on shopper's next request: a UTF-8 form POST with no charset in its Content-Type
+    const event = formEvent(
+      "/api/session/sign-in",
+      { userId: "山田太郎", password: "pw-5678" },
+      `ps_sid=${sid}`,
+    );
+    // the request's handlers are every middleware the application ships, in Nitro's filename
+    // order, then the route handler; each must see the value the handler before it passed on
+    const dir = join(process.cwd(), "middleware");
+    const files = readdirSync(dir)
+      .filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f))
+      .sort();
+    expect(files, "the application declares the encoding and session middleware").toEqual(
+      expect.arrayContaining(["00.encoding.ts", "10.session.ts"]),
+    );
+    for (const f of files) {
+      const mw = (await import(/* @vite-ignore */ join(dir, f))).default as (e: H3Event) => unknown;
+      await mw(event);
+      expect(await formValue(event, "userId"), `form value after middleware ${f}`).toBe("山田太郎");
+    }
+    // the route handler authenticates only if it received exactly 山田太郎
+    const handler = (await import(`${ROUTES}/session/sign-in.post`)).default as (
+      e: H3Event,
+    ) => Promise<unknown>;
+    const out = await handler(event);
+    const status = out instanceof Response ? out.status : event.res.status || 200;
+    expect(status).toBe(200);
+    const setCookies = [
+      ...(event.res.headers.getSetCookie?.() ?? []),
+      ...(out instanceof Response ? (out.headers.getSetCookie?.() ?? []) : []),
+    ];
+    const next = cookieValue(setCookies, "ps_sid") ?? sid!;
+    const who = await signOn(app, `${ROUTES}/session.get`, {
+      url: "/api/session",
+      cookies: { ps_sid: next },
+    });
+    expect(JSON.stringify(who.body)).toContain("山田太郎");
   });
 
   // case: SWHR2-C-0040@v1
   it("SWHR2-C-0040: a Chinese keyword in a search query parameter is read as the same characters", async () => {
     const app = await twoLocaleApp();
-    seeder(app.client).product("FI-ZH", "FISH", { en_US: "金鱼", ja_JP: "金鱼", zh_CN: "金鱼" });
+    const s = seeder(app.client);
+    s.product("FI-ZH", "FISH", { en_US: "金鱼", ja_JP: "金鱼", zh_CN: "金鱼" });
+    // search returns items, so FI-ZH carries one described by the keyword in every locale
+    const zh = { descn: "金鱼", list: 1200, unit: 800 };
+    s.item({ id: "EST-ZH", product: "FI-ZH", details: { en_US: zh, ja_JP: zh, zh_CN: zh } });
     const mw = await encoding();
     const event = new H3Event(
       new Request(`http://localhost/api/catalog/search?keyword=${encodeURIComponent("金鱼")}`),
@@ -185,7 +217,7 @@ describe("request decoding", () => {
     ) => Promise<unknown>;
     const out = await handler(event);
     const text = out instanceof Response ? await out.text() : JSON.stringify(out);
-    // a product named exactly the decoded keyword is found, so the search used the decoded keyword
-    expect(text).toContain("FI-ZH");
+    // the item named and described by exactly the decoded keyword is found, so the search used the decoded keyword
+    expect(text).toContain("EST-ZH");
   });
 });

@@ -5,6 +5,9 @@ import { loadCatalog, nameOf, rows, seeder } from "./harness";
 
 afterEach(() => vi.useRealTimers());
 
+/** The item's unit price (the unit cost shown as "Your Price"). */
+const unitPriceOf = (item: Record<string, unknown>) => item.unitCost ?? item.unitPrice;
+
 async function fish() {
   const env = await loadCatalog();
   const s = seeder(env.client);
@@ -26,17 +29,25 @@ describe("catalog page cache", () => {
   });
 
   // case: SWHR2-C-0189@v1
-  it("SWHR2-C-0189: within 5 minutes shopper B gets either the cached render or a fresh one, and nothing else", async () => {
+  it("SWHR2-C-0189: within 5 minutes shopper B is served the FISH list cached from shopper A's view", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { client, catalog } = await fish();
-    await catalog.listProducts("FISH", "en_US", 0, 10); // shopper A at T0
+    const forA = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf); // shopper A at T0
+    expect(forA).toEqual(["Koi"]);
     vi.setSystemTime(Date.now() + 60 * 1000);
     client.exec(
       "update catalog_product_details set name = 'Koi Carp' where product_id = 'FI-FW-01' and locale = 'en_US'",
     );
-    const names = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf);
-    expect(names.length).toBe(1);
-    expect(["Koi", "Koi Carp"]).toContain(names[0]);
+    // the store now holds the new name, so a fresh read would say "Koi Carp"
+    expect(
+      client
+        .query(
+          "select name from catalog_product_details where product_id = 'FI-FW-01' and locale = 'en_US'",
+        )
+        .get(),
+    ).toEqual({ name: "Koi Carp" });
+    const forB = rows(await catalog.listProducts("FISH", "en_US", 0, 10)).map(nameOf); // shopper B at T0 + 1 min
+    expect(forB).toEqual(forA);
   });
 
   // case: SWHR2-C-0190@v1
@@ -47,8 +58,14 @@ describe("catalog page cache", () => {
       product: "FI-FW-01",
       details: { en_US: { descn: "Koi", list: 1650, unit: 1000 } },
     });
-    expect(JSON.stringify(await catalog.getItem("EST-1", "en_US"))).toMatch(/10\.00|\b10\b|1000/);
+    // money is held in hundredths: 10.00 is 1000, 12.00 is 1200, 16.50 is 1650
+    const before = (await catalog.getItem("EST-1", "en_US")) as Record<string, unknown>;
+    expect(unitPriceOf(before)).toBe(1000);
+    expect(before.listPrice).toBe(1650);
     client.exec("update catalog_item_details set unit_cost = 1200 where item_id = 'EST-1'");
-    expect(JSON.stringify(await catalog.getItem("EST-1", "en_US"))).toMatch(/12\.00|\b12\b|1200/);
+    const after = (await catalog.getItem("EST-1", "en_US")) as Record<string, unknown>;
+    expect(unitPriceOf(after)).toBe(1200);
+    // only the unit price changed
+    expect(after.listPrice).toBe(1650);
   });
 });
