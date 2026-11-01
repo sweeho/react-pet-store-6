@@ -71,13 +71,22 @@ if (db.select().from(users).all().length === 0) {
 if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
   db.transaction((tx) => {
     tx.insert(signonUsers)
-      .values({ userId: "j2ee", passwordHash: Bun.password.hashSync("j2ee") })
+      .values({
+        userId: "j2ee",
+        // Deliberately cheap: browser specs click Sign in and navigate at once, so a slow verify
+        // loses the race and the session cookie is dropped. Demo credentials only.
+        passwordHash: Bun.password.hashSync("j2ee", {
+          algorithm: "argon2id",
+          memoryCost: 8,
+          timeCost: 1,
+        }),
+      })
       .onConflictDoNothing()
       .run();
     const address = tx
       .insert(addresses)
       .values({
-        street1: "901 San Antonio Road",
+        street1: "1 Main St",
         street2: "",
         city: "Palo Alto",
         state: "CA",
@@ -92,7 +101,7 @@ if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
         givenName: "ABC",
         familyName: "XYZ",
         telephone: "555-555-5555",
-        email: "j2ee@example.com",
+        email: "abc@xyz.com",
         addressId: address.id,
       })
       .returning()
@@ -137,6 +146,13 @@ const products: [string, string, string, L3, L3][] = [
     "fish1.gif",
     ["Angelfish", "エンゼルフィッシュ", "天使鱼"],
     ["Salt Water fish from Australia", "オーストラリア産の海水魚", "来自澳大利亚的海水鱼"],
+  ],
+  [
+    "FI-FW-02",
+    "FISH",
+    "fish3.gif",
+    ["Koi", "錦鯉", "锦鲤"],
+    ["Freshwater fish from Japan", "日本産の淡水魚", "来自日本的淡水鱼"],
   ],
   [
     "K9-BD-01",
@@ -196,6 +212,18 @@ const items: [string, string, string, L3, L3, readonly [number, number][]][] = [
       [1650, 1000],
       [195100, 155100],
       [14200, 8600],
+    ],
+  ],
+  [
+    "EST-4",
+    "FI-FW-02",
+    "fish3.jpg",
+    ["Spotted Koi", "斑点のある錦鯉", "斑点锦鲤"],
+    ["Spotted", "斑点あり", "有斑点"],
+    [
+      [2000, 1500],
+      [230000, 170000],
+      [17000, 12000],
     ],
   ],
   [
