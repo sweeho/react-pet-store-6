@@ -15,15 +15,14 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  // No retries and a short per-test timeout: the suite is red until Build, so a retry cannot turn
-  // a test green, it only makes the run slower, and the design gate waits for the whole run.
-  // A test for a feature that does not exist yet fails by WAITING for its first element, so the
-  // timeout is what each such test costs: 60 of 66 tests at 15 s was a 7 minute step on every push.
-  // Restore the template's retries and a longer timeout once the Build phase has made the suite
-  // green (the longest passing test took 1.2 s).
+  // No retries: the suite is red until Build, so a retry cannot turn a test green, it only makes
+  // the run slower. The timeouts stay at 15 s per test and 5 s per expect even though the red
+  // suite then runs longer: during Build the merge gate reads this run on every ticket, and a flow
+  // that signs in and checks out takes several seconds on a CI runner. Shorter waits failed
+  // working checkout flows by timeout.
   retries: 0,
-  timeout: 4_000,
-  expect: { timeout: 3_000 },
+  timeout: 15_000,
+  expect: { timeout: 5_000 },
   reporter: process.env.CI
     ? [["list"], ["junit", { outputFile: ".vortex-results/acceptance/e2e-junit.xml" }]]
     : "list",
