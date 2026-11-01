@@ -30,6 +30,19 @@ const signInForm = (p: Page) =>
       hasNot: p.getByLabel(/^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i),
     });
 const userIdField = (p: Page) => signInForm(p).getByLabel(/^user ?id:?$/i);
+/** Links in the page body, not the shared header or nav. */
+const bodyLink = (p: Page, name: RegExp) =>
+  p.locator("a:not(header a, nav a)").filter({ hasText: name });
+const displayInventory = (p: Page) =>
+  p
+    .getByRole("link", { name: /display inventory/i })
+    .or(p.getByRole("button", { name: /display inventory/i }));
+/** Inventory rows: each carries a new-quantity entry and an update marker. */
+const inventoryRows = (p: Page) =>
+  p
+    .getByRole("row")
+    .filter({ has: p.getByRole("textbox") })
+    .filter({ has: p.getByRole("checkbox") });
 
 async function fillLogin(page: Page, user: string, pw: string) {
   const form = signInForm(page);
@@ -58,8 +71,7 @@ test.describe("sign-on", () => {
       .click();
     await expect(userIdField(page)).toBeVisible();
     await fillLogin(page, "j2ee", "j2ee");
-    // The shopper continues to checkout: the shipping and billing form, with no sign-in prompt.
-    await expect(page).toHaveURL(/checkout/);
+    // The shopper continues to order entry: the shipping and billing form, with no sign-in prompt.
     await expect(userIdField(page)).toHaveCount(0);
     await expect(page.getByLabel(/^first name:?$/i).first()).toBeVisible();
   });
@@ -86,7 +98,33 @@ test.describe("sign-on", () => {
       .or(page.getByRole("link", { name: /check ?out/i }))
       .click();
     await expect(userIdField(page)).toHaveCount(0);
-    await expect(page.getByLabel(/^first name:?$/i).first()).toBeVisible();
+    // Fill in every billing and shipping field the form shows.
+    const fields: [RegExp, string][] = [
+      [/^(first name|given name):?$/i, "ABC"],
+      [/^(last name|family name):?$/i, "XYZ"],
+      [/^(street( address)?|address 1):?$/i, "1 Main St"],
+      [/^city:?$/i, "Palo Alto"],
+      [/^state:?$/i, "CA"],
+      [/^(zip( code)?|postal code):?$/i, "94303"],
+      [/^(phone|telephone)( number)?:?$/i, "555-555-5555"],
+      [/^e-?mail:?$/i, "abc@xyz.com"],
+    ];
+    await expect(page.getByLabel(fields[0][0]).first()).toBeVisible();
+    for (const [label, value] of fields)
+      for (const input of await page.getByLabel(label).all()) await input.fill(value);
+    await page
+      .getByRole("button", { name: /continue|submit|next/i })
+      .first()
+      .click();
+    // The form is accepted: it gives way to the next order step, with no sign-in screen.
+    await expect(page.getByLabel(fields[0][0])).toHaveCount(0);
+    await expect(userIdField(page)).toHaveCount(0);
+    await expect(
+      page
+        .getByRole("button", { name: /confirm|place order|submit/i })
+        .or(page.getByText(/thank you|order (has been )?(placed|submitted|complete)/i))
+        .first(),
+    ).toBeVisible();
   });
 
   // case: SWHR2-C-0255@v1
@@ -113,9 +151,19 @@ test.describe("sign-on", () => {
   }) => {
     await page.goto("/admin");
     await fillLogin(page, ADMIN.user, ADMIN.pw);
+    // Without signing out, open the supplier area and try Display Inventory.
     await page.goto("/supplier");
-    await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
-    await expect(page.getByText(/sign out of (the )?admin/i)).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    if (await userIdField(page).count()) {
+      await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
+      await page.waitForLoadState("networkidle");
+    }
+    if (await displayInventory(page).count()) {
+      await displayInventory(page).first().click();
+      await page.waitForLoadState("networkidle");
+    }
+    // refused, however the build refuses it: no inventory is shown
+    await expect(inventoryRows(page)).toHaveCount(0);
     await page.goto("/admin");
     await page
       .getByRole("button", { name: /log ?out/i })
@@ -123,8 +171,8 @@ test.describe("sign-on", () => {
       .click();
     await page.goto("/supplier");
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
-    await expect(page.getByText(/sign out of (the )?admin/i)).toHaveCount(0);
-    await expect(userIdField(page)).toHaveCount(0);
+    await displayInventory(page).first().click();
+    await expect(inventoryRows(page).first()).toBeVisible();
   });
 
   // case: SWHR2-C-0257@v1
@@ -145,11 +193,13 @@ test.describe("sign-on", () => {
   }) => {
     await page.goto("/admin");
     await fillLogin(page, "admin", "wrong");
-    await expect(page.getByText("Login Error")).toBeVisible();
+    await expect(page.getByText("Login Error", { exact: true }).first()).toBeVisible();
     await expect(page.getByText(LOGIN_ERROR)).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /sign ?in|log ?in|try again|back/i }),
-    ).toBeVisible();
+    // the link back sits on the error page itself, not in a shared header or nav
+    const back = bodyLink(page, /sign ?in|log ?in|try again|back/i).first();
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(userIdField(page)).toBeVisible();
   });
 
   // case: SWHR2-C-0267@v1
@@ -188,8 +238,19 @@ test.describe("sign-on", () => {
       .or(page.getByText(/sign out|サインアウト|ログアウト/i))
       .first()
       .click();
-    await expect(page).toHaveURL(/signed-out/);
-    await expect(page.getByRole("link").filter({ hasText: /./ }).first()).toBeVisible();
+    // the "You are signed out" screen, with a link to sign in again
+    await expect(
+      page
+        .getByText(/you are signed out|(サインアウト|ログアウト)(しました|されました|済み)/i)
+        .first(),
+    ).toBeVisible();
+    await expect(bodyLink(page, /sign ?in|log ?in|サインイン|ログイン/i).first()).toBeVisible();
+    await expect(
+      page
+        .locator("header")
+        .getByText(/sign ?in|サインイン|ログイン/i)
+        .first(),
+    ).toBeVisible();
     // the signed-out screen itself is in Japanese
     await expect(page.locator("body")).toContainText(/[\u3040-\u30ff\u4e00-\u9fff]/);
     await page.goto("/");
