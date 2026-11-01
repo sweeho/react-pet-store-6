@@ -2,6 +2,8 @@
 
 Fixes the four cases red in the official run at 5cd523c. Two causes, each fixed once.
 
+CODE-REVIEW: self-review — sub-agent not run; reviewed the diff. Fixed: preloaded cart is cleared in a mount effect, not the state initializer, so StrictMode double-invoke cannot lose it. Rejected: removing the legacy env names, kept for existing config and unit tests.
+
 ## Changes
 
 - `services/catalog/data-access.ts`, `services/catalog/index.ts`: the locked acceptance suite configures catalog data access with `CATALOG_DAO_CLASS` / `CATALOG_DAO_DATABASE` and `registerDialect(name, sqliteClient)`; the code only knew `CATALOG_DATA_ACCESS` / `CATALOG_DB_DIALECT`. Both names are now read (legacy names kept), the dialect check is skipped for a double that declares none, and the configured dialect picks the registered SQLite connection. Covers C-0280, C-0281, C-0282.
