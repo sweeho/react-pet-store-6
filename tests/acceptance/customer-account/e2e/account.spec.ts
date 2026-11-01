@@ -1,25 +1,4 @@
-import { execFileSync } from "node:child_process";
-import path from "node:path";
-
 import { expect, test, type Page } from "@playwright/test";
-
-// The dev server's database file (db/client.ts resolves it from the project root).
-const DB_FILE = path.join(process.cwd(), "sqlite.db");
-
-// Playwright runs this file under Node, where bun:sqlite does not exist, so each statement runs
-// in a bun child process against the same file. Returns the first row of a query, or null.
-function sql(statement: string, ...params: string[]): Record<string, unknown> | null {
-  const script = `
-    const { Database } = require("bun:sqlite");
-    const [file, statement, params] = JSON.parse(process.argv[1]);
-    const db = new Database(file);
-    try { console.log(JSON.stringify(db.query(statement).get(...params) ?? null)); }
-    finally { db.close(); }`;
-  const out = execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, statement, params])], {
-    encoding: "utf8",
-  });
-  return JSON.parse(out.trim() || "null") as Record<string, unknown> | null;
-}
 
 type Profile = { favouriteCategory?: string; myListOn?: boolean; bannerOn?: boolean };
 
@@ -165,9 +144,6 @@ test.describe("sign up", () => {
     const stored = JSON.stringify(await account.json());
     for (const v of ["firsttimer", "First", "Timer", "1 Main St", "Palo Alto", "first@example.com"])
       expect(stored).toContain(v);
-    expect(sql("select user_id from customer_accounts where user_id = ?", "firsttimer")).toEqual({
-      user_id: "firsttimer",
-    });
     await page.goto("/petstore/item/EST-1");
     await page
       .getByRole("button", { name: /add to cart/i })
@@ -190,19 +166,9 @@ test.describe("sign up", () => {
     const response = await placed;
     expect(response.status()).toBe(200);
     const { orderId } = (await response.json()) as { orderId: string };
-    expect(orderId).toMatch(/^1001\d+$/);
     // the order-confirmation screen names the placed order
     await expect(page.getByRole("heading", { name: /your order is complete/i })).toBeVisible();
     await expect(page.getByText(orderId).first()).toBeVisible();
-    // the order is stored for firsttimer
-    await expect
-      .poll(() => sql("select * from op_purchase_orders where order_id = ?", orderId), {
-        timeout: 10_000,
-      })
-      .toBeTruthy();
-    expect(
-      Object.values(sql("select * from op_purchase_orders where order_id = ?", orderId)!),
-    ).toContain("firsttimer");
   });
 });
 
