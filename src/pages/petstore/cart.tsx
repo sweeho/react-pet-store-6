@@ -120,6 +120,7 @@ export default function PetstoreCart() {
                       >
                         {l.name}
                       </Link>
+                      <span className="text-muted-foreground font-mono text-xs"> {l.itemId}</span>
                       <span className="text-muted-foreground">
                         {" "}
                         · {l.productName}
