@@ -133,7 +133,17 @@ test.describe("sign up", () => {
     await page.getByLabel(/^country:?$/i).fill("USA");
     await page.getByLabel(/^card number:?$/i).fill("4111111111111111");
     await page.getByLabel(/^card type:?$/i).selectOption({ index: 0 });
+    const saved = page.waitForResponse(
+      (r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/account",
+    );
     await page.getByRole("button", { name: /save|submit|create/i }).click();
+    expect((await saved).status()).toBeLessThan(300);
+    // the account is created: it reads back for the signed-on firsttimer with the entered details
+    const account = await page.request.get("/api/account");
+    expect(account.status()).toBe(200);
+    const stored = JSON.stringify(await account.json());
+    for (const v of ["firsttimer", "First", "Timer", "1 Main St", "Palo Alto", "first@example.com"])
+      expect(stored).toContain(v);
     await page.goto("/petstore/item/EST-1");
     await page
       .getByRole("button", { name: /add to cart/i })
@@ -141,13 +151,24 @@ test.describe("sign up", () => {
       .click();
     await page.getByRole("link", { name: /cart/i }).first().click();
     await page.getByRole("link", { name: /check ?out/i }).click();
+    const placed = page.waitForResponse(
+      (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
+    );
     await page
       .getByRole("button", { name: /continue|submit|place|next/i })
       .first()
       .click();
-    const confirm = page.getByRole("button", { name: /confirm|place order|submit/i });
-    if (await confirm.count()) await confirm.first().click();
-    await expect(page.getByText(/\b1001\d+\b/).first()).toBeVisible();
+    // the shopper confirms the order: the confirm step must be offered and taken
+    await page
+      .getByRole("button", { name: /confirm|place order|submit/i })
+      .first()
+      .click();
+    const response = await placed;
+    expect(response.status()).toBe(200);
+    const { orderId } = (await response.json()) as { orderId: string };
+    // the order-confirmation screen names the placed order
+    await expect(page.getByRole("heading", { name: /your order is complete/i })).toBeVisible();
+    await expect(page.getByText(orderId).first()).toBeVisible();
   });
 });
 
@@ -157,12 +178,42 @@ test.describe("My List panel and pet-tips banner", () => {
     page,
   }) => {
     await signedInWith(page, { favouriteCategory: "BIRDS", myListOn: true });
+    // the BIRDS products, and the page each links to, as the store's own BIRDS listing shows them
+    await page.goto("/petstore/category/BIRDS");
+    const birds = new Map<string, string>();
+    for (;;) {
+      const listed = page.locator('a[href*="/petstore/product/"]:not([data-testid="my-list"] a)');
+      await expect(listed.first()).toBeVisible();
+      for (const [name, href] of await listed.evaluateAll((els) =>
+        els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
+      ))
+        birds.set(name, href);
+      const next = page
+        .getByRole("link", { name: /next/i })
+        .or(page.getByRole("button", { name: /next/i }));
+      if ((await next.count()) === 0) break;
+      const shown = await listed.first().getAttribute("href");
+      await next.first().click();
+      await expect(listed.first()).not.toHaveAttribute("href", shown ?? "");
+    }
     await page.goto("/petstore/category/FISH");
-    const panel = page.getByTestId("my-list");
-    const links = panel.getByRole("link");
-    expect(await links.count()).toBeGreaterThan(0);
-    for (const href of await links.evaluateAll((els) => els.map((e) => e.getAttribute("href")))) {
-      expect(href).toMatch(/\/petstore\/product\/AV-/);
+    const links = page.getByTestId("my-list").getByRole("link");
+    await expect(links.first()).toBeVisible();
+    const entries = await links.evaluateAll((els) =>
+      els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
+    );
+    for (const [name, href] of entries) {
+      // only BIRDS products, each linked to the page the BIRDS listing gives that product
+      expect([...birds.keys()]).toContain(name);
+      expect(new URL(href, page.url()).pathname).toBe(
+        new URL(birds.get(name) ?? "", page.url()).pathname,
+      );
+    }
+    for (const [name, href] of entries) {
+      // following the link opens that product's page
+      await page.goto(href);
+      await expect(page).toHaveURL(/\/petstore\/product\//);
+      await expect(page.getByRole("heading", { name }).first()).toBeVisible();
     }
   });
 
