@@ -178,12 +178,42 @@ test.describe("My List panel and pet-tips banner", () => {
     page,
   }) => {
     await signedInWith(page, { favouriteCategory: "BIRDS", myListOn: true });
+    // the BIRDS products, and the page each links to, as the store's own BIRDS listing shows them
+    await page.goto("/petstore/category/BIRDS");
+    const birds = new Map<string, string>();
+    for (;;) {
+      const listed = page.locator('a[href*="/petstore/product/"]:not([data-testid="my-list"] a)');
+      await expect(listed.first()).toBeVisible();
+      for (const [name, href] of await listed.evaluateAll((els) =>
+        els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
+      ))
+        birds.set(name, href);
+      const next = page
+        .getByRole("link", { name: /next/i })
+        .or(page.getByRole("button", { name: /next/i }));
+      if ((await next.count()) === 0) break;
+      const shown = await listed.first().getAttribute("href");
+      await next.first().click();
+      await expect(listed.first()).not.toHaveAttribute("href", shown ?? "");
+    }
     await page.goto("/petstore/category/FISH");
-    const panel = page.getByTestId("my-list");
-    const links = panel.getByRole("link");
+    const links = page.getByTestId("my-list").getByRole("link");
     await expect(links.first()).toBeVisible();
-    for (const href of await links.evaluateAll((els) => els.map((e) => e.getAttribute("href")))) {
-      expect(href).toMatch(/\/petstore\/product\/AV-/);
+    const entries = await links.evaluateAll((els) =>
+      els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
+    );
+    for (const [name, href] of entries) {
+      // only BIRDS products, each linked to the page the BIRDS listing gives that product
+      expect([...birds.keys()]).toContain(name);
+      expect(new URL(href, page.url()).pathname).toBe(
+        new URL(birds.get(name) ?? "", page.url()).pathname,
+      );
+    }
+    for (const [name, href] of entries) {
+      // following the link opens that product's page
+      await page.goto(href);
+      await expect(page).toHaveURL(/\/petstore\/product\//);
+      await expect(page.getByRole("heading", { name }).first()).toBeVisible();
     }
   });
 
