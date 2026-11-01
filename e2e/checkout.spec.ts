@@ -15,7 +15,7 @@ async function addToCart(page: Page, itemId = "EST-1") {
 }
 
 test.describe("checkout", () => {
-  test("[SWHR2-C-0089] Check Out opens the billing and shipping form", async ({ page }) => {
+  test("Check Out opens the billing and shipping form", async ({ page }) => {
     await signIn(page);
     await addToCart(page);
     await page.getByRole("link", { name: /check ?out/i }).click();
@@ -25,9 +25,7 @@ test.describe("checkout", () => {
     ).toBeVisible();
   });
 
-  test("[SWHR2-C-0101] [SWHR2-C-0254] placing an order shows Order Placed and empties the cart", async ({
-    page,
-  }) => {
+  test("placing an order shows Order Placed and empties the cart", async ({ page }) => {
     await signIn(page);
     await addToCart(page, "EST-1");
     await addToCart(page, "EST-2");
@@ -46,9 +44,7 @@ test.describe("checkout", () => {
     await expect(page.getByText("Your Shopping Cart is Empty.")).toBeVisible();
   });
 
-  test("[SWHR2-C-0252] a visitor who is not signed in is sent to sign in first", async ({
-    page,
-  }) => {
+  test("a visitor who is not signed in is sent to sign in first", async ({ page }) => {
     await page.goto("/petstore/item/EST-1");
     await page.getByRole("button", { name: /add to cart/i }).click();
     await page.getByRole("link", { name: /check ?out/i }).click();
@@ -59,7 +55,7 @@ test.describe("checkout", () => {
     await expect(page).toHaveURL(/\/petstore\/checkout/);
   });
 
-  test("[SWHR2-C-0174] a first-time visitor signs up, enters account information and can buy", async ({
+  test("a first-time visitor signs up, enters account information and can buy", async ({
     page,
   }) => {
     const name = `buyer${Date.now()}`;
