@@ -33,7 +33,7 @@ describe("AddToCart", () => {
     );
   });
 
-  it("[SWHR2-C-0096] stays on the page and reports a failed add", async () => {
+  it("stays on the page and reports a failed add", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response("no", { status: 500 })),
