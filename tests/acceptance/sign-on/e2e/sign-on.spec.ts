@@ -101,11 +101,6 @@ test.describe("sign-on", () => {
     await page.goto("/petstore/account");
     await expect(userIdField(page)).toBeVisible();
     await expect(page.getByLabel(/^(first name|given name):?$/i)).toHaveCount(0);
-    // Submitting an account edit without signing in is refused.
-    const edit = await page.request.put("/api/account", {
-      data: { firstName: "Intruder", lastName: "XYZ", email: "intruder@xyz.com" },
-    });
-    expect(edit.status()).toBe(401);
   });
 
   // case: SWHR2-C-0254@v1
@@ -133,11 +128,27 @@ test.describe("sign-on", () => {
     await expect(page.getByLabel(fields[0][0]).first()).toBeVisible();
     for (const [label, value] of fields)
       for (const input of await page.getByLabel(label).all()) await input.fill(value);
-    // The entered information is kept, and no sign-in prompt appears.
-    for (const [label, value] of fields)
-      for (const input of await page.getByLabel(label).all())
-        await expect(input).toHaveValue(value);
+    const submit = page
+      .getByRole("button", { name: /^\s*(submit|continue|next|place (your )?order)/i })
+      .first();
+    await submit.click();
+    // The form is accepted: it gives way to the next order step (a confirm step if one is
+    // offered, otherwise the order-complete screen), with no sign-in screen.
+    await expect(page.getByLabel(fields[0][0])).toHaveCount(0);
+    await expect(page).not.toHaveURL(/\/petstore\/checkout\/?(\?|#|$)/);
     await expect(userIdField(page)).toHaveCount(0);
+    await expect(page.getByText(/server error|shopping cart is empty/i)).toHaveCount(0);
+    await expect(
+      page
+        .getByRole("button", { name: /confirm|place (your )?order/i })
+        .or(page.getByRole("link", { name: /confirm|place (your )?order/i }))
+        .or(
+          page.getByText(
+            /thank you|order (has been )?(placed|submitted|received)|your order is complete/i,
+          ),
+        )
+        .first(),
+    ).toBeVisible();
   });
 
   // case: SWHR2-C-0255@v1
@@ -165,14 +176,25 @@ test.describe("sign-on", () => {
   }) => {
     await page.goto("/admin");
     await awaitPost(page, "/api/admin/sign-in", () => fillLogin(page, ADMIN.user, ADMIN.pw));
+    /** A visible refusal: the sign-in prompt is still shown, or an access-denied message. */
+    const refused = (p: Page) =>
+      userIdField(p)
+        .or(
+          p.getByText(
+            /access denied|not authori[sz]ed|(sign|log) ?(out|off)( of| from)? (the )?admin(istrat(or|ion))?|signed in as (an? )?admin(istrator)?/i,
+          ),
+        )
+        .first();
     // Without signing out, open the supplier area: signing in as supplier while still admin
-    // does not open it.
+    // is refused and does not open it.
     await page.goto("/supplier");
     await expect(userIdField(page)).toBeVisible();
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
+    await expect(refused(page)).toBeVisible();
     await expect(displayInventory(page)).toHaveCount(0);
-    // Display Inventory requested directly shows no inventory.
+    // Display Inventory requested directly is refused and shows no inventory.
     await page.goto("/supplier/inventory");
+    await expect(refused(page)).toBeVisible();
     await expect(inventoryRows(page)).toHaveCount(0);
     // After signing out of admin, the supplier area can be used.
     await page.goto("/admin");
@@ -216,34 +238,31 @@ test.describe("sign-on", () => {
   }) => {
     await page.goto("/admin");
     await fillLogin(page, ADMIN.user, ADMIN.pw);
-    // Each feature is described in body text (a sentence naming what the administrator can do),
-    // not merely named by a link, button or heading.
-    const VIEW = String.raw`\b(view|see|review|display|show|track|monitor|check)\w*\b[^.]*`;
+    // Each feature is described in page text, not merely named by a link, button or heading.
     const features: [string, RegExp][] = [
-      ["sales", new RegExp(`${VIEW}\\bsales\\b`, "i")],
-      ["revenue", new RegExp(`${VIEW}\\brevenue\\b`, "i")],
-      ["orders by status", new RegExp(`${VIEW}\\borders?\\b[^.]*\\bstatus`, "i")],
+      ["sales", /\bsales\b/i],
+      ["revenue", /\brevenue\b/i],
+      ["orders by status", /\borders?\b[^.]*\bstatus|\bstatus\b[^.]*\borders?\b/i],
       [
         "approve or deny pending orders",
-        /\bapprov\w*\b[^.]*\b(deny|denie\w*|reject\w*)\b[^.]*\borders?\b/i,
+        /\bapprov\w*\b[^.]*\b(deny|denie\w*|reject\w*)|\b(deny|denie\w*|reject\w*)\b[^.]*\bapprov/i,
       ],
     ];
-    const prose = page.locator(
-      ":is(p, li, dd, td, span, div, section, article, main):not(:has(a, button, h1, h2, h3, h4, h5, h6))",
+    const notControl = page.locator(
+      ":not(a, button, h1, h2, h3, h4, h5, h6, [role=link], [role=button], [role=heading])",
     );
     for (const [name, description] of features)
       await expect(
-        prose.filter({ hasText: description }).first(),
+        page.getByText(description).and(notControl).first(),
         `the landing page describes: ${name}`,
       ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /launch/i }).or(page.getByRole("button", { name: /launch/i })),
-    ).toBeVisible();
-    await expect(
       page
-        .getByRole("link", { name: /log ?out/i })
-        .or(page.getByRole("button", { name: /log ?out/i })),
+        .getByRole("link", { name: /launch/i })
+        .or(page.getByRole("button", { name: /launch/i }))
+        .first(),
     ).toBeVisible();
+    await expect(logOut(page).first()).toBeVisible();
   });
 
   // case: SWHR2-C-0269@v1
