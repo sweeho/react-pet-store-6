@@ -66,6 +66,8 @@ export default defineHandler((event) =>
 
     // The id and the queued order document commit together; the worker stores the order later.
     const orderId = db.transaction((tx) => {
+      // A concurrent request may have placed this cart during the awaits above.
+      if (cartFor(session.id).size === 0) throw new EmptyCartOrder("The shopping cart is empty.");
       const id = nextId(ORDER_ID_PREFIX, tx);
       enqueue(
         tx,

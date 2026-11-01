@@ -29,7 +29,11 @@ export function deliverPending(handlers: Handlers): number {
     } catch {
       const attempts = m.attempts + 1;
       db.update(messages)
-        .set({ attempts, status: attempts >= MAX_ATTEMPTS ? "failed" : "pending" })
+        .set({
+          attempts,
+          status: attempts >= MAX_ATTEMPTS ? "failed" : "pending",
+          availableAt: Date.now() + 1000 * 2 ** attempts,
+        })
         .where(eq(messages.id, m.id))
         .run();
     }

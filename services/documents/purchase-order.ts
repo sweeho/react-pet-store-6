@@ -90,6 +90,7 @@ const text = (n: Node, name: string): string => {
   return String(v);
 };
 const num = (n: Node, name: string): number => {
+  if (text(n, name) === "") throw new Error(`${name} element expected.`);
   const v = Number(text(n, name));
   if (!Number.isFinite(v)) throw new Error(`${name} must be a number.`);
   return v;
@@ -122,6 +123,7 @@ export function fromXml(xml: string): PurchaseOrder {
   const orderDate = Date.parse(text(r, "OrderDate"));
   if (Number.isNaN(orderDate)) throw new Error("OrderDate is not a date.");
   const items = ((r["LineItems"] as Node | undefined)?.["LineItem"] ?? []) as Node[];
+  if (text(r, "OrderId") === "") throw new Error("OrderId element expected.");
   return {
     orderId: text(r, "OrderId"),
     userId: text(r, "UserId"),

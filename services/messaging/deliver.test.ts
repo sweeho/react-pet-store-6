@@ -28,8 +28,15 @@ describe("order.new delivery", () => {
     const a = await app();
     a.enqueue(a.db, a.ORDER_NEW, "<Invoice/>");
     const handlers = { [a.ORDER_NEW]: a.receiveOrderDocument };
-    for (let i = 0; i < 4; i++) a.deliverPending(handlers);
+    const due = () => a.client.run("update messages set available_at = 0");
+    a.deliverPending(handlers);
+    expect(a.deliverPending(handlers)).toBe(0); // backed off, not due yet
+    for (let i = 0; i < 3; i++) {
+      due();
+      a.deliverPending(handlers);
+    }
     expect(count(a.client, "messages", "status = 'pending'")).toBe(1);
+    due();
     a.deliverPending(handlers);
     expect(count(a.client, "messages", "status = 'failed'")).toBe(1);
     expect(count(a.client, "op_purchase_orders")).toBe(0);
