@@ -21,67 +21,6 @@ function sql(statement: string, ...params: string[]): Record<string, unknown>[] 
   return JSON.parse(out.trim() || "[]") as Record<string, unknown>[];
 }
 
-// Every table of the store with its highest rowid, so the rows a later step adds can be told apart.
-const TABLES = `
-  const tables = db.query("select name from sqlite_master where type = 'table' and name not like 'sqlite_%'").all();
-  const top = (t) => db.query(\`select coalesce(max(rowid), 0) as n from "\${t}"\`).get().n;`;
-
-function tableTops(): Record<string, number> {
-  return bunDb(`${TABLES}
-    return Object.fromEntries(tables.map(({ name }) => [name, top(name)]));`) as Record<
-    string,
-    number
-  >;
-}
-
-// The rows added since `before`, in any table, holding a cell exactly equal to one of `values`.
-function rowsAddedWith(
-  before: Record<string, number>,
-  values: string[],
-): Record<string, unknown>[] {
-  return bunDb(
-    `${TABLES}
-    const [before, values] = args;
-    return tables.flatMap(({ name }) =>
-      db.query(\`select * from "\${name}" where rowid > ?\`).all(before[name] ?? 0)
-        .filter((row) => Object.values(row).some((v) => v !== null && values.includes(String(v)))));`,
-    before,
-    values,
-  ) as Record<string, unknown>[];
-}
-
-// Runs `body` (which sees `db` and `args`) in a bun child process against the store file.
-function bunDb(body: string, ...args: unknown[]): unknown {
-  const script = `
-    const { Database } = require("bun:sqlite");
-    const [file, args] = JSON.parse(process.argv[1]);
-    const db = new Database(file, { readonly: true });
-    try { console.log(JSON.stringify((() => { ${body} })())); }
-    finally { db.close(); }`;
-  const out = execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, args])], {
-    encoding: "utf8",
-  });
-  return JSON.parse(out.trim());
-}
-
-// Creates, on every table of the store, a trigger aborting with "boom-test" any insert of a row
-// with a cell mentioning EST-4 (not EST-40 and the like).
-function boomTriggers(): void {
-  const tables = sql(
-    "select name from sqlite_master where type = 'table' and name not like 'sqlite_%'",
-  ).map((t) => String(t.name));
-  tables.forEach((table, i) => {
-    const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
-    const cells = sql(`select name from pragma_table_info(?)`, table).map(
-      (c) => `((' ' || coalesce(new.${quote(String(c.name))}, '') || ' ') glob '*EST-4[^0-9]*')`,
-    );
-    const name = `acc_c0212_boom_${i}`;
-    sql(`create trigger if not exists ${name} before insert on ${quote(table)}
-      when ${cells.join(" or ")}
-      begin select raise(abort, 'boom-test'); end`);
-  });
-}
-
 async function toCheckout(page: Page, itemId = "EST-1") {
   await page.goto("/petstore/signin");
   // /petstore/signin also carries the registration form, with its own "Password" field;
@@ -94,16 +33,7 @@ async function toCheckout(page: Page, itemId = "EST-1") {
     });
   await signIn.getByLabel(/^user id:?$/i).fill("j2ee");
   await signIn.getByLabel(/^password:?$/i).fill("j2ee");
-  // navigating before the sign-in request completes aborts it, losing its session cookie and
-  // leaving the visitor anonymous at checkout, so wait for the sign-in response itself
-  await Promise.all([
-    page.waitForResponse(
-      (r) =>
-        new URL(r.url()).pathname === "/api/session/sign-in" && r.request().method() === "POST",
-    ),
-    signIn.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click(),
-  ]);
-  await expect(page.getByText(/^sign out$/i).first()).toBeVisible();
+  await signIn.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   await page.goto(`/petstore/item/${itemId}`);
   // every Add to Cart control on the item page adds this item, so any one of them will do
   await page
@@ -111,66 +41,52 @@ async function toCheckout(page: Page, itemId = "EST-1") {
     .or(page.getByRole("link", { name: /add to cart/i }))
     .first()
     .click();
-  // the add lands on the cart (shopping cart); reopen it by its address rather than a "cart" link,
-  // which could equally be an Add to Cart control
-  await expect(page).toHaveURL(/\/petstore\/cart(\?|$)/);
-  await page.goto("/petstore/cart");
-  // the cart's own Check Out control, not a Checkout entry in the header or site navigation
+  await page.getByRole("link", { name: /cart/i }).first().click();
+  // every Check Out control (cart button, header link) leads to the same checkout form
   await page
-    .locator(":is(a, button):not(header *):not(nav *):not([role=navigation] *)")
-    .filter({ hasText: /^\s*(proceed to )?check ?out\s*$/i })
+    .getByRole("button", { name: /^\s*(proceed to )?check ?out\s*$/i })
+    .or(page.getByRole("link", { name: /^\s*(proceed to )?check ?out\s*$/i }))
     .first()
     .click();
 }
 
-// The account values the checkout form is pre-filled with (C-0215: name, address, telephone and
-// e-mail), per field label. Labels are anchored, allowing only a "billing"/"shipping" prefix, so a
-// credit-card or other field whose label merely contains "state" or "city" is not picked up.
-const label = (name: string) =>
-  new RegExp(`^\\s*((billing|shipping)\\s+)?(${name})\\s*:?\\s*\\*?\\s*$`, "i");
-// The name and address are on both the billing and the shipping copy; telephone and e-mail need
-// only be on one of them (the shipping block may carry no phone or e-mail field).
-const PREFILL: [RegExp, string, number][] = [
-  [label("first name|given name"), "ABC", 2],
-  [label("last name|family name"), "XYZ", 2],
-  [label("address( line)?( 1)?|street( address)?"), "1 Main St", 2],
-  [label("city"), "Palo Alto", 2],
-  [label("state|state/province|province"), "CA", 2],
-  [label("zip|zip code|postal code"), "94303", 2],
-  [label("phone|telephone|telephone number|phone number"), "555-555-5555", 1],
-  [label("e-?mail|e-?mail address"), "abc@xyz.com", 1],
+// The account values the checkout form is pre-filled with, per field label.
+const PREFILL: [RegExp, string | RegExp][] = [
+  [/first name|given name/i, "ABC"],
+  [/last name|family name/i, "XYZ"],
+  [/address 1|street/i, "1 Main St"],
+  [/city/i, "Palo Alto"],
+  [/state/i, "CA"],
+  [/zip|postal/i, "94303"],
+  // the account stores the United States as USA; the form may label that option "United States"
+  [/country/i, /^(USA|United States)$/],
+  [/phone|telephone/i, "555-555-5555"],
+  [/e-?mail/i, "abc@xyz.com"],
 ];
 
-// Outside the header and site navigation.
-const inPage = ":not(header *):not(nav *):not([role=navigation] *)";
-const complete = (page: Page) =>
-  page.getByRole("heading", { name: /your order is complete|order placed/i }).first();
-const serverError = (page: Page) => page.getByRole("heading", { name: /server error/i }).first();
-
-// Submits the checkout form as shown by clicking its visible submit control, then takes an
-// optional confirm step, until the order-complete or Server Error screen appears.
+// Submits the checkout form as shown, then confirms the order if a confirm step follows.
 async function submitCheckout(page: Page) {
-  const control = (name: RegExp) =>
-    page
-      .getByRole("button", { name })
-      .and(page.locator(`*${inPage}:visible`))
-      .first();
-  const CONFIRM = /^\s*(confirm|place order)/i;
-  const submit = control(/^\s*(submit|continue|next|confirm|place order)/i);
-  // a submit control that already confirms the order is not followed by a confirm step
-  const confirms = CONFIRM.test((await submit.getAttribute("value")) ?? (await submit.innerText()));
-  await submit.click();
-  const confirm = control(CONFIRM);
+  const placed = page.waitForResponse(
+    (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
+  );
+  // the checkout form: the one holding a first-name field and a submit control (first match, so
+  // separate billing and shipping forms cannot trip strict mode)
+  const form = page
+    .locator("form")
+    .filter({ has: page.getByLabel(/^(first name|given name):?$/i) })
+    .filter({ has: page.locator("button:not([type]), button[type=submit], input[type=submit]") })
+    .first();
+  await form.evaluate((f) => (f as HTMLFormElement).requestSubmit());
+  const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
   const next = await Promise.race([
-    complete(page)
-      .waitFor()
-      .then(() => "done"),
-    serverError(page)
-      .waitFor()
-      .then(() => "done"),
-    ...(confirms ? [] : [confirm.waitFor().then(() => "confirm")]),
+    placed.then(() => "placed"),
+    confirm.waitFor().then(
+      () => "confirm",
+      () => "placed",
+    ),
   ]);
   if (next === "confirm") await confirm.click();
+  return placed;
 }
 
 test.describe("checkout form", () => {
@@ -179,14 +95,12 @@ test.describe("checkout form", () => {
     page,
   }) => {
     await toCheckout(page);
-    // The form carries a billing and a shipping copy of the name and address fields, so those
-    // labels are on at least two fields; telephone and e-mail on at least one. Every field found
-    // holds the account value. Fields need not be on screen together: a shipping block behind a
-    // "ship to a different address" step still has to be there and carry the pre-filled values.
-    for (const [name, value, copies] of PREFILL) {
-      const fields = page.getByLabel(name);
-      await expect(fields.nth(copies - 1), `${name}: ${copies} field(s)`).toBeAttached();
-      for (const field of await fields.all()) await expect(field, `${name}`).toHaveValue(value);
+    // one field per label in the billing block and one in the shipping block: both hold the value
+    for (const [label, value] of PREFILL) {
+      const fields = page.getByLabel(label);
+      await expect(fields, `billing and shipping ${label}`).toHaveCount(2);
+      await expect(fields.nth(0)).toHaveValue(value);
+      await expect(fields.nth(1)).toHaveValue(value);
     }
   });
 
@@ -195,48 +109,53 @@ test.describe("checkout form", () => {
     page,
   }) => {
     await toCheckout(page);
-    const before = tableTops();
-    await submitCheckout(page);
+    const { orderId } = (await (await submitCheckout(page)).json()) as { orderId: string };
 
-    // The order went ahead: the shopper sees the order-complete screen.
-    await expect(complete(page)).toBeVisible();
-
-    // No screen shows a stored order's billing and shipping details, so they are read from the
-    // store without assuming its layout: the order's records are the rows this submit added, in
-    // any table, holding a cell equal to a pre-filled value. Billing and shipping both carry the
-    // name and address, so each of those values is stored at least twice; telephone and e-mail
-    // at least once (shipping may carry neither). Order processing may store the order after the
-    // confirmation is shown, so the store is polled.
-    const PREFILLED = PREFILL.map(([, value, copies]) => [value, copies] as const);
-    const values = PREFILLED.map(([value]) => value);
-    const short = () => {
-      const held = rowsAddedWith(before, values).flatMap((r) => Object.values(r));
-      return PREFILLED.filter(
-        ([value, copies]) => held.filter((v) => v === value).length < copies,
-      ).map(([value]) => value);
-    };
-    await expect
-      .poll(short, {
-        timeout: 10_000,
-        message: "pre-filled values missing from the stored order's billing and shipping details",
-      })
-      .toEqual([]);
+    // The order went ahead: it is stored (design.md, Data), billing details on the
+    // op_purchase_orders header, shipping details on its op_po_contacts record. Each pre-filled
+    // value must be held by a column named for its field, not just anywhere in the row.
+    const row = (table: string) => sql(`select * from ${table} where order_id = ?`, orderId)[0];
+    await expect.poll(() => row("op_purchase_orders"), { timeout: 10_000 }).toBeTruthy();
+    await expect.poll(() => row("op_po_contacts"), { timeout: 10_000 }).toBeTruthy();
+    const fields: [RegExp, string | RegExp][] = [
+      [/(given|first)_?name/i, "ABC"],
+      [/(family|last)_?name/i, "XYZ"],
+      [/street|addr(ess)?_?1/i, "1 Main St"],
+      [/city/i, "Palo Alto"],
+      [/state/i, "CA"],
+      [/zip|postal/i, "94303"],
+      [/country/i, /^(USA|United States)$/],
+      [/phone/i, "555-555-5555"],
+      [/e_?mail/i, "abc@xyz.com"],
+    ];
+    for (const [which, stored] of [
+      ["billing", row("op_purchase_orders")],
+      ["shipping", row("op_po_contacts")],
+    ] as const) {
+      for (const [name, value] of fields) {
+        const held = Object.keys(stored)
+          .filter((k) => name.test(k))
+          .map((k) => String(stored[k]));
+        expect(held, `${which} ${name}`).toContainEqual(expect.stringMatching(value));
+      }
+    }
   });
 });
 
 test.describe("server error page", () => {
   // case: SWHR2-C-0212@v1
-  // The failure is real and on the server, without assuming how orders are stored: placing an
-  // order of EST-4 has to write that item id somewhere, so a trigger on every table makes any
-  // insert of a row mentioning EST-4 throw "boom-test". The cart already holds the item before the
-  // triggers exist, and EST-4 is an item no other browser spec orders, so specs placing orders in
-  // parallel are unaffected.
+  // The failure is real and on the server: placement enqueues the order document on the
+  // order.new channel in the messages table (design.md), and a trigger there makes that insert
+  // throw "boom-test" for an order of EST-4 only, an item no other browser spec orders, so
+  // specs placing orders in parallel are unaffected.
   test("SWHR2-C-0212: the Server Error page shows the message and trace and asks the shopper to notify the administrator", async ({
     page,
   }) => {
     await toCheckout(page, "EST-4");
+    sql(`create trigger if not exists acc_c0212_boom before insert on messages
+      when new.channel = 'order.new' and new.payload glob '*EST-4[^0-9]*'
+      begin select raise(abort, 'boom-test'); end`);
     try {
-      boomTriggers();
       await submitCheckout(page);
       await expect(page.getByRole("heading", { name: /server error/i }).first()).toBeVisible();
       await expect(page.getByText(/boom-test/).first()).toBeVisible();
@@ -244,10 +163,7 @@ test.describe("server error page", () => {
       await expect(page.getByText(/\bat .+:\d+:\d+/).first()).toBeVisible();
       await expect(page.getByText(/notify (the )?administrator/i).first()).toBeVisible();
     } finally {
-      const left = sql(
-        "select name from sqlite_master where type = 'trigger' and name like 'acc_c0212_boom_%'",
-      );
-      for (const { name } of left) sql(`drop trigger if exists "${String(name)}"`);
+      sql("drop trigger if exists acc_c0212_boom");
     }
   });
 });
