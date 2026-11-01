@@ -25,7 +25,7 @@ Read `design.md` first: **Target design**, then **Planning — SWHR2-S-0023**, w
 3. **Document codec** (5.1–5.3, 6.1–6.2; P4, P5, P9). `services/documents/purchase-order.ts#toXml/fromXml` with the element order and rejection messages of SWHR2-R-0050.
 4. **Outbox, worker and receipt** (5.4–5.7; P2, P3). `services/messaging/` (`enqueue`, poll/deliver), `plugins/message-worker.ts` (Nitro plugin, `order.new` → receipt), and `services/orders/receive.ts#createPurchaseOrder/getPurchaseOrder`.
 5. **Placement** (4.1–4.6, 4.8, 5.5; P6). `GET /api/checkout` returns the pre-fill mapped from `services/customers` (SD5). `POST /api/orders`: guard, trim and require fields, refuse an empty cart with `EmptyCartOrder`, number lines from 0, total in hundredths, `nextId("1001")` and `enqueue` in one transaction, then `clearCart`. Wrap the handler in `guardRoute`.
-6. **Screens** (3.1–3.5, 4.7, 4.8; P7, P8, SD6). Build `src/pages/petstore/checkout.tsx` and `order-placed.tsx`, and rebuild `error/empty-cart.tsx` and `error/server.tsx` to the mockups. Server Error must show the reply's message and trace and ask the shopper to notify the administrator. Screen text goes through per-locale definitions under `src/locales/` (en_US, ja_JP, zh_CN). The checkout form uses labelled inputs, so the suite's label queries resolve.
+6. **Screens** (3.1–3.5, 4.7, 4.8; P7, P8, SD6). Build `src/pages/petstore/checkout.tsx` and `order-placed.tsx`, and rebuild `error/empty-cart.tsx` and `error/server.tsx` to the mockups. Server Error must show the reply's message and trace and ask the shopper to notify the administrator. Screen text goes through per-locale definitions under `src/locales/` (en_US, ja_JP, zh_CN). The checkout form uses labelled inputs, so the suite's label queries resolve. State is a text input with the fixed list as suggestions (SD7).
 7. **Tests** (7.1–7.4). Add colocated tests mirroring the nearest file: `services/ids.test.ts`, `services/documents/purchase-order.test.ts`, `services/orders/receive.test.ts`, `routes/api/orders/index.post.test.ts`, `routes/api/checkout/index.get.test.ts`, page tests, and `e2e/checkout.spec.ts`. CI needs no change (design.md Phases 8).
 
 ## File/module ownership
@@ -63,6 +63,6 @@ Render each route beside its mockup to check the build.
 ## Definition of Done
 
 - AC-1 to AC-16 are met, each covered by its linked case (C-0212 to C-0227).
-- The shopping-cart cases deferred to checkout (C-0089, C-0090 and C-0101) also pass.
+- The shopping-cart cases deferred to checkout (C-0089, C-0090, C-0101), sign-on (C-0252, C-0254) and customer-account (C-0174) also pass.
 - The locked suite `tests/acceptance/checkout/` passes unmodified, and the existing catalog, localization, sign-on, customer-account and shopping-cart suites still pass.
 - Every `tasks.md` line tagged SWHR2-T-0281 is implemented.

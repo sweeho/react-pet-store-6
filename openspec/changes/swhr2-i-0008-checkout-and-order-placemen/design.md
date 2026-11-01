@@ -140,7 +140,7 @@ One FEATURE, **SWHR2-T-0281**, owns every task group (1 to 7) in order. No SPIKE
 - `services/cart.ts` provides `cartFor(sessionId)`, `lines(cart, locale)`, `total` and `clearCart(sessionId)`. `services/session/guards.ts#requireCustomer` gives the 401 `SignOnRequired`.
 - `services/customers/index.ts#getCustomer(userId)` and `contactSnapshot(contactId)` return the account contact as `givenName, familyName, telephone, email` with address `street1, street2, city, state, zip, country`.
 - No XML library is installed, and nothing exists under `plugins/` or `services/messaging/`.
-- Locked acceptance suite `tests/acceptance/checkout/` (`harness.ts`, `unit.test.ts`, `orders.test.ts`, `e2e/checkout.spec.ts`) fixes these module paths: `services/ids#nextId`, `services/documents/purchase-order#{toXml,fromXml}`, `services/orders/receive#{createPurchaseOrder,getPurchaseOrder}` and `routes/api/orders/index.post`. Three shopping-cart cases deferred here (C-0089, C-0090, C-0101) also depend on this change.
+- Locked acceptance suite `tests/acceptance/checkout/` (`harness.ts`, `unit.test.ts`, `orders.test.ts`, `e2e/checkout.spec.ts`) fixes these module paths: `services/ids#nextId`, `services/documents/purchase-order#{toXml,fromXml}`, `services/orders/receive#{createPurchaseOrder,getPurchaseOrder}` and `routes/api/orders/index.post`. Three shopping-cart cases (C-0089, C-0090, C-0101), two sign-on cases (C-0252, C-0254) and one customer-account case (C-0174) were deferred here and also depend on this change.
 
 ### Interface contracts fixed by the locked suite
 
@@ -181,3 +181,4 @@ One FEATURE, **SWHR2-T-0281**, owns every task group (1 to 7) in order. No SPIKE
 - **SD4** Tasks 4.6, 5.3 and 6.2 refer to "the decided" card, date and expiry rules, but no decision is recorded. Resolved by P4 and P5 as planning decisions; the Business Owner may revise them.
 - **SD5** The spec counts ten contact fields per section. The locked suite's body carries nine (`street` with no `street2`, and `phone` where the account has `telephone`). The form keeps an optional second address line, and the route maps the account names to the order names.
 - **SD6** The existing `server.tsx` stub (heading "Server error", "Please try again") contradicts SWHR2-R-0003 and SWHR2-MCK-27. It is rebuilt here.
+- **SD7** Task 3.3 offers fixed state lists, but deferred sign-on case C-0254 types into the State field (`fill`), which fails on a `<select>`. The State field is a text input that offers the fixed list as suggestions (for example a `datalist`). C-0254 also requires that submitting leaves `/petstore/checkout` (the Order Placed route, P7).
