@@ -108,8 +108,8 @@ test.describe("sign up", () => {
     await page.goto("/petstore/signin");
     await fillSignUp(page, "j2ee", "secret1", "secret1");
     await submitSignUp(page);
-    await expect(page.getByText(/user creation error/i)).toBeVisible();
-    await expect(page.getByText(/in use/i)).toBeVisible();
+    await expect(page.getByText(/user creation error/i).first()).toBeVisible();
+    await expect(page.getByText(/in use/i).first()).toBeVisible();
   });
 
   // case: SWHR2-C-0174@v1
@@ -148,9 +148,13 @@ test.describe("sign up", () => {
     await page
       .getByRole("button", { name: /add to cart/i })
       .or(page.getByRole("link", { name: /add to cart/i }))
+      .first()
       .click();
     await page.getByRole("link", { name: /cart/i }).first().click();
-    await page.getByRole("link", { name: /check ?out/i }).click();
+    await page
+      .getByRole("link", { name: /check ?out/i })
+      .first()
+      .click();
     const placed = page.waitForResponse(
       (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
     );
