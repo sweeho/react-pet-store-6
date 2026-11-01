@@ -11,8 +11,12 @@ const SUPPLIER = {
 const LOGIN_ERROR =
   "You could not be authenticated with the information provided. Please check your Username and Password.";
 
+/** The item page may repeat its Add to Cart control; take the first. */
 const addToCart = (p: Page) =>
-  p.getByRole("button", { name: /add to cart/i }).or(p.getByRole("link", { name: /add to cart/i }));
+  p
+    .getByRole("button", { name: /add to cart/i })
+    .or(p.getByRole("link", { name: /add to cart/i }))
+    .first();
 /** The cart row whose name links to item `id`'s detail page (rows show names, not ids). */
 const itemRow = (p: Page, id: string) =>
   p.getByRole("row").filter({ has: p.locator(`a[href$="/item/${id}"]`) });
@@ -167,23 +171,25 @@ test.describe("sign-on", () => {
     await page.goto("/admin");
     await fillLogin(page, ADMIN.user, ADMIN.pw);
     // Without signing out, open the supplier area and try Display Inventory.
-    const refusal = (p: Page) =>
-      userIdField(p)
-        .or(
-          p.getByText(
-            /access denied|not authori[sz]ed|(sign|log) ?(out|off) of (the )?admin(istration)?/i,
-          ),
+    /** A message refusing the supplier area because the administrator session is still open. */
+    const adminRefusal = (p: Page) =>
+      p
+        .getByText(
+          /access denied|not authori[sz]ed|(sign|log) ?(out|off)( of| from)? (the )?admin(istrat(or|ion))?|signed in as (an? )?admin(istrator)?/i,
         )
         .first();
-    // The supplier area asks for sign-in; signing in as supplier while still admin is refused.
+    // The supplier area asks for sign-in; signing in as supplier while still admin is refused
+    // with a message saying so, not a credential failure.
     await page.goto("/supplier");
     await expect(userIdField(page)).toBeVisible();
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
-    await expect(refusal(page)).toBeVisible();
+    await expect(adminRefusal(page)).toBeVisible();
+    await expect(page.getByText(LOGIN_ERROR)).toHaveCount(0);
     await expect(displayInventory(page)).toHaveCount(0);
-    // Display Inventory requested directly is refused the same way and shows no inventory.
+    // Display Inventory requested directly is refused (sign-in prompt or the refusal message)
+    // and shows no inventory.
     await page.goto("/supplier/inventory");
-    await expect(refusal(page)).toBeVisible();
+    await expect(userIdField(page).or(adminRefusal(page)).first()).toBeVisible();
     await expect(inventoryRows(page)).toHaveCount(0);
     await page.goto("/admin");
     await logOut(page).click();
@@ -226,8 +232,26 @@ test.describe("sign-on", () => {
   }) => {
     await page.goto("/admin");
     await fillLogin(page, ADMIN.user, ADMIN.pw);
-    for (const word of [/sales/i, /revenue/i, /order status/i, /approve/i, /deny/i])
-      await expect(page.getByText(word).first()).toBeVisible();
+    // Each feature is described in body text (a sentence naming what the administrator can do),
+    // not merely named by a link, button or heading.
+    const VIEW = String.raw`\b(view|see|review|display|show|track|monitor|check)\w*\b[^.]*`;
+    const features: [string, RegExp][] = [
+      ["sales", new RegExp(`${VIEW}\\bsales\\b`, "i")],
+      ["revenue", new RegExp(`${VIEW}\\brevenue\\b`, "i")],
+      ["orders by status", new RegExp(`${VIEW}\\borders?\\b[^.]*\\bstatus`, "i")],
+      [
+        "approve or deny pending orders",
+        /\bapprov\w*\b[^.]*\b(deny|denie\w*|reject\w*)\b[^.]*\borders?\b/i,
+      ],
+    ];
+    const prose = page.locator(
+      ":is(p, li, dd, td, span, div, section, article, main):not(:has(a, button, h1, h2, h3, h4, h5, h6))",
+    );
+    for (const [name, description] of features)
+      await expect(
+        prose.filter({ hasText: description }).first(),
+        `the landing page describes: ${name}`,
+      ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /launch/i }).or(page.getByRole("button", { name: /launch/i })),
     ).toBeVisible();
