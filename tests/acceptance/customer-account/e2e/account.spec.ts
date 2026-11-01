@@ -154,15 +154,21 @@ test.describe("sign up", () => {
     const placed = page.waitForResponse(
       (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
     );
-    await page
-      .getByRole("button", { name: /continue|submit|place|next/i })
-      .first()
-      .click();
-    // the shopper confirms the order: the confirm step must be offered and taken
-    await page
-      .getByRole("button", { name: /confirm|place order|submit/i })
-      .first()
-      .click();
+    // one "Place order" submit places the order; a confirm step is taken only if one appears
+    // (as in C-0101)
+    const submit = page
+      .getByRole("button", { name: /^\s*(submit|continue|next|confirm|place order)/i })
+      .first();
+    const confirmsOrder = /^\s*(confirm|place order)/i.test(
+      (await submit.getAttribute("value")) ?? (await submit.innerText()),
+    );
+    await submit.click();
+    if (!confirmsOrder) {
+      const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
+      const done = page.getByRole("heading", { name: /your order is complete|order placed/i });
+      await expect(done.or(confirm).first()).toBeVisible();
+      if (!(await done.isVisible())) await confirm.click();
+    }
     const response = await placed;
     expect(response.status()).toBe(200);
     const { orderId } = (await response.json()) as { orderId: string };
