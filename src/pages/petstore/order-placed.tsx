@@ -45,7 +45,7 @@ export default function PetstoreOrderPlaced() {
     <div>
       <div className="mb-6 flex items-end justify-between">
         <div>
-          <p className="text-2xl font-semibold">{t.placedTitle}</p>
+          <h1 className="text-2xl font-semibold">{t.placedTitle}</h1>
           <p className="text-muted-foreground mt-1 text-sm">{t.placedSubtitle}</p>
         </div>
         <Link to="/petstore" className={buttonVariants()}>
