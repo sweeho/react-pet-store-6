@@ -7,12 +7,41 @@ sprint: SWHR2-S-0025
 
 All four mockups rendered at 1440×900 against the built screens (dev server, signed in as j2ee, cart with EST-1 and EST-4). Pairs are in `design-check/`.
 
-| Mockup                      | Route / state                                   | Mockup                                                     | Built                                                     |
-| --------------------------- | ----------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
-| MCK-24 Billing and shipping | `/petstore/checkout`, pre-filled                | `design-check/mockup-billing-and-shipping-information.png` | `design-check/built-billing-and-shipping-information.png` |
-| MCK-25 Order Placed         | `/petstore/order-placed` after POST             | `design-check/mockup-order-placed.png`                     | `design-check/built-order-placed.png`                     |
-| MCK-26 Empty-cart error     | `/petstore/error/empty-cart`                    | `design-check/mockup-empty-cart-order-error.png`           | `design-check/built-empty-cart-order-error.png`           |
-| MCK-27 Server Error         | `/petstore/error/server` with message and trace | `design-check/mockup-server-error.png`                     | `design-check/built-server-error.png`                     |
+## SWHR2-MCK-24 Billing and shipping information
+
+Route / state: `/petstore/checkout`, pre-filled, 1440×900.
+
+- Mockup: `design-check/mockup-billing-and-shipping-information.png`
+- Built: `design-check/built-billing-and-shipping-information.png`
+
+Differences: see the list below.
+
+## SWHR2-MCK-25 Order Placed
+
+Route / state: `/petstore/order-placed` after POST, 1440×900.
+
+- Mockup: `design-check/mockup-order-placed.png`
+- Built: `design-check/built-order-placed.png`
+
+Differences: see the list below.
+
+## SWHR2-MCK-26 Empty-cart error
+
+Route / state: `/petstore/error/empty-cart`, 1440×900.
+
+- Mockup: `design-check/mockup-empty-cart-order-error.png`
+- Built: `design-check/built-empty-cart-order-error.png`
+
+Differences: see the list below.
+
+## SWHR2-MCK-27 Server Error
+
+Route / state: `/petstore/error/server` with message and trace, 1440×900.
+
+- Mockup: `design-check/mockup-server-error.png`
+- Built: `design-check/built-server-error.png`
+
+Differences: see the list below.
 
 ## Differences left
 
