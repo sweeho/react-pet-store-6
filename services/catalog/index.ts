@@ -3,6 +3,8 @@ import {
   type Dialect,
   type ItemRow,
   type ProductRow,
+  configuredDialect,
+  configuredImplementation,
   resolveDataAccess,
 } from "./data-access";
 import { cached } from "./cache";
@@ -10,7 +12,7 @@ import { CatalogError } from "./errors";
 import { type CatalogPage, pageOf } from "./paging";
 
 export { CatalogError } from "./errors";
-export { registerDataAccess } from "./data-access";
+export { registerDataAccess, registerDialect } from "./data-access";
 export type { CatalogPage } from "./paging";
 export { search } from "./search";
 
@@ -39,7 +41,7 @@ async function page<T>(
 }
 
 /** Cache keys include the configured implementation, so switching it never serves the other's copy. */
-const impl = (): string => process.env.CATALOG_DATA_ACCESS ?? "";
+const impl = (): string => `${configuredImplementation()}|${configuredDialect()}`;
 
 export function listCategories(
   locale: string,
@@ -85,5 +87,5 @@ export async function getItem(itemId: string, locale: string): Promise<CatalogIt
 
 /** The dialect of the configured data-access implementation. */
 export function catalogDialect(): Dialect {
-  return resolveDataAccess().dialect;
+  return resolveDataAccess().dialect ?? "sqlite";
 }

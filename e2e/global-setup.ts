@@ -21,6 +21,11 @@ export default async function globalSetup(config: FullConfig) {
   const page = await browser.newPage();
   await page.goto(baseURL!);
   await page.waitForLoadState("networkidle");
+  // Compile the cart screens up front so a test's first visit is not the one that pays for it.
+  for (const path of ["/petstore/item/EST-1", "/petstore/cart", "/petstore/change-language"]) {
+    await page.goto(`${baseURL}${path}`);
+    await page.waitForLoadState("networkidle");
+  }
   for (const area of ["admin", "supplier"]) {
     await page.goto(`${baseURL}/${area}`);
     await page.waitForLoadState("networkidle");
