@@ -77,7 +77,7 @@ if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
     const address = tx
       .insert(addresses)
       .values({
-        street1: "901 San Antonio Road",
+        street1: "1 Main St",
         street2: "",
         city: "Palo Alto",
         state: "CA",
@@ -92,7 +92,7 @@ if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
         givenName: "ABC",
         familyName: "XYZ",
         telephone: "555-555-5555",
-        email: "j2ee@example.com",
+        email: "abc@xyz.com",
         addressId: address.id,
       })
       .returning()
