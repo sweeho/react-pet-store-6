@@ -8,7 +8,7 @@ import GlobalNav from "./GlobalNav";
 const areas = [
   { label: "Catalog & search", to: "/petstore" },
   { label: "Shopping cart", to: "/petstore/cart" },
-  { label: "Checkout", to: "/petstore/cart" },
+  { label: "Place order", to: "/petstore/cart" },
   { label: "Language", to: "/petstore/change-language" },
   { label: "Sign in", to: "/petstore/signin" },
   { label: "Account & profile", to: "/petstore/account" },
@@ -55,5 +55,14 @@ describe("GlobalNav", () => {
     for (const group of ["Shop", "Account", "Administration", "Supplier"]) {
       expect(within(nav).getByRole("heading", { name: group })).toBeInTheDocument();
     }
+  });
+
+  it("has no link named like the cart's Check Out link", () => {
+    render(
+      <MemoryRouter>
+        <GlobalNav />
+      </MemoryRouter>,
+    );
+    expect(screen.queryAllByRole("link", { name: /check ?out/i })).toEqual([]);
   });
 });

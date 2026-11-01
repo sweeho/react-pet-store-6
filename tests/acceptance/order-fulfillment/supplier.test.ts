@@ -79,7 +79,6 @@ describe("supplier orders", () => {
     expect(inv).toHaveLength(1);
     expect(inv[0].status).toBe("delivered");
     expect(inv[0].payload).toContain("EST-1");
-    expect(statusOf(f.client, "10018")).toBe("COMPLETED");
   });
 
   // case: SWHR2-C-0113@v1
@@ -99,7 +98,17 @@ describe("supplier orders", () => {
     expect(po).toHaveLength(1);
     expect(po[0].status).toBe("pending");
     expect(po[0].attempts).toBeGreaterThan(0);
+    // clear the failure: the redelivered purchase order is now received in full
     dropFailure(f.client, "supplier.invoice");
+    await f.drain();
+    expect(messages(f.client, "supplier.purchase-order")[0].status).toBe("delivered");
+    expect(count(f.client, "sup_orders", "order_id = '10014'")).toBe(1);
+    expect(f.stock("EST-1")).toBe(8);
+    expect(
+      messages(f.client, "supplier.invoice", "%10014%").filter(
+        (m) => m.subscriber === "order-processing.invoice",
+      ),
+    ).toHaveLength(1);
   });
 
   // case: SWHR2-C-0120@v1

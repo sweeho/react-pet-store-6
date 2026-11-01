@@ -6,7 +6,7 @@ import path from "node:path";
 import { H3Event } from "nitro/h3";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fulfilment, mod, supplierOrder } from "./harness";
+import { fulfilment, messages, mod, supplierOrder } from "./harness";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -134,11 +134,32 @@ describe("invoice and catalog", () => {
   // case: SWHR2-C-0109@v1
   it("SWHR2-C-0109: a supplier order document arriving on the invoice channel is rejected", async () => {
     const { f, xml } = await build();
-    f.client.exec("insert into op_order_workflow (order_id, status) values ('10011', 'APPROVED')");
+    await f.approvedOrder("10011", [
+      ["EST-1", 3],
+      ["EST-2", 1],
+    ]);
+    const shipped = () =>
+      f.client
+        .query(
+          "select item_id, quantity_shipped q from op_po_line_items where order_id = '10011' order by item_id",
+        )
+        .all();
+    const before = shipped();
     expect(() => f.invoices.readInvoice(xml)).toThrow();
+    // the supplier order document is published on the invoice channel and consumed by the worker
+    f.messaging.enqueue(f.db, "supplier.invoice", xml);
+    f.client.exec("update messages set available_at = 0 where status = 'pending'");
+    await f.worker.processDue();
+    const row = messages(f.client, "supplier.invoice", "%10011%").find(
+      (m) => m.subscriber === "order-processing.invoice",
+    );
+    expect(row).toBeDefined();
+    expect(row?.status).not.toBe("delivered");
+    expect(row?.attempts).toBeGreaterThan(0);
     expect(
       f.client.query("select status from op_order_workflow where order_id = '10011'").get(),
     ).toEqual({ status: "APPROVED" });
+    expect(shipped()).toEqual(before);
   });
 
   // case: SWHR2-C-0110@v1

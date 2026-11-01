@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AccountPage from "../../../src/pages/petstore/account";
-import PetTipsBanner from "../../../src/components/storefront/PetTipsBanner";
+import CartPage from "../../../src/pages/petstore/cart";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -54,17 +54,42 @@ describe("account form", () => {
 describe("pet-tips banner", () => {
   // case: SWHR2-C-0161@v1
   it("SWHR2-C-0161: an unrecognised favourite category shows the dogs banner on the cart screen", async () => {
-    stubFetch({
+    const session = {
       locale: "en_US",
       signedOn: true,
       userId: "j2ee",
       preferences: { banner: true, myList: true, favouriteCategory: "UNKNOWN" },
-    });
+    };
+    const cart = {
+      locale: "en_US",
+      total: 1650,
+      lines: [
+        {
+          itemId: "EST-1",
+          name: "Large Angelfish",
+          productName: "Angelfish",
+          quantity: 1,
+          unitPrice: 1650,
+          lineTotal: 1650,
+        },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        Response.json(
+          String(input instanceof Request ? input.url : input).includes("/api/session")
+            ? session
+            : cart,
+        ),
+      ),
+    );
     render(
       <MemoryRouter>
-        <PetTipsBanner screen="cart" />
+        <CartPage />
       </MemoryRouter>,
     );
+    expect(await screen.findByRole("link", { name: /Large Angelfish/ })).toBeInTheDocument();
     const banner = await screen.findByTestId("pet-tips-banner");
     expect(banner.getAttribute("data-category") ?? banner.textContent).toMatch(/dog/i);
   });

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { addToCart, cartApp, getCart, ids } from "../shopping-cart/harness";
 import { ADMIN, call, cookieValue, loadApp, maxAge, seedCustomer } from "./harness";
 
 afterEach(() => vi.useRealTimers());
@@ -40,7 +41,7 @@ describe("session expiry", () => {
   // case: SWHR2-C-0262@v1
   it("SWHR2-C-0262: a shopper idle for 16 minutes is signed out and finds the cart empty", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    const app = await loadApp();
+    const app = await cartApp();
     await seedCustomer(app.client, "j2ee", "j2ee");
     const signed = await call(app, SIGN_IN, {
       method: "POST",
@@ -49,20 +50,13 @@ describe("session expiry", () => {
     });
     expect(signed.status).toBe(200);
     const sid = cookieValue(signed.setCookies, "ps_sid")!;
-    await call(app, "../../../routes/api/cart/items.post", {
-      method: "POST",
-      url: "/api/cart/items",
-      cookies: { ps_sid: sid },
-      json: { itemId: "EST-1" },
-    });
+    expect((await addToCart(app, { ps_sid: sid }, "EST-1")).status).toBe(200);
+    expect(ids((await getCart(app, { ps_sid: sid })).body)).toEqual(["EST-1"]);
     vi.setSystemTime(Date.now() + 16 * MIN);
     const who = await call(app, SESSION, { url: "/api/session", cookies: { ps_sid: sid } });
     expect((who.body as { signedOn: boolean }).signedOn).toBe(false);
-    const cart = await call(app, "../../../routes/api/cart/index.get", {
-      url: "/api/cart",
-      cookies: { ps_sid: sid },
-    });
-    expect(JSON.stringify(cart.body)).not.toContain("EST-1");
+    const cart = await getCart(app, { ps_sid: sid });
+    expect(ids(cart.body)).toEqual([]);
   });
 });
 
