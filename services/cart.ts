@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars -- red-phase stubs */
 import { DEFAULT_LOCALE } from "../shared/i18n/locale";
 import { getItem } from "./catalog";
 
@@ -51,4 +52,24 @@ export function moveCart(from: string, to: string): void {
   if (!cart) return;
   carts.delete(from);
   carts.set(to, cart);
+}
+
+export function addItemWithQuantity(
+  _cart: Map<string, number>,
+  _itemId: string,
+  _qty: number,
+): void {
+  throw new Error("VortexNotImplemented");
+}
+export function removeItem(_cart: Map<string, number>, _itemId: string): void {
+  throw new Error("VortexNotImplemented");
+}
+export function updateQuantities(_cart: Map<string, number>, _q: Record<string, number>): void {
+  throw new Error("VortexNotImplemented");
+}
+export function clearCart(_sessionId: string): void {
+  throw new Error("VortexNotImplemented");
+}
+export function total(_view: CartLine[]): number {
+  throw new Error("VortexNotImplemented");
 }
