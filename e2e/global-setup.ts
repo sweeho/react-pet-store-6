@@ -34,26 +34,5 @@ export default async function globalSetup(config: FullConfig) {
       failOnStatusCode: false,
     });
   }
-  // Compile the checkout screens and routes too: the first checkout spec otherwise spends its
-  // short expect timeout on the dev server compiling them. The signed-in session lives in this
-  // throwaway context; the empty-cart POST compiles /api/orders without placing an order.
-  await page.request.post(`${baseURL}/api/session/sign-in`, {
-    data: { userId: "j2ee", password: "j2ee" },
-    failOnStatusCode: false,
-  });
-  await page.request.get(`${baseURL}/api/checkout`, { failOnStatusCode: false });
-  await page.request.post(`${baseURL}/api/orders`, { data: {}, failOnStatusCode: false });
-  for (const path of [
-    "/petstore/signin",
-    "/petstore/item/EST-4",
-    "/petstore/checkout",
-    "/petstore/confirm-order",
-    "/petstore/order-placed",
-    "/petstore/error/server",
-    "/petstore/error/empty-cart",
-  ]) {
-    await page.goto(`${baseURL}${path}`);
-    await page.waitForLoadState("networkidle");
-  }
   await browser.close();
 }
