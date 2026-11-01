@@ -214,22 +214,25 @@ test.describe("shopping cart", () => {
       [/^e-?mail:?$/i, "abc@xyz.com"],
     ];
     for (const [label, value] of fields) await page.getByLabel(label).first().fill(value);
-    const submit = page.getByRole("button", { name: /continue|submit|place|confirm/i }).first();
-    const final = /confirm|place/i.test(
-      ((await submit.textContent()) || (await submit.getAttribute("value"))) ?? "",
-    );
-    await submit.click();
-    // The order information entry form leaves the screen once it is submitted.
-    await page.getByLabel(fields[0][0]).first().waitFor({ state: "hidden" });
-    await page.waitForLoadState("networkidle");
+    // Submit the order information form itself (the form holding the first-name field and a
+    // submit control), never a header search or other page button whose name happens to match.
+    const form = page
+      .locator("form")
+      .filter({ has: page.getByLabel(fields[0][0]) })
+      .filter({ has: page.locator("button:not([type]), button[type=submit], input[type=submit]") })
+      .first();
+    await form.evaluate((f) => (f as HTMLFormElement).requestSubmit());
     // An optional confirm step (as in C-0174/C-0254): if a confirm/place-order button is offered
-    // after the first button, it is taken to place the order.
-    const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
-    if (!final && (await confirm.isVisible())) {
-      await confirm.click();
-      await confirm.waitFor({ state: "hidden" });
-      await page.waitForLoadState("networkidle");
-    }
+    // once the form is submitted, it is taken to place the order.
+    const complete = page.getByRole("heading", { name: /your order is complete|order placed/i });
+    const confirm = page
+      .getByRole("button", { name: /^\s*(confirm|place order)/i })
+      .and(page.locator(":not(header *):not(nav *):not([role=navigation] *)"))
+      .first();
+    await expect(complete.or(confirm).first()).toBeVisible();
+    if (!(await complete.isVisible())) await confirm.click();
+    // The order is confirmed: the order-complete screen is shown.
+    await expect(complete).toBeVisible();
     await page.goto("/petstore/cart");
     await expect(page.getByText(EMPTY)).toBeVisible();
   });
