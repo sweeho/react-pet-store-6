@@ -21,9 +21,13 @@ const view = (lines: ReturnType<typeof line>[]) => ({
   total: lines.reduce((n, l) => n + l.lineTotal, 0),
 });
 
-function mount(responses: object[]) {
-  const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () =>
-    Response.json(responses.length > 1 ? responses.shift() : responses[0]),
+/** `initial` answers GET /api/cart; `after` answers the Remove (DELETE) and Update Cart (PUT) requests. */
+function mount([initial, after]: [object, object?]) {
+  const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(
+    async (url, init) =>
+      Response.json(
+        url === "/api/cart" && !init?.method ? initial : url.startsWith("/api/cart") ? after : {},
+      ),
   );
   vi.stubGlobal("fetch", fetchMock);
   render(
