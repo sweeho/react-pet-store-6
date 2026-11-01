@@ -81,4 +81,28 @@ describe("cart routes", () => {
     await addToCart(app, a, "EST-1");
     expect(ids((await getCart(app, b)).body)).toEqual([]);
   });
+
+  it("[SWHR2-C-0093] [SWHR2-C-0094] an anonymous visitor adds and removes EST-1 with no role check", async () => {
+    const app = await cartApp();
+    const cookies = sessionOf(await getCart(app));
+    const added = await addToCart(app, cookies, "EST-1");
+    expect(added.status).toBe(200);
+    expect(qty(added.body, "EST-1")).toBe(1);
+    const removed = await removeFromCart(app, cookies, "EST-1");
+    expect(removed.status).toBe(200);
+    expect(ids(removed.body)).toEqual([]);
+  });
+
+  it("[SWHR2-C-0085] [SWHR2-C-0095] signing out discards the cart for every later session", async () => {
+    const app = await cartApp();
+    const s1 = sessionOf(await getCart(app));
+    await addToCart(app, s1, "EST-1", 2);
+    await call(app, "../../../routes/api/session/sign-out.post", {
+      method: "POST",
+      url: "/api/session/sign-out",
+      cookies: s1,
+    });
+    expect(ids((await getCart(app, s1)).body)).toEqual([]);
+    expect(ids((await getCart(app)).body)).toEqual([]);
+  });
 });
