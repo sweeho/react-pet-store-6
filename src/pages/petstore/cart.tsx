@@ -21,16 +21,26 @@ interface CartLine {
 }
 
 interface CartView {
+  locale: string;
   lines: CartLine[];
   total: number;
 }
 
+// Awaited when the route chunk loads, which the browser's load event waits for, so the first render
+// already holds the cart (in the session locale) instead of fetching it after navigation reports
+// loaded. Used by the first mount only; any failure falls back to the normal fetch.
+let preloaded: CartView | null = await fetch("/api/cart")
+  .then((r) => (r.ok ? (r.json() as Promise<CartView>) : null))
+  .catch(() => null);
+
 export default function PetstoreCart() {
   const { locale } = useLocale();
   const navigate = useNavigate();
-  const screen = useScreen("petstore-cart", locale);
-  const [view, setView] = useState<CartView | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [view, setView] = useState<CartView | null>(preloaded);
+  const screen = useScreen("petstore-cart", view?.locale ?? locale);
+  const [drafts, setDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries((view?.lines ?? []).map((l) => [l.itemId, String(l.quantity)])),
+  );
 
   /** Shows a cart reply; a failure goes to the error page its kind maps to. */
   const receive = useCallback(
@@ -51,15 +61,23 @@ export default function PetstoreCart() {
       .then(receive)
       .catch(() => void navigate(routeFailure({ kind: "", kinds: [] })));
 
+  // The reply is already in the session locale, so the first load does not wait for the locale
+  // to arrive; a later locale change re-lists the lines only when the shown ones are in another.
   useEffect(() => {
-    fetch("/api/cart")
-      .then(receive)
-      .catch(() => void navigate(routeFailure({ kind: "", kinds: [] })));
-  }, [locale, receive, navigate]);
+    preloaded = null;
+    void send("/api/cart");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const shownLocale = view?.locale;
+  useEffect(() => {
+    if (shownLocale && shownLocale !== locale) void send("/api/cart");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale, shownLocale]);
 
   if ("error" in screen) return screen.error;
   const t = screen.definition;
-  const money = (cents: number) => formatMoney(cents / 100, locale, locale === "ja_JP" ? 0 : 2);
+  const shown = view?.locale ?? locale;
+  const money = (cents: number) => formatMoney(cents / 100, shown, shown === "ja_JP" ? 0 : 2);
 
   return (
     <div>

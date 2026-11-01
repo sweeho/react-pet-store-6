@@ -1,4 +1,6 @@
+import type { Database } from "bun:sqlite";
 import { and, asc, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 
 import { db } from "../../db/client";
 import {
@@ -11,6 +13,34 @@ import {
 import { CatalogError } from "./errors";
 
 export type Dialect = "sqlite";
+
+/** The configured implementation name: CATALOG_DAO_CLASS, else CATALOG_DATA_ACCESS. */
+export const configuredImplementation = (): string =>
+  process.env.CATALOG_DAO_CLASS || process.env.CATALOG_DATA_ACCESS || "";
+
+/** The configured dialect name: CATALOG_DAO_DATABASE, else CATALOG_DB_DIALECT. */
+export const configuredDialect = (): string =>
+  process.env.CATALOG_DAO_DATABASE || process.env.CATALOG_DB_DIALECT || "";
+
+const dialects = new Map<string, Database>();
+const connections = new WeakMap<Database, typeof db>();
+
+/** Makes the SQLite connection `client` the store read when the configuration names dialect `name`. */
+export function registerDialect(name: string, client: Database): void {
+  dialects.set(name, client);
+}
+
+/** The connection for the configured dialect, or the default one when none is registered for it. */
+function conn(): typeof db {
+  const client = dialects.get(configuredDialect());
+  if (!client) return db;
+  let c = connections.get(client);
+  if (!c) {
+    c = drizzle(client) as unknown as typeof db;
+    connections.set(client, c);
+  }
+  return c;
+}
 
 export interface CategoryRow {
   categoryId: string;
@@ -41,7 +71,7 @@ export interface ItemRow {
 
 /** Every read is for exactly one locale; there is no fallback to another. */
 export interface DataAccess {
-  readonly dialect: Dialect;
+  readonly dialect?: Dialect;
   listCategories(locale: string, offset: number, limit: number): Promise<CategoryRow[]>;
   getCategory(categoryId: string, locale: string): Promise<CategoryRow | undefined>;
   listProducts(
@@ -100,7 +130,7 @@ export function toItemRow({ itemId, productId, name, d }: ItemJoined): ItemRow {
 
 /** Items joined to their item details and product details on the same locale. */
 export function itemsQuery(locale: string) {
-  return db
+  return conn()
     .select(itemColumns)
     .from(catalogItems)
     .innerJoin(
@@ -120,7 +150,7 @@ export function itemsQuery(locale: string) {
 }
 
 function productsQuery(locale: string) {
-  return db
+  return conn()
     .select(productColumns)
     .from(catalogProducts)
     .innerJoin(
@@ -135,7 +165,7 @@ function productsQuery(locale: string) {
 export const drizzleDataAccess: DataAccess = {
   dialect: "sqlite",
   async listCategories(locale, offset, limit) {
-    return db
+    return conn()
       .select(categoryColumns)
       .from(catalogCategoryDetails)
       .where(eq(catalogCategoryDetails.locale, locale))
@@ -145,7 +175,7 @@ export const drizzleDataAccess: DataAccess = {
       .all();
   },
   async getCategory(categoryId, locale) {
-    return db
+    return conn()
       .select(categoryColumns)
       .from(catalogCategoryDetails)
       .where(
@@ -189,11 +219,11 @@ export function registerDataAccess(name: string, impl: DataAccess): void {
 
 /** The implementation named by CATALOG_DATA_ACCESS (default "drizzle"). Resolved on every read. */
 export function resolveDataAccess(): DataAccess {
-  const name = process.env.CATALOG_DATA_ACCESS || "drizzle";
+  const name = configuredImplementation() || "drizzle";
   const impl = registry.get(name);
   if (!impl) throw new CatalogError(`Unknown catalog data access "${name}"`);
-  const dialect = process.env.CATALOG_DB_DIALECT || "sqlite";
-  if (impl.dialect !== dialect)
+  const dialect = configuredDialect() || "sqlite";
+  if (impl.dialect && impl.dialect !== dialect)
     throw new CatalogError(
       `Catalog data access "${name}" uses dialect "${impl.dialect}", not "${dialect}"`,
     );
