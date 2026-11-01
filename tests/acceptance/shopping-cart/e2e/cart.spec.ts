@@ -125,7 +125,7 @@ test.describe("shopping cart", () => {
   });
 
   // case: SWHR2-C-0089@v1
-  test("[SWHR2-C-0089] Check Out from a non-empty cart opens order information entry", async ({
+  test("SWHR2-C-0089: Check Out from a non-empty cart opens order information entry", async ({
     page,
   }) => {
     await signIn(page);

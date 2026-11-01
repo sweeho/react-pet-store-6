@@ -68,7 +68,7 @@ async function signInCustomer(page: Page) {
 
 test.describe("sign-on", () => {
   // case: SWHR2-C-0252@v1
-  test("[SWHR2-C-0252] a visitor who is not signed in and checks out is sent to sign in first", async ({
+  test("SWHR2-C-0252: a visitor who is not signed in and checks out is sent to sign in first", async ({
     page,
   }) => {
     await page.goto("/petstore/item/EST-1");
