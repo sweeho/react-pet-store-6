@@ -82,14 +82,19 @@ export default function PetstoreConfirmOrder() {
       return;
     }
     setBusy(false);
-    const body = (await res?.json().catch(() => ({}))) as {
-      kind?: string;
-      kinds?: string[];
-      message?: string;
-      trace?: string;
+    // The server wraps a failure in an h3 error body: the reply is its `data`, and the dev
+    // server adds the raw `stack` frames beside it.
+    type Reply = { kind?: string; kinds?: string[]; message?: string; trace?: string };
+    const body = (await res?.json().catch(() => ({}))) as Reply & {
+      stack?: string[];
+      data?: Reply;
     };
-    void navigate(routeFailure({ kind: body?.kind ?? "", kinds: body?.kinds ?? [] }), {
-      state: { message: body?.message, trace: body?.trace },
+    const reply: Reply = body?.data ?? body ?? {};
+    void navigate(routeFailure({ kind: reply.kind ?? "", kinds: reply.kinds ?? [] }), {
+      state: {
+        message: reply.message ?? body?.message,
+        trace: reply.trace || body?.stack?.join("\n"),
+      },
     });
   };
 

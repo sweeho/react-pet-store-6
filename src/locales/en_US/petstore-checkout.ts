@@ -11,7 +11,7 @@ const definition: ScreenDefinition = {
   givenName: "Given name",
   familyName: "Family name",
   street: "Street address",
-  street2: "Street address line 2",
+  street2: "Address line 2",
   city: "City",
   state: "State",
   zip: "Postal code",
