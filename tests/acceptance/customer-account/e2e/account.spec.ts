@@ -116,6 +116,9 @@ test.describe("sign up", () => {
   test("SWHR2-C-0174: a first-time visitor signs up, enters account information and can then buy", async ({
     page,
   }) => {
+    // sign up, account entry, cart and checkout in one test: more than the suite's 15s budget
+    // on a cold dev server shared by parallel workers
+    test.slow();
     await page.goto("/petstore/signin");
     await fillSignUp(page, "firsttimer", "secret1", "secret1");
     await submitSignUp(page);
