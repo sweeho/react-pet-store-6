@@ -1,9 +1,11 @@
-import { eq } from "drizzle-orm";
 import { XMLBuilder, XMLParser } from "fast-xml-parser";
 
 import { db } from "../../db/client";
-import { opOrderWorkflow } from "../../db/schema";
+import { buildSupplierOrder } from "../documents/supplier-order";
 import type { Executor } from "../ids";
+import { readPurchaseOrder } from "./receive";
+import { handOff } from "./transitions";
+import { setStatus } from "./workflow";
 
 export const ORDER_APPROVAL_CHANNEL = "order.approval";
 
@@ -37,12 +39,34 @@ export function readApprovalBatch(xml: string): DecisionEntry[] {
   });
 }
 
-/** Moves a PENDING order to APPROVED or DENIED; any other order or value is left unchanged. */
+/**
+ * Moves a PENDING order to APPROVED or DENIED; any other order, value or current status is left
+ * unchanged. An order that becomes APPROVED is handed to the supplier as a supplier order document
+ * in the same transaction, so a failed hand-off undoes the approval (SWHR2-R-0100, SWHR2-R-0140).
+ */
 export function applyDecision(tx: Executor, orderId: string, status: string): void {
   if (status !== "APPROVED" && status !== "DENIED") return;
-  const row = tx.select().from(opOrderWorkflow).where(eq(opOrderWorkflow.orderId, orderId)).get();
-  if (row?.status !== "PENDING") return;
-  tx.update(opOrderWorkflow).set({ status }).where(eq(opOrderWorkflow.orderId, orderId)).run();
+  if (!setStatus(tx, orderId, status) || status !== "APPROVED") return;
+  const po = readPurchaseOrder(tx, orderId);
+  if (!po) throw new Error(`Approved order ${orderId} has no stored purchase order.`);
+  const xml = buildSupplierOrder({
+    orderId: po.orderId,
+    userId: po.userId,
+    orderDate: new Date(po.orderDate).toISOString(),
+    shipping: {
+      firstName: po.shipping.givenName,
+      lastName: po.shipping.familyName,
+      street: po.shipping.street,
+      city: po.shipping.city,
+      state: po.shipping.state,
+      country: po.shipping.country,
+      zip: po.shipping.zip,
+      email: po.shipping.email,
+      phone: po.shipping.phone,
+    },
+    lines: po.lines,
+  });
+  handOff("approval", [xml], tx);
 }
 
 /** Applies every entry of an approval document in one transaction. */

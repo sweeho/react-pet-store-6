@@ -1,11 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import {
-  fulfilment,
-  messages,
-  supplierOrder,
-} from "../../tests/acceptance/order-fulfillment/harness";
+import { fulfilment, messages, supplierOrder } from "./fulfilmentHarness";
 
 describe("invoice receipt", () => {
   it("[SWHR2-C-0108] reads shipped quantities", async () => {

@@ -1,11 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  fulfilment,
-  messages,
-  purchaseOrder,
-} from "../../tests/acceptance/order-fulfillment/harness";
+import { fulfilment, messages, purchaseOrder } from "../orders/fulfilmentHarness";
 
 describe("channels", () => {
   it("[SWHR2-C-0135] the fulfilment channels accept messages", async () => {
@@ -45,7 +41,7 @@ describe("channels", () => {
   });
 
   it("[SWHR2-C-0118] placing an order leaves it pending for the worker", async () => {
-    const { shopper } = await import("../../tests/acceptance/checkout/harness");
+    const { shopper } = await import("../orders/testHarness");
     const app = await shopper();
     expect((await app.place()).status).toBe(200);
     expect(

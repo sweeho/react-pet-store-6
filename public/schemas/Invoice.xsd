@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://petstore.example/schemas/Invoice" xmlns="http://petstore.example/schemas/Invoice" elementFormDefault="qualified">
+  <xsd:element name="Invoice">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="OrderId" type="xsd:string"/>
+        <xsd:element name="UserId" type="xsd:string"/>
+        <xsd:element name="ShippingDate" type="xsd:date"/>
+        <xsd:element name="LineItem" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:attribute name="lineNumber" type="xsd:nonNegativeInteger" use="required"/>
+            <xsd:attribute name="itemId" type="xsd:string" use="required"/>
+            <xsd:attribute name="quantity" type="xsd:positiveInteger" use="required"/>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

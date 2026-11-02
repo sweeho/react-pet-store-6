@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { count, fulfilment, supplierOrder } from "../../tests/acceptance/order-fulfillment/harness";
+import { count, fulfilment, supplierOrder } from "../orders/fulfilmentHarness";
 
 describe("supplier orders", () => {
   it("[SWHR2-C-0102] status is restricted to four values", async () => {

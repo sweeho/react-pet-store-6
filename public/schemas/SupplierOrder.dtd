@@ -1,0 +1,22 @@
+<!ELEMENT SupplierOrder (OrderId, OrderDate, ShippingAddress, LineItem+)>
+<!ATTLIST SupplierOrder userId CDATA #REQUIRED>
+<!ELEMENT OrderId (#PCDATA)>
+<!ELEMENT OrderDate (#PCDATA)>
+<!ELEMENT ShippingAddress (FirstName, LastName, Street, City, State, Country, ZipCode, Email, Phone)>
+<!ELEMENT FirstName (#PCDATA)>
+<!ELEMENT LastName (#PCDATA)>
+<!ELEMENT Street (#PCDATA)>
+<!ELEMENT City (#PCDATA)>
+<!ELEMENT State (#PCDATA)>
+<!ELEMENT Country (#PCDATA)>
+<!ELEMENT ZipCode (#PCDATA)>
+<!ELEMENT Email (#PCDATA)>
+<!ELEMENT Phone (#PCDATA)>
+<!ELEMENT LineItem EMPTY>
+<!ATTLIST LineItem
+  lineNumber CDATA #REQUIRED
+  categoryId CDATA #REQUIRED
+  productId CDATA #REQUIRED
+  itemId CDATA #REQUIRED
+  quantity CDATA #REQUIRED
+  unitPrice CDATA #REQUIRED>
