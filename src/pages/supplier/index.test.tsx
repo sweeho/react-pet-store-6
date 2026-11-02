@@ -46,7 +46,11 @@ describe("supplier area", () => {
   it("[SWHR2-C-0255] opens the supplier home once signed in", async () => {
     setup(200);
     await submit();
-    expect(await screen.findByRole("button", { name: /log out/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /logout/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /display inventory/i })).toHaveAttribute(
+      "href",
+      "/supplier/inventory",
+    );
     expect(screen.queryByLabelText(/user id/i)).not.toBeInTheDocument();
   });
 

@@ -2,11 +2,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { listInventory } from "../../../services/supplier/inventory";
-import { call, cookieValue, loadApp, SUPPLIER } from "../../../tests/acceptance/sign-on/harness";
+import { call, loadApp } from "../../../services/customers/testHarness";
+
+const SUPPLIER = { userId: "supplier", password: "supplier-pw" };
+const cookieValue = (setCookies: string[], name: string) =>
+  setCookies.map((c) => c.match(new RegExp(`^${name}=([^;]*)`))?.[1]).find(Boolean);
 
 type App = Awaited<ReturnType<typeof loadApp>>;
-const LIST = "../../../routes/api/supplier/inventory.get";
-const UPDATE = "../../../routes/api/supplier/inventory.post";
+const LIST = "supplier/inventory.get";
+const UPDATE = "supplier/inventory.post";
 
 // Raw seeding starts with a read through the service, so the store is known to answer first.
 const seed = (app: App, rows: [string, number][]) => {
@@ -27,7 +31,7 @@ const msgs = (app: App) =>
   app.client.query("select id from messages where channel = 'supplier.inventory-changed'").all();
 
 async function cookies(app: App) {
-  const r = await call(app, "../../../routes/api/supplier/sign-in.post", {
+  const r = await call(app, "supplier/sign-in.post", {
     method: "POST",
     url: "/api/supplier/sign-in",
     json: SUPPLIER,
@@ -41,6 +45,7 @@ describe("supplier inventory routes", () => {
   let app: App;
   beforeEach(async () => {
     app = await loadApp();
+    process.env.SUPPLIER_USERS = `${SUPPLIER.userId}:${await Bun.password.hash(SUPPLIER.password)}`;
     seed(app, [
       ["EST-1", 40],
       ["EST-2", 0],

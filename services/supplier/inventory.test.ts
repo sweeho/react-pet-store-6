@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { loadApp } from "../../tests/acceptance/sign-on/harness";
+import { loadApp } from "../customers/testHarness";
 import { listInventory } from "./inventory";
 
 type App = Awaited<ReturnType<typeof loadApp>>;

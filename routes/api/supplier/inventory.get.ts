@@ -1,5 +1,12 @@
 import { defineHandler } from "nitro/h3";
 
-export default defineHandler(() => {
-  throw new Error("VortexNotImplemented");
-});
+import { guardRoute } from "../../../services/errors";
+import { requireSupplier } from "../../../services/session/guards";
+import { listInventory } from "../../../services/supplier/inventory";
+
+export default defineHandler((event) =>
+  guardRoute(() => {
+    requireSupplier(event);
+    return listInventory();
+  }),
+);

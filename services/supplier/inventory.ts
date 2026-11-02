@@ -1,23 +1,58 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- red-phase stubs */
+import { eq, sql } from "drizzle-orm";
+
+import { db } from "../../db/client";
+import { supInventory } from "../../db/schema";
 import type { Executor } from "../ids";
+import { enqueue } from "../messaging";
 
 export interface StockRow {
   itemId: string;
   quantity: number;
 }
 
-const stub = (): never => {
-  throw new Error("VortexNotImplemented");
-};
+export const INVENTORY_CHANGED_CHANNEL = "supplier.inventory-changed";
 
-export function listInventory(_exec?: Executor): StockRow[] {
-  return stub();
+const natural = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true });
+
+/** Every stock record, in natural item order (EST-2 before EST-10). */
+export function listInventory(exec: Executor = db): StockRow[] {
+  return exec
+    .select()
+    .from(supInventory)
+    .all()
+    .sort((a, b) => natural(a.itemId, b.itemId));
 }
 
-export function updateInventory(_changes: StockRow[], _exec?: Executor): void {
-  stub();
+/**
+ * Overwrites (or creates) each record and enqueues one `supplier.inventory-changed` message, in
+ * one transaction. A change list that is empty writes and enqueues nothing.
+ */
+export function updateInventory(changes: StockRow[], exec?: Executor): void {
+  if (changes.length === 0) return;
+  const run = (tx: Executor) => {
+    for (const { itemId, quantity } of changes)
+      tx.insert(supInventory)
+        .values({ itemId, quantity })
+        .onConflictDoUpdate({ target: supInventory.itemId, set: { quantity } })
+        .run();
+    enqueue(
+      tx,
+      INVENTORY_CHANGED_CHANNEL,
+      JSON.stringify({ itemIds: changes.map((c) => c.itemId) }),
+    );
+  };
+  if (exec) run(exec);
+  else db.transaction(run);
 }
 
-export function reduceStock(_exec: Executor, _itemId: string, _quantity: number): boolean {
-  return stub();
+/** Subtracts `quantity` when the record holds at least that much; otherwise changes nothing. */
+export function reduceStock(exec: Executor, itemId: string, quantity: number): boolean {
+  const row = exec.select().from(supInventory).where(eq(supInventory.itemId, itemId)).get();
+  if (!row || row.quantity < quantity) return false;
+  exec
+    .update(supInventory)
+    .set({ quantity: sql`${supInventory.quantity} - ${quantity}` })
+    .where(eq(supInventory.itemId, itemId))
+    .run();
+  return true;
 }
