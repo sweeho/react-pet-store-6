@@ -21,7 +21,7 @@ Work the `tasks.md` groups in order. Tick nothing yourself; the platform ticks t
 5. **Order notifications** (§5; P4, P5). In `decide.ts#applyDecision`, enqueue `notify.approval` `{ orderId, status }` when the status moves. In `invoice.ts#handleInvoice`, enqueue `notify.completed` `{ orderId }` when the order becomes COMPLETED. Add the handlers in `services/notifications/handlers.ts` (`notify.approval`, `supplier.invoice/notify.shipment`, `notify.completed`), registered in the worker's handler map. Each handler checks its switch. When the switch is off it returns, so the row is consumed with no mail. When on, it renders from `services/notifications/templates/<locale>.ts`, falling back to en_US, and enqueues one `mail.outbound` triple to `op_purchase_orders.email`. The subjects are:
    - approval: `Order Status: <id>`
    - completion: `Java Pet Store Order COMPLETED: <id>`, with a body stating that the entire order has shipped and listing category, product, quantity and unit price per line through `shared/i18n/format.ts`
-   - shipment: a subject that contains neither "Order Status:" nor "COMPLETED"
+   - shipment: a subject that contains the order id but neither "Order Status:" nor "COMPLETED"
 6. **Test harness** (§6). Unit tests beside each new module, shaped like `services/orders/decide.test.ts`; mock `nodemailer` with a capturing transport as the locked harness does. Extend `services/messaging/worker.test.ts` for the async path and the `failed` row. Do not edit `tests/acceptance/**`.
 7. **CI.** No workflow change. The existing job must be green on the ticket branch.
 
@@ -41,6 +41,10 @@ These are fixed by the locked suite. Do not rename them.
 Create: `services/notifications/request.ts`, `send.ts`, `config.ts`, `handlers.ts` and `templates/{en_US,ja_JP,zh_CN}.ts`, plus a `*.test.ts` beside each new module.
 Modify: `services/messaging/index.ts`, `services/messaging/worker.ts` (+ `worker.test.ts`), `services/orders/decide.ts`, `services/orders/invoice.ts`, and `package.json`/`bun.lock` (add `nodemailer` and `@types/nodemailer`).
 
+## Deferred case (linked here)
+
+SWHR2-C-0136 (`tests/acceptance/order-fulfillment/messaging.test.ts`) was deferred to this brief by SWHR2-S-0030 because it loads this change's `mailApp()` harness. With the shipment switch on, one `supplier.invoice` message must produce exactly one e-mail whose subject contains the order id. Both subscriber rows (`order-processing.invoice`, `notify.shipment`) must end `delivered`, and nothing may be left due.
+
 ## Definition of Done
 
-AC-1 … AC-22 on the ticket, one per scenario, each proven by its locked case SWHR2-C-0046 … SWHR2-C-0067. The existing order-approval and order-fulfillment acceptance suites must stay green.
+AC-1 … AC-22 on the ticket, one per scenario, each proven by its locked case SWHR2-C-0046 … SWHR2-C-0067, plus the deferred SWHR2-C-0136. The existing order-approval and order-fulfillment acceptance suites must stay green.
