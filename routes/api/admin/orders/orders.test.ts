@@ -49,6 +49,29 @@ describe("admin order routes", () => {
     expect((await get("/api/admin/orders")).status).toBe(400);
   });
 
+  it("[SWHR2-C-0013] an unused status returns an empty list", async () => {
+    const app = await loadOrders();
+    await deliver({ orderId: "1001", locale: "en_US", total: 600 });
+    const cookies = await adminCookies(app);
+    const r = await call(app, "../../routes/api/admin/orders/index.get", {
+      url: "/api/admin/orders?status=DENIED",
+      cookies,
+    });
+    expect(r.body).toEqual([]);
+  });
+
+  it("[SWHR2-C-0014] lists each pending order exactly once", async () => {
+    const app = await loadOrders();
+    for (const id of ["2001", "2002", "2003"])
+      await deliver({ orderId: id, locale: "en_US", total: 1 });
+    const cookies = await adminCookies(app);
+    const r = await call(app, "../../routes/api/admin/orders/index.get", {
+      url: "/api/admin/orders?status=PENDING",
+      cookies,
+    });
+    expect((r.body as { id: string }[]).map((o) => o.id)).toEqual(["2001", "2002", "2003"]);
+  });
+
   it("rejects an empty decision list and enqueues nothing", async () => {
     const app = await loadOrders();
     const cookies = await adminCookies(app);
