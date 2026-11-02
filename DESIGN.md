@@ -40,6 +40,19 @@ Three shared frames live in `src/components/shell/`, centred in the content well
 
 Capability-specific wording, such as "Your Shopping Cart is Empty.", is passed in as the frame's message. Do not build a bespoke empty, error or spinner block.
 
+## Status colours
+
+An order workflow status is shown as its stored upper-case value in a small rounded badge, and the label is always visible beside the colour, so colour is never the only signal (WCAG 1.4.1). The badge uses Tailwind palette utilities, not theme tokens, because the hue name is part of the contract the order tools are tested against:
+
+| Status    | Badge classes                   |
+| --------- | ------------------------------- |
+| PENDING   | `bg-yellow-100 text-yellow-800` |
+| APPROVED  | `bg-green-100 text-green-800`   |
+| DENIED    | `bg-red-100 text-red-800`       |
+| COMPLETED | `bg-slate-100 text-slate-700`   |
+
+Any later screen that lists orders (sales reporting, fulfilment) reuses the same badge rather than choosing new colours.
+
 ## Accessibility
 
 - Landmarks: exactly one `banner`, one global `navigation`, one `main` and one `contentinfo` per page.
