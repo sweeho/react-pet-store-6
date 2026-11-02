@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 
 import { ChartPanel } from "@/components/admin/ChartPanel";
 import type { ChartPoint } from "@/components/admin/ChartPanel";
-import { OrderTable } from "@/components/admin/OrderTable";
+import OrderTable from "@/components/admin/OrderTable";
 import { PendingTable } from "@/components/admin/PendingTable";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import type { Decision, OrderRow } from "@/components/admin/types";
@@ -47,12 +47,14 @@ type Raw = Partial<{
   status: string;
 }>;
 
+/** The orders route replies with the row array; a `{ orders | items }` object is accepted too. */
 async function loadOrders(status: string): Promise<OrderRow[]> {
-  const body = (await getJson(`/api/admin/orders?status=${status}`)) as {
-    orders?: Raw[];
-    items?: Raw[];
-  } | null;
-  return (body?.orders ?? body?.items ?? []).map((o) => ({
+  const body = (await getJson(`/api/admin/orders?status=${status}`)) as
+    | Raw[]
+    | { orders?: Raw[]; items?: Raw[] }
+    | null;
+  const list = Array.isArray(body) ? body : (body?.orders ?? body?.items ?? []);
+  return list.map((o) => ({
     id: o.orderId ?? o.id ?? "",
     userId: o.userId ?? "",
     date: o.date ?? "",
@@ -61,7 +63,7 @@ async function loadOrders(status: string): Promise<OrderRow[]> {
   }));
 }
 
-async function loadChart(kind: "revenue" | "order-count", range: Range): Promise<ChartPoint[]> {
+async function loadChart(kind: "revenue" | "order-counts", range: Range): Promise<ChartPoint[]> {
   const start = toIso(range.start);
   const end = toIso(range.end);
   if (!start || !end) return [];
@@ -72,6 +74,11 @@ async function loadChart(kind: "revenue" | "order-count", range: Range): Promise
 const tabClass = (selected: boolean) =>
   `flex h-10 items-center gap-2 border-b-2 -mb-px text-sm font-medium outline-none ${
     selected ? "border-primary text-primary" : "text-muted-foreground border-transparent"
+  }`;
+
+const viewClass = (selected: boolean) =>
+  `flex h-[30px] items-center rounded-md px-3.5 text-sm font-medium outline-none ${
+    selected ? "bg-background text-foreground ring-border ring-1" : "text-muted-foreground"
   }`;
 
 const Count = ({ n }: { n: number }) => (
@@ -113,7 +120,7 @@ export default function Tool() {
       void apply(loadOrders(status), (rows) => setOrders((o) => ({ ...o, [status]: rows })));
     }
     void apply(loadChart("revenue", range), (revenue) => setCharts((c) => ({ ...c, revenue })));
-    void apply(loadChart("order-count", range), (count) => setCharts((c) => ({ ...c, count })));
+    void apply(loadChart("order-counts", range), (count) => setCharts((c) => ({ ...c, count })));
     await apply(loadOrders("PENDING"), (rows) => {
       setOrders((o) => ({ ...o, PENDING: rows }));
       setMarks({});
@@ -140,7 +147,7 @@ export default function Tool() {
     try {
       const [revenue, count] = await Promise.all([
         loadChart("revenue", draft),
-        loadChart("order-count", draft),
+        loadChart("order-counts", draft),
       ]);
       setCharts({ revenue, count });
       setApplied(draft);
@@ -193,9 +200,9 @@ export default function Tool() {
     <div>
       <div className="mb-4 flex items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl leading-8 font-semibold">Order approval</h1>
+          <h1 className="text-2xl leading-8 font-semibold">Orders and sales</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Mark orders that were not auto-approved, then commit every decision together.
+            Approve or deny pending orders, review decided ones and see sales by category.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -250,107 +257,153 @@ export default function Tool() {
       )}
 
       <TabGroup>
-        <TabList className="mb-4 flex gap-6 border-b">
-          <Tab className={({ selected: s }) => tabClass(s)}>
-            Pending <Count n={pending.length} />
-          </Tab>
-          <Tab className={({ selected: s }) => tabClass(s)}>
-            Non-pending <Count n={nonPending.length} />
-          </Tab>
+        <TabList className="bg-muted mb-4 flex w-fit gap-1 rounded-lg border p-[3px]">
+          <Tab className={({ selected: s }) => viewClass(s)}>Orders</Tab>
+          <Tab className={({ selected: s }) => viewClass(s)}>Sales</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
-            <div className="mb-3 flex min-h-9 items-center gap-2">
-              <span className="text-muted-foreground mr-1 text-xs">
-                <b className="text-foreground">{selected.size}</b> selected
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
+            <TabGroup>
+              <TabList className="mb-4 flex gap-6 border-b">
+                <Tab className={({ selected: s }) => tabClass(s)}>
+                  Pending <Count n={pending.length} />
+                </Tab>
+                <Tab className={({ selected: s }) => tabClass(s)}>
+                  Non-pending <Count n={nonPending.length} />
+                </Tab>
+              </TabList>
+              <TabPanels>
+                <TabPanel>
+                  <div className="mb-3 flex min-h-9 items-center gap-2">
+                    <span className="text-muted-foreground mr-1 text-xs">
+                      <b className="text-foreground">{selected.size}</b> selected
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={off}
+                      onClick={() => mark("APPROVED")}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={off}
+                      onClick={() => mark("DENIED")}
+                    >
+                      Deny
+                    </Button>
+                    <span className="text-muted-foreground ml-auto flex items-center gap-4 text-xs">
+                      <span className="flex items-center gap-1">
+                        <StatusBadge status="PENDING" /> not decided
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <StatusBadge status="APPROVED" /> will be approved
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <StatusBadge status="DENIED" /> will be denied
+                      </span>
+                    </span>
+                  </div>
+                  <PendingTable
+                    rows={pending}
+                    marks={marks}
+                    selected={selected}
+                    onToggle={(id) =>
+                      setSelected((s) => {
+                        const n = new Set(s);
+                        if (!n.delete(id)) n.add(id);
+                        return n;
+                      })
+                    }
+                    onToggleAll={() =>
+                      setSelected((s) =>
+                        s.size === pending.length ? new Set() : new Set(pending.map((r) => r.id)),
+                      )
+                    }
+                  />
+                  <div className="bg-muted mt-4 flex items-center gap-3 rounded-lg border px-4 py-3 text-sm">
+                    <span className="bg-primary size-2 rounded-full" aria-hidden="true" />
+                    <span>
+                      <b>{marked.length} decisions not committed</b>
+                      {marked.length > 0 &&
+                        ` — ${approved} approved, ${marked.length - approved} denied. No order changes until you commit.`}
+                    </span>
+                    <span className="text-muted-foreground ml-auto text-xs">
+                      {pending.length} pending
+                    </span>
+                  </div>
+                </TabPanel>
+                <TabPanel>
+                  <OrderTable orders={nonPending} />
+                </TabPanel>
+              </TabPanels>
+            </TabGroup>
+
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <ChartPanel
+                id="revenue"
+                title="Revenue by category"
+                kind="pie"
+                data={charts.revenue}
+                {...draft}
                 disabled={off}
-                onClick={() => mark("APPROVED")}
-              >
-                Approve
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
+                onChange={setDraft}
+                onSubmit={() => void submitRange()}
+              />
+              <ChartPanel
+                id="count"
+                title="Orders by category"
+                kind="bar"
+                data={charts.count}
+                {...draft}
                 disabled={off}
-                onClick={() => mark("DENIED")}
-              >
-                Deny
-              </Button>
-              <span className="text-muted-foreground ml-auto flex items-center gap-4 text-xs">
-                <span className="flex items-center gap-1">
-                  <StatusBadge status="PENDING" /> not decided
-                </span>
-                <span className="flex items-center gap-1">
-                  <StatusBadge status="APPROVED" /> will be approved
-                </span>
-                <span className="flex items-center gap-1">
-                  <StatusBadge status="DENIED" /> will be denied
-                </span>
-              </span>
-            </div>
-            <PendingTable
-              rows={pending}
-              marks={marks}
-              selected={selected}
-              onToggle={(id) =>
-                setSelected((s) => {
-                  const n = new Set(s);
-                  if (!n.delete(id)) n.add(id);
-                  return n;
-                })
-              }
-              onToggleAll={() =>
-                setSelected((s) =>
-                  s.size === pending.length ? new Set() : new Set(pending.map((r) => r.id)),
-                )
-              }
-            />
-            <div className="bg-muted mt-4 flex items-center gap-3 rounded-lg border px-4 py-3 text-sm">
-              <span className="bg-primary size-2 rounded-full" aria-hidden="true" />
-              <span>
-                <b>{marked.length} decisions not committed</b>
-                {marked.length > 0 &&
-                  ` — ${approved} approved, ${marked.length - approved} denied. No order changes until you commit.`}
-              </span>
-              <span className="text-muted-foreground ml-auto text-xs">
-                {pending.length} pending
-              </span>
+                onChange={setDraft}
+                onSubmit={() => void submitRange()}
+              />
             </div>
           </TabPanel>
           <TabPanel>
-            <OrderTable rows={nonPending} />
+            <TabGroup>
+              <TabList className="mb-4 flex gap-6 border-b">
+                <Tab className={({ selected: s }) => tabClass(s)}>Pie chart</Tab>
+                <Tab className={({ selected: s }) => tabClass(s)}>Bar chart</Tab>
+              </TabList>
+              <TabPanels>
+                <TabPanel>
+                  <ChartPanel
+                    id="pie"
+                    title="Revenue by category"
+                    kind="pie"
+                    large
+                    data={charts.revenue}
+                    {...draft}
+                    disabled={off}
+                    onChange={setDraft}
+                    onSubmit={() => void submitRange()}
+                  />
+                </TabPanel>
+                <TabPanel>
+                  <ChartPanel
+                    id="bar"
+                    title="Orders by category"
+                    kind="bar"
+                    large
+                    data={charts.count}
+                    {...draft}
+                    disabled={off}
+                    onChange={setDraft}
+                    onSubmit={() => void submitRange()}
+                  />
+                </TabPanel>
+              </TabPanels>
+            </TabGroup>
           </TabPanel>
         </TabPanels>
       </TabGroup>
-
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
-        <ChartPanel
-          id="revenue"
-          title="Revenue by category"
-          kind="pie"
-          data={charts.revenue}
-          {...draft}
-          disabled={off}
-          onChange={setDraft}
-          onSubmit={() => void submitRange()}
-        />
-        <ChartPanel
-          id="count"
-          title="Orders by category"
-          kind="bar"
-          data={charts.count}
-          {...draft}
-          disabled={off}
-          onChange={setDraft}
-          onSubmit={() => void submitRange()}
-        />
-      </div>
     </div>
   );
 }

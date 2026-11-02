@@ -28,6 +28,6 @@ export const areas: Area[] = [
   { label: "Sign in", to: "/petstore/signin", group: "Account", icon: "log-in" },
   { label: "Account & profile", to: "/petstore/account", group: "Account", icon: "user" },
   { label: "Order approval", to: "/admin", group: "Administration", icon: "check-square" },
-  { label: "Sales reporting", to: "/admin", group: "Administration", icon: "bar-chart" },
+  { label: "Orders and sales", to: "/admin/tool", group: "Administration", icon: "bar-chart" },
   { label: "Supplier inventory", to: "/supplier", group: "Supplier", icon: "package" },
 ];
