@@ -17,11 +17,15 @@ function at(text: string | undefined): number | undefined {
   return Number.isNaN(t) ? undefined : t;
 }
 
-/** Revenue or order count per product category over orders dated from `start` to `end` inclusive. */
+/**
+ * Revenue or order count over orders dated from `start` to `end` inclusive: per product category,
+ * or per item of `category` when one is named.
+ */
 export function salesByCategory(
   kind: "revenue" | "count",
   start: string | undefined,
   end: string | undefined,
+  category?: string,
 ): SalesPoint[] {
   const from = at(start) ?? 0;
   const to = (at(end) ?? Number.MAX_SAFE_INTEGER - DAY_MS) + DAY_MS;
@@ -29,8 +33,10 @@ export function salesByCategory(
     kind === "revenue"
       ? sql<number>`sum(${opPoLineItems.quantity} * ${opPoLineItems.unitPrice}) / 100.0`
       : sql<number>`count(distinct ${opPoLineItems.orderId})`;
+  const perItem = category !== undefined && category !== "";
+  const group = perItem ? opPoLineItems.itemId : opPoLineItems.categoryId;
   const rows = db
-    .select({ key: opPoLineItems.categoryId, label: catalogCategoryDetails.name, value })
+    .select({ key: group, label: catalogCategoryDetails.name, value })
     .from(opPoLineItems)
     .innerJoin(opPurchaseOrders, eq(opPurchaseOrders.orderId, opPoLineItems.orderId))
     .leftJoin(
@@ -40,8 +46,18 @@ export function salesByCategory(
         eq(catalogCategoryDetails.locale, "en_US"),
       ),
     )
-    .where(and(gte(opPurchaseOrders.orderDate, from), lt(opPurchaseOrders.orderDate, to)))
-    .groupBy(opPoLineItems.categoryId)
+    .where(
+      and(
+        gte(opPurchaseOrders.orderDate, from),
+        lt(opPurchaseOrders.orderDate, to),
+        perItem ? eq(opPoLineItems.categoryId, category) : undefined,
+      ),
+    )
+    .groupBy(group)
     .all();
-  return rows.map((r) => ({ key: r.key, label: r.label ?? r.key, value: Number(r.value) }));
+  return rows.map((r) => ({
+    key: r.key,
+    label: perItem ? r.key : (r.label ?? r.key),
+    value: Number(r.value),
+  }));
 }

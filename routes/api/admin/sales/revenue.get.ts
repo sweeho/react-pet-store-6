@@ -4,7 +4,7 @@ import { guardRoute } from "../../../../services/errors";
 import { salesByCategory } from "../../../../services/orders/sales";
 import { requireAdmin } from "../../../../services/session/guards";
 
-/** revenue per category over orders dated from `start` to `end` (ISO dates). */
+/** revenue per category (per item when `category` is given) over orders dated from `start` to `end` (ISO dates). */
 export default defineHandler((event) =>
   guardRoute(() => {
     requireAdmin(event);
@@ -13,6 +13,7 @@ export default defineHandler((event) =>
       "revenue",
       q.start ? String(q.start) : undefined,
       q.end ? String(q.end) : undefined,
+      q.category ? String(q.category) : undefined,
     );
   }),
 );

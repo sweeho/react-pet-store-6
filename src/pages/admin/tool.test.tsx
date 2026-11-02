@@ -109,7 +109,7 @@ describe("administration tool", () => {
     await openTool();
     expect(statusUrls(f.calls).sort()).toEqual(["APPROVED", "COMPLETED", "DENIED", "PENDING"]);
     expect(f.calls.some((c) => /sales\/revenue/.test(c.url))).toBe(true);
-    expect(f.calls.some((c) => /sales\/order-count/.test(c.url))).toBe(true);
+    expect(f.calls.some((c) => /sales\/order-counts/.test(c.url))).toBe(true);
   });
 
   it("[SWHR2-C-0241] refresh reloads the four statuses and charts", async () => {

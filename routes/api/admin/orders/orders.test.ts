@@ -21,7 +21,7 @@ describe("admin order routes", () => {
   it("[SWHR2-C-0012] lists orders by status as a bare array with M/D/YYYY dates", async () => {
     const app = await loadOrders();
     await deliver({ orderId: "1001", locale: "en_US", total: 600 });
-    await deliver({ orderId: "1002", locale: "en_US", total: 100 });
+    await deliver({ orderId: "1002", locale: "en_US", total: 700 });
     const cookies = await adminCookies(app);
     const get = (status: string) =>
       call(app, "../../routes/api/admin/orders/index.get", {
@@ -63,7 +63,7 @@ describe("admin order routes", () => {
   it("[SWHR2-C-0014] lists each pending order exactly once", async () => {
     const app = await loadOrders();
     for (const id of ["2001", "2002", "2003"])
-      await deliver({ orderId: id, locale: "en_US", total: 1 });
+      await deliver({ orderId: id, locale: "en_US", total: 600 });
     const cookies = await adminCookies(app);
     const r = await call(app, "../../routes/api/admin/orders/index.get", {
       url: "/api/admin/orders?status=PENDING",

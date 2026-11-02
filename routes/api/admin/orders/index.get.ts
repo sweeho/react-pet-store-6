@@ -6,20 +6,24 @@ import { opOrderWorkflow, opPurchaseOrders } from "../../../../db/schema";
 import { guardRoute } from "../../../../services/errors";
 import { requireAdmin } from "../../../../services/session/guards";
 
-const STATUSES = ["PENDING", "APPROVED", "DENIED", "COMPLETED"];
+/** `M/D/YYYY` in UTC. */
+const mdy = (ms: number) => {
+  const d = new Date(ms);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+};
 
-/** The orders with one workflow status, by order id. Rows carry both the tool's and the table's field names. */
+/** The orders whose workflow status equals `status` exactly, by order id, as a bare array. Rows carry both the tool's and the table's field names. */
 export default defineHandler((event) =>
   guardRoute(() => {
     requireAdmin(event);
-    const status = String(getQuery(event).status ?? "");
-    if (!STATUSES.includes(status))
+    const status = getQuery(event).status;
+    if (typeof status !== "string" || status === "")
       throw new HTTPError({
         status: 400,
-        message: "Unknown status",
+        message: "Status is required",
         data: { kind: "InvalidStatus" },
       });
-    const orders = db
+    return db
       .select({
         orderId: opPurchaseOrders.orderId,
         userId: opPurchaseOrders.userId,
@@ -38,11 +42,10 @@ export default defineHandler((event) =>
         orderId: o.orderId,
         userId: o.userId,
         locale: o.locale,
-        date: new Date(o.orderDate).toISOString(),
+        date: mdy(o.orderDate),
         amount: o.total / 100,
         totalPrice: o.total / 100,
         status: o.status,
       }));
-    return { items: orders, orders };
   }),
 );
