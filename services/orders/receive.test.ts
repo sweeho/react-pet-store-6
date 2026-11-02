@@ -65,20 +65,21 @@ describe("purchase order storage", () => {
     for (const t of ORDER_TABLES) expect(count(client, t), t).toBe(0);
   });
 
-  it("[SWHR2-C-0220] receiving an order message stores the order, starts its workflow as PENDING and marks the message done", async () => {
+  it("[SWHR2-C-0220] receiving an order message stores the order, starts its workflow as PENDING and marks the message delivered", async () => {
     const { client, codec } = await app();
-    const { receiveOrder } = await import("./receive");
+    const { processDue } = await import("../messaging/worker");
+    const po = { ...purchaseOrder("10011"), total: 60000 };
     client.exec(
-      `insert into messages (channel, payload, status, created_at) values ('order.new', '${codec.toXml(purchaseOrder("10011")).replace(/'/g, "''")}', 'pending', 0)`,
+      `insert into messages (channel, payload, status, created_at) values ('order.new', '${codec.toXml(po).replace(/'/g, "''")}', 'pending', 0)`,
     );
     const { id } = client.query("select id from messages").get() as { id: number };
-    await receiveOrder(id);
+    expect(await processDue()).toBe(1);
     expect(
       client.query("select status from op_order_workflow where order_id = '10011'").get(),
     ).toEqual({ status: "PENDING" });
     expect(count(client, "op_purchase_orders")).toBe(1);
     expect(client.query("select status from messages where id = ?").get(id)).toEqual({
-      status: "done",
+      status: "delivered",
     });
   });
 });
