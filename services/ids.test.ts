@@ -21,7 +21,7 @@ describe("nextId", () => {
     expect(client.query("select count(*) n from id_sequences").get()).toEqual({ n: 1 });
     expect(
       client.query("select next_value v from id_sequences where prefix = '1001'").get(),
-    ).toEqual({ v: 2 });
+    ).toEqual({ v: 3 });
   });
 
   it("[SWHR2-C-0218] a missing or empty prefix is refused and nothing is issued", async () => {

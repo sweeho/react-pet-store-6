@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { purchaseOrder } from "../../tests/acceptance/checkout/harness";
+import { purchaseOrder } from "../orders/testHarness";
 import { fromXml, toXml } from "./purchase-order";
 
 describe("purchase order document", () => {

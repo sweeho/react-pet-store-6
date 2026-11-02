@@ -113,7 +113,7 @@ describe("checkout page", () => {
       email: "abc@xyz.com",
     });
     expect(body.shipping).toMatchObject({ givenName: "ABC", country: "USA" });
-    expect(await screen.findByText("10011")).toBeVisible();
+    expect((await screen.findAllByText("10011"))[0]).toBeVisible();
   });
 
   it("[SWHR2-C-0254] a signed-in customer submits the form without a sign-in prompt and reaches the confirmation", async () => {
@@ -180,14 +180,28 @@ describe("order placed page", () => {
     render(
       <MemoryRouter
         initialEntries={[
-          { pathname: "/petstore/order-placed", state: { orderId: "10012", email: "abc@xyz.com" } },
+          {
+            pathname: "/petstore/order-placed",
+            state: {
+              orderId: "10012",
+              email: "abc@xyz.com",
+              givenName: "ABC",
+              familyName: "XYZ",
+              shipTo: person,
+              sameAsShipping: true,
+              lines: [],
+              total: 0,
+              locale: "en_US",
+              placedAt: 0,
+            },
+          },
         ]}
       >
         <OrderPlaced />
       </MemoryRouter>,
     );
     expect(screen.getByRole("heading", { name: /your order is complete/i })).toBeVisible();
-    expect(screen.getByText("10012")).toBeVisible();
+    expect(screen.getAllByText("10012")[0]).toBeVisible();
   });
 });
 

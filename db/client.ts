@@ -16,6 +16,13 @@ import {
   customerAccounts,
   customerProfiles,
   customers,
+  idSequences,
+  messages,
+  opOrderWorkflow,
+  opPoCards,
+  opPoContacts,
+  opPoLineItems,
+  opPurchaseOrders,
   signonUsers,
   users,
 } from "./schema";
@@ -46,6 +53,13 @@ export const db = drizzle(sqlite, {
     catalogProductDetails,
     catalogItems,
     catalogItemDetails,
+    idSequences,
+    messages,
+    opPurchaseOrders,
+    opPoContacts,
+    opPoCards,
+    opPoLineItems,
+    opOrderWorkflow,
   },
 });
 
@@ -77,7 +91,7 @@ if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
     const address = tx
       .insert(addresses)
       .values({
-        street1: "901 San Antonio Road",
+        street1: "1 Main St",
         street2: "",
         city: "Palo Alto",
         state: "CA",
@@ -92,7 +106,7 @@ if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
         givenName: "ABC",
         familyName: "XYZ",
         telephone: "555-555-5555",
-        email: "j2ee@example.com",
+        email: "abc@xyz.com",
         addressId: address.id,
       })
       .returning()
@@ -137,6 +151,13 @@ const products: [string, string, string, L3, L3][] = [
     "fish1.gif",
     ["Angelfish", "エンゼルフィッシュ", "天使鱼"],
     ["Salt Water fish from Australia", "オーストラリア産の海水魚", "来自澳大利亚的海水鱼"],
+  ],
+  [
+    "FI-FW-01",
+    "FISH",
+    "fish3.gif",
+    ["Koi", "錦鯉", "锦鲤"],
+    ["Freshwater fish from Japan", "日本産の淡水魚", "来自日本的淡水鱼"],
   ],
   [
     "K9-BD-01",
@@ -196,6 +217,18 @@ const items: [string, string, string, L3, L3, readonly [number, number][]][] = [
       [1650, 1000],
       [195100, 155100],
       [14200, 8600],
+    ],
+  ],
+  [
+    "EST-4",
+    "FI-FW-01",
+    "fish3.jpg",
+    ["Spotless Koi", "斑点なしの錦鯉", "无斑锦鲤"],
+    ["Spotless", "斑点なし", "无斑"],
+    [
+      [1850, 1200],
+      [205000, 140000],
+      [15000, 9000],
     ],
   ],
   [

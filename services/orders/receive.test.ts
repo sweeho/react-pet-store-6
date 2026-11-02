@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { count, ORDER_TABLES, purchaseOrder } from "../../tests/acceptance/checkout/harness";
+import { count, ORDER_TABLES, purchaseOrder } from "../orders/testHarness";
 import { loadApp } from "../customers/testHarness";
 
 async function app() {
@@ -69,7 +69,7 @@ describe("purchase order storage", () => {
     const { client, codec } = await app();
     const { receiveOrder } = await import("./receive");
     client.exec(
-      `insert into messages (channel, payload, status) values ('order.new', '${codec.toXml(purchaseOrder("10011")).replace(/'/g, "''")}', 'pending')`,
+      `insert into messages (channel, payload, status, created_at) values ('order.new', '${codec.toXml(purchaseOrder("10011")).replace(/'/g, "''")}', 'pending', 0)`,
     );
     const { id } = client.query("select id from messages").get() as { id: number };
     await receiveOrder(id);
