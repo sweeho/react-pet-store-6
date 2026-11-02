@@ -1,0 +1,9 @@
+<!ELEMENT Invoice (OrderId, UserId, ShippingDate, LineItem+)>
+<!ELEMENT OrderId (#PCDATA)>
+<!ELEMENT UserId (#PCDATA)>
+<!ELEMENT ShippingDate (#PCDATA)>
+<!ELEMENT LineItem EMPTY>
+<!ATTLIST LineItem
+  lineNumber CDATA #REQUIRED
+  itemId CDATA #REQUIRED
+  quantity CDATA #REQUIRED>

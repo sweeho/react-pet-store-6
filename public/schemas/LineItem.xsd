@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://petstore.example/schemas/LineItem" xmlns="http://petstore.example/schemas/LineItem" elementFormDefault="qualified">
+  <xsd:element name="LineItem">
+    <xsd:complexType>
+      <xsd:attribute name="lineNumber" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="categoryId" type="xsd:string" use="required"/>
+      <xsd:attribute name="productId" type="xsd:string" use="required"/>
+      <xsd:attribute name="itemId" type="xsd:string" use="required"/>
+      <xsd:attribute name="quantity" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="unitPrice" type="xsd:decimal" use="required"/>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

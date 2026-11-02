@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog>
+  <system systemId="SupplierOrder" uri="public/schemas/SupplierOrder.dtd"/>
+  <system systemId="Invoice" uri="public/schemas/Invoice.dtd"/>
+  <system systemId="LineItem" uri="public/schemas/LineItem.dtd"/>
+</catalog>
