@@ -100,7 +100,8 @@ export async function getPurchaseOrder(orderId: string): Promise<PurchaseOrder |
  * Order processing's handler for one `order.new` message: decodes the document, stores the order,
  * starts its workflow as PENDING and marks the message done, in one transaction.
  */
-export async function receiveOrder(messageId: number): Promise<void> {
+export async function receiveOrder(messageId: number | object): Promise<void> {
+  if (typeof messageId !== "number") throw new Error("VortexNotImplemented");
   const message = db.select().from(messages).where(eq(messages.id, messageId)).get();
   if (!message || message.status !== "pending") return;
   const po = fromXml(message.payload);
