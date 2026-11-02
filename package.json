@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "bun run db:seed",
     "dev": "vite",
     "prebuild": "node scripts/ensure-generated-files.mjs",
     "build": "tsc --build && vite build",
@@ -24,6 +25,7 @@
     "test:smoke": "playwright test e2e/smoke.spec.ts",
     "verify": "bun run lint && bun run typecheck && bun run test",
     "verify:full": "bun run verify && bun run test:e2e",
+    "db:seed": "bun scripts/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky",

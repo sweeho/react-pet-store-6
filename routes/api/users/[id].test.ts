@@ -1,6 +1,8 @@
 import { H3Event } from "nitro/h3";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
+import { db } from "../../../db/client";
+import { users } from "../../../db/schema";
 import getUser from "./[id]";
 
 /**
@@ -12,6 +14,17 @@ import getUser from "./[id]";
  * routes/api/hello.test.ts sets `event.context.user` for its middleware.
  */
 describe("GET /api/users/:id", () => {
+  // db/client.ts inserts no rows (SWHR2-R-0074), so the test owns its users.
+  beforeAll(() => {
+    db.insert(users)
+      .values([
+        { id: 1, name: "John Doe", email: "john@example.com" },
+        { id: 2, name: "Jane Smith", email: "jane@example.com" },
+      ])
+      .onConflictDoNothing()
+      .run();
+  });
+
   it("returns the matching user", async () => {
     const event = new H3Event(new Request("http://localhost/api/users/1"), {
       params: { id: "1" },

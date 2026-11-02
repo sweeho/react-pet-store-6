@@ -32,7 +32,7 @@ export default defineConfig({
     // database-backed route 500s, while routes that never touch the database
     // keep working. And naming the file skips bunx's resolution/auto-install
     // step, which can silently eat the whole startup budget on a cold runner.
-    command: `bun --bun ./node_modules/vite/bin/vite.js --port ${PORT} --strictPort`,
+    command: `bun scripts/seed.ts && bun --bun ./node_modules/vite/bin/vite.js --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     // Cold runners pay for Vite's first-run dependency optimization here. 30s sat

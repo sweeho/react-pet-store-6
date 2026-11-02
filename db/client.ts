@@ -72,258 +72,43 @@ export const db = drizzle(sqlite, {
   },
 });
 
-migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+const migrationsFolder = path.join(process.cwd(), "drizzle");
+
+/**
+ * Drizzle's journal records that a migration ran, so `migrate()` never recreates a table dropped
+ * afterwards. This runs the same migrations on a throwaway in-memory database and creates, with its
+ * reference SQL, every table (and that table's indexes) that exists there but not in `sqlite`.
+ * Existing tables are not touched (SWHR2-R-0074.02).
+ */
+export function repairMissingTables(target: Database, folder: string): void {
+  const reference = new Database(":memory:");
+  try {
+    migrate(drizzle(reference), { migrationsFolder: folder });
+    const have = new Set(
+      (
+        target.query("select name from sqlite_master where type = 'table'").all() as {
+          name: string;
+        }[]
+      ).map((t) => t.name),
+    );
+    const refRows = reference
+      .query(
+        "select type, name, tbl_name, sql from sqlite_master where sql is not null and name not like 'sqlite_%' order by rowid",
+      )
+      .all() as { type: string; name: string; tbl_name: string; sql: string }[];
+    const missing = new Set(
+      refRows.filter((r) => r.type === "table" && !have.has(r.name)).map((r) => r.name),
+    );
+    for (const r of refRows)
+      if ((r.type === "table" || r.type === "index") && missing.has(r.tbl_name)) target.exec(r.sql);
+  } finally {
+    reference.close();
+  }
+}
+
+migrate(db, { migrationsFolder });
+repairMissingTables(sqlite, migrationsFolder);
 
 // Enforce the catalog references. Enabled after migrating because the table
 // rebuilds in migration 0002 drop and recreate referenced tables.
 sqlite.exec("PRAGMA foreign_keys = ON");
-
-// Seed the same two users the mock API used to hardcode, so the demo data
-// (and the existing route tests) keep working out of the box.
-if (db.select().from(users).all().length === 0) {
-  db.insert(users)
-    .values([
-      { name: "John Doe", email: "john@example.com" },
-      { name: "Jane Smith", email: "jane@example.com" },
-    ])
-    .run();
-}
-
-// Dev/e2e demo customer (sign-on design P3, customer-account P7); data-population replaces it.
-// Never under Vitest. Inserted directly: services/customers imports this module.
-if (!process.env.VITEST && db.select().from(customers).all().length === 0) {
-  db.transaction((tx) => {
-    tx.insert(signonUsers)
-      .values({ userId: "j2ee", passwordHash: Bun.password.hashSync("j2ee") })
-      .onConflictDoNothing()
-      .run();
-    const address = tx
-      .insert(addresses)
-      .values({
-        street1: "1 Main St",
-        street2: "",
-        city: "Palo Alto",
-        state: "CA",
-        zip: "94303",
-        country: "USA",
-      })
-      .returning()
-      .get();
-    const contact = tx
-      .insert(contactInfo)
-      .values({
-        givenName: "ABC",
-        familyName: "XYZ",
-        telephone: "555-555-5555",
-        email: "abc@xyz.com",
-        addressId: address.id,
-      })
-      .returning()
-      .get();
-    tx.insert(customers).values({ userId: "j2ee" }).run();
-    tx.insert(customerAccounts)
-      .values({
-        userId: "j2ee",
-        contactId: contact.id,
-        cardNumber: "4111111111111111",
-        cardType: "Java(TM) Card",
-        cardExpiryMonth: 12,
-        cardExpiryYear: 2030,
-      })
-      .run();
-    tx.insert(customerProfiles).values({ userId: "j2ee" }).run();
-  });
-}
-
-// Seed fixture (design.md P6): five categories in the three storefront locales.
-// Prices are integer hundredths of the displayed unit.
-type L3 = readonly [en: string, ja: string, zh: string];
-const LOCALES = ["en_US", "ja_JP", "zh_CN"] as const;
-const categories: [string, L3][] = [
-  ["BIRDS", ["Birds", "鳥", "鸟"]],
-  ["CATS", ["Cats", "猫", "猫"]],
-  ["DOGS", ["Dogs", "犬", "狗"]],
-  ["FISH", ["Fish", "魚", "鱼"]],
-  ["REPTILES", ["Reptiles", "爬虫類", "爬行动物"]],
-];
-const products: [string, string, string, L3, L3][] = [
-  [
-    "AV-CB-01",
-    "BIRDS",
-    "bird4.gif",
-    ["Amazon Parrot", "アマゾンオウム", "亚马逊鹦鹉"],
-    ["Great companion for up to 75 years", "最長75年間の素晴らしい仲間", "长达75年的好伙伴"],
-  ],
-  [
-    "FI-SW-01",
-    "FISH",
-    "fish1.gif",
-    ["Angelfish", "エンゼルフィッシュ", "天使鱼"],
-    ["Salt Water fish from Australia", "オーストラリア産の海水魚", "来自澳大利亚的海水鱼"],
-  ],
-  [
-    "FI-FW-01",
-    "FISH",
-    "fish3.gif",
-    ["Koi", "錦鯉", "锦鲤"],
-    ["Freshwater fish from Japan", "日本産の淡水魚", "来自日本的淡水鱼"],
-  ],
-  [
-    "K9-BD-01",
-    "DOGS",
-    "dog2.gif",
-    ["Bulldog", "ブルドッグ", "斗牛犬"],
-    ["Friendly dog from England", "イギリス原産の友好的な犬", "来自英国的友好犬"],
-  ],
-  [
-    "K9-DL-01",
-    "DOGS",
-    "dog4.gif",
-    ["Dalmation", "ダルメシアン", "斑点狗"],
-    ["Great dog for a Fire Station", "消防署に最適な犬", "适合消防站的好犬"],
-  ],
-  [
-    "K9-PO-02",
-    "DOGS",
-    "dog6.gif",
-    ["Poodle", "プードル", "贵宾犬"],
-    ["Cute dog from France", "フランス原産のかわいい犬", "来自法国的可爱犬"],
-  ],
-];
-// [itemId, productId, image, descriptions, attr1, [listPrice, unitCost] per locale]
-const items: [string, string, string, L3, L3, readonly [number, number][]][] = [
-  [
-    "EST-18",
-    "AV-CB-01",
-    "bird4.jpg",
-    ["Adult Male Amazon Parrot", "オスの成鳥アマゾンオウム", "成年雄性亚马逊鹦鹉"],
-    ["Green", "緑", "绿色"],
-    [
-      [12500, 9000],
-      [1400000, 1000000],
-      [95000, 65000],
-    ],
-  ],
-  [
-    "EST-1",
-    "FI-SW-01",
-    "fish1.jpg",
-    ["Large Angelfish", "大きなエンゼルフィッシュ", "大天使鱼"],
-    ["Spotted", "斑点あり", "有斑点"],
-    [
-      [1650, 1000],
-      [195100, 155100],
-      [14200, 8600],
-    ],
-  ],
-  [
-    "EST-2",
-    "FI-SW-01",
-    "fish1.jpg",
-    ["Thin Angelfish", "細身のエンゼルフィッシュ", "细长天使鱼"],
-    ["Pale", "淡色", "浅色"],
-    [
-      [1650, 1000],
-      [195100, 155100],
-      [14200, 8600],
-    ],
-  ],
-  [
-    "EST-4",
-    "FI-FW-01",
-    "fish3.jpg",
-    ["Spotless Koi", "斑点なしの錦鯉", "无斑锦鲤"],
-    ["Spotless", "斑点なし", "无斑"],
-    [
-      [1850, 1200],
-      [205000, 140000],
-      [15000, 9000],
-    ],
-  ],
-  [
-    "EST-6",
-    "K9-BD-01",
-    "dog2.jpg",
-    ["Male Adult Bulldog", "オスの成犬ブルドッグ", "成年雄性斗牛犬"],
-    ["Friendly dog from England", "イギリス原産の友好的な犬", "来自英国的友好犬"],
-    [
-      [18350, 12000],
-      [2100000, 1400000],
-      [160000, 100000],
-    ],
-  ],
-  [
-    "EST-7",
-    "K9-BD-01",
-    "dog2.jpg",
-    ["Female Puppy Bulldog", "メスの子犬ブルドッグ", "雌性幼年斗牛犬"],
-    ["Friendly dog from England", "イギリス原産の友好的な犬", "来自英国的友好犬"],
-    [
-      [18350, 12000],
-      [2100000, 1400000],
-      [160000, 100000],
-    ],
-  ],
-];
-
-if (!process.env.VITEST && db.select().from(catalogCategories).all().length === 0) {
-  db.transaction((tx) => {
-    tx.insert(catalogCategories)
-      .values(categories.map(([categoryId]) => ({ categoryId })))
-      .run();
-    tx.insert(catalogCategoryDetails)
-      .values(
-        categories.flatMap(([categoryId, names]) =>
-          LOCALES.map((locale, i) => ({
-            categoryId,
-            locale,
-            name: names[i],
-            description: names[i],
-            image: `${categoryId.toLowerCase()}_icon.gif`,
-          })),
-        ),
-      )
-      .run();
-    tx.insert(catalogProducts)
-      .values(products.map(([productId, categoryId]) => ({ productId, categoryId })))
-      .run();
-    tx.insert(catalogProductDetails)
-      .values(
-        products.flatMap(([productId, , image, names, descriptions]) =>
-          LOCALES.map((locale, i) => ({
-            productId,
-            locale,
-            name: names[i],
-            description: descriptions[i],
-            image,
-          })),
-        ),
-      )
-      .run();
-    tx.insert(catalogItems)
-      .values(items.map(([itemId, productId]) => ({ itemId, productId })))
-      .run();
-    tx.insert(catalogItemDetails)
-      .values(
-        items.flatMap(([itemId, , image, descriptions, attrs, prices]) =>
-          LOCALES.map((locale, i) => ({
-            itemId,
-            locale,
-            description: descriptions[i],
-            image,
-            attr1: attrs[i],
-            listPrice: prices[i][0],
-            unitCost: prices[i][1],
-          })),
-        ),
-      )
-      .run();
-  });
-}
-
-// Dev/e2e demo stock (supplier-inventory design P6): one record per demo catalog item; data-population replaces it.
-if (!process.env.VITEST && db.select().from(supInventory).all().length === 0) {
-  db.insert(supInventory)
-    .values(items.map(([itemId]) => ({ itemId, quantity: 10000 })))
-    .run();
-}
