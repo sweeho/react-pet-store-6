@@ -81,3 +81,58 @@ The supplier group holds no foreign key into the storefront catalog tables (data
 - The persisted outbox carries the change notification (PRD constraints).
 - A Vite React SPA page with Tailwind and the shadcn/ui-style primitives.
 - Tests: route integration tests for the duplicate record, the missing quantity, the unmarked row not saved and the two marked rows saved together; a UI test for the row controls.
+
+## Planning (SWHR2-S-0028)
+
+Ticket: SWHR2-T-0299 (FEATURE) owns every task group. The locked acceptance suites (`tests/acceptance/supplier-inventory/`, plus the supplier steps in `sign-on`, `order-fulfillment` and `data-population`) fix route files, table and column names and the request shape. Where they and the Target design above differ, the locked suites win, and each difference is listed under Spec discrepancies.
+
+### Codebase findings
+
+- F1. No stock table exists. The schema is the single file `db/schema.ts` (messages and `op_*` tables at the end); the latest migration is `drizzle/0006_cool_mojo.sql`, so this change adds `0007`.
+- F2. Supplier sign-on is built: `routes/api/supplier/{session.get,sign-in.post,sign-out.post}.ts`, `requireSupplier` in `services/session/guards.ts`, the area layout `src/pages/supplier.tsx` and `src/pages/supplier/index.tsx`. When signed in, it shows the placeholder "Supplier inventory will appear here once it ships." Its test is `src/pages/supplier/index.test.tsx`.
+- F3. The global navigation already has "Supplier inventory" → `/supplier` (`src/components/shell/areas.ts`); no change needed.
+- F4. The outbox is `services/messaging#enqueue(exec, channel, payload)`. `services/messaging/worker.ts#processDue` skips a channel with no registered handler, so its rows stay `pending` until a handler exists.
+- F5. Locked names: `routes/api/supplier/inventory.get` returns `[{ itemId, quantity }]`; `routes/api/supplier/inventory.post` takes `{ rows: [{ itemId, quantity, marked }] }` and answers 200; table `sup_inventory (item_id, quantity)`. Order-fulfillment's harness drives `services/supplier/fulfil` and `services/supplier/orders` (change `swhr2-i-0011-order-fulfilment-and-invoic`) and enqueues `supplier.inventory-changed` `{ itemIds }` itself. Data-population seeds `sup_inventory` directly.
+- F6. Sign-on e2e opens `/supplier/inventory` while signed out (or while an administrator is signed in) and expects the supplier sign-in form or the existing refusal, and no row holding a textbox.
+- F7. The locked e2e finds a row with `getByRole("row").filter({ hasText: "EST-1" }).first()`, which also matches EST-10 to EST-19. Rows must list in natural item order (EST-1, EST-2, …, EST-10), as mockup SWHR2-MCK-33 does.
+
+### Spec discrepancies
+
+- SD1. **Who uses the screen.** The proposal, stories S1/S2 and tasks 5.4 and 6.1 say "administrator role" (the legacy `web.xml`). The brief, PRD, shell and sign-on spec name the supplier, and `requireSupplier` already guards `/api/supplier/**`. Built: both routes call `requireSupplier`. A signed-out visitor to `/supplier/inventory` is sent to `/supplier` (sign-in). An administrator gets the existing "sign out of Administration first" refusal. The legacy text "not authorised to update the status of orders" (D6) is not reproduced.
+- SD2. **Schema location.** The Target design puts the table in `db/schema/supplier.ts`; the repository has one `db/schema.ts` (F1). Built: `supInventory` is added to `db/schema.ts`.
+- SD3. **Negative and non-whole quantities (Q1, tasks 2.3/2.4).** Task 2.3 silently ignores a negative quantity. The Target design returns 400 for a non-whole number, and case C-0043 step 3 expects a submission with an invalid (e.g. negative) quantity to save nothing. Built: a marked row whose quantity is negative, fractional or non-numeric makes the whole submission 400 `InvalidQuantity`, and nothing is saved. A marked row with a blank quantity, and every unmarked row, is ignored without a message.
+- SD4. **Unknown item ids (Q2, task 2.5).** The locked e2e seeds stock by POSTing marked rows for EST-1..3, which may have no record yet. C-0043 step 3 suggests a deleted record should fail the submission. Built: a marked row for an item with no stock record creates it (upsert). The SME may reverse this; it is one branch in `updateInventory`.
+- SD5. **Draw-down, re-fulfilment and invoices (groups 3, 4.2, 4.3, 7.2, 7.3).** No requirement of this change covers them. Order-fulfillment owns them: its locked harness drives `services/supplier/fulfil` and consumes `supplier.inventory-changed` (F5). This FEATURE delivers the stock side only. That means `reduceStock` (group 3), whose missing-record and short-stock cases leave stock untouched, and the restock unit of work: the stock changes and one `supplier.inventory-changed` message commit or roll back together (4.1, 4.4). Re-fulfilment and invoicing (4.2, 4.3) happen when order-fulfillment registers its consumer. Until then the message waits `pending` (F4). The lines are tagged to this FEATURE because the gate requires every line to name a ticket.
+- SD6. **Confirmation screen (task 5.7).** Not specified (legacy `back.jsp`, pending SME). Built: after a successful Submit, the inventory page shows "Inventory updated" with the refreshed list, a Display Inventory action that clears the confirmation, and Logout. There is no separate route.
+- SD7. **Empty inventory versus read failure (Q3, task 5.5).** Built: no stock records shows "There are no items in inventory."; a failed read shows the shared `ErrorFrame`, never the empty message (D5).
+
+### Decisions
+
+- P1. **Table.** `sup_inventory`: `item_id` text primary key, `quantity` integer not null, no default, plus a check that `typeof(quantity) = 'integer'`. There is no foreign key to the catalog (Target design § Data). Migration `0007` from `db:generate`.
+- P2. **Service** `services/supplier/inventory.ts`, the only writer of `sup_inventory` outside seeding. Every function takes an optional executor and otherwise opens its own transaction (ARCHITECTURE.md Key Decisions):
+  - `listInventory(exec?): { itemId: string; quantity: number }[]` sorts in natural item order (F7).
+  - `updateInventory(changes: { itemId: string; quantity: number }[], exec?): void` upserts every change. When there is at least one change, it enqueues one `supplier.inventory-changed` message `{ itemIds }`, all in one transaction (SD4, SD5).
+  - `reduceStock(exec, itemId, quantity): boolean` returns false and changes nothing when the record is missing or holds less than `quantity`. Otherwise it subtracts and returns true. Order-fulfillment calls it inside its shipping transaction.
+- P3. **Routes**, both `requireSupplier`:
+  - `GET /api/supplier/inventory` → `listInventory()`.
+  - `POST /api/supplier/inventory` reads `{ rows }` and keeps the marked rows with a non-blank quantity. If any kept quantity is not a whole number ≥ 0 (a number, or a string of digits), it answers 400 with the existing failure reply, kind `InvalidQuantity`, and saves nothing. Otherwise it calls `updateInventory` and answers 200 with the refreshed list. A body without a `rows` array is 400.
+- P4. **Supplier home** (`src/pages/supplier/index.tsx`, signed-in state, mockup SWHR2-MCK-32). Heading "Supplier home" with the explanation line, an Inventory card with a **Display Inventory** link to `/supplier/inventory`, and a "Finished?" card with **Logout** (the existing sign-out). The sign-in state is unchanged.
+- P5. **Inventory page** `src/pages/supplier/inventory.tsx` (route `/supplier/inventory`, mockup SWHR2-MCK-33). It shows a table with columns Item | Quantity on hand | New quantity | Update. Each row has a textbox (empty) and a checkbox (unticked), each with an accessible name that includes the item id. The page also has a marked-row count, one **Submit** button, a Supplier home link and the footnote "Quantities are whole numbers of units."
+  - Submit posts every row with its `marked` flag in one request.
+  - Behaviour on each reply: a 401 goes to `/supplier`; a 400 shows an inline alert and keeps the entries; success follows SD6.
+  - Loading and error states use `useApi` and the shared frames, and the empty state is SD7.
+  - Screen text is English only, like the administration tool.
+- P6. **Demo stock for dev and e2e.** Deferred sign-on cases SWHR2-C-0255 and SWHR2-C-0256 (`tests/acceptance/sign-on/e2e/sign-on.spec.ts`) now land here. They sign in as supplier on the e2e database and expect Display Inventory and at least one inventory row, without seeding stock themselves. So `db/client.ts` seeds one `sup_inventory` record of 10000 per demo catalog item when the table is empty, following its existing demo-catalog block and never under Vitest. The real seeding is data-population's (change `swhr2-i-0014-sample-data-population`), which replaces this block.
+
+### Phases
+
+1. Table and migration (P1); service (P2) with its unit tests.
+2. Routes (P3) with route integration tests.
+3. Home and inventory pages (P4, P5) against the mockups.
+4. **Test harness.** Colocated tests per the AGENTS.md table:
+   - `services/supplier/inventory.test.ts`: overwrite, upsert, zero quantity, `reduceStock` for sufficient, exact, short and missing stock, and the message enqueued with the change and rolled back with it.
+   - `routes/api/supplier/inventory.test.ts`: guard, unmarked and blank rows ignored, two marked rows saved together, invalid quantity saves nothing.
+   - `src/pages/supplier/inventory.test.tsx`, plus updates to `src/pages/supplier/index.test.tsx`.
+   - The locked suites under `tests/acceptance/**` are not edited.
+5. **E2E.** `e2e/supplier-inventory.spec.ts` (task 7.5): sign in as supplier, Display Inventory, set one marked row and one unmarked row, Submit, see the confirmation, and after Display Inventory the marked row holds its new value while the unmarked one is unchanged.
+6. **CI.** No workflow change. The existing CI runs lint, typecheck, unit, Playwright and the locked acceptance tiers on `vortex/**` pushes and pull requests, and picks up the new specs by path.

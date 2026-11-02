@@ -23,6 +23,7 @@ import {
   opPoContacts,
   opPoLineItems,
   opPurchaseOrders,
+  supInventory,
   signonUsers,
   users,
 } from "./schema";
@@ -67,6 +68,7 @@ export const db = drizzle(sqlite, {
     opPoCards,
     opPoLineItems,
     opOrderWorkflow,
+    supInventory,
   },
 });
 
@@ -317,4 +319,11 @@ if (!process.env.VITEST && db.select().from(catalogCategories).all().length === 
       )
       .run();
   });
+}
+
+// Dev/e2e demo stock (supplier-inventory design P6): one record per demo catalog item; data-population replaces it.
+if (!process.env.VITEST && db.select().from(supInventory).all().length === 0) {
+  db.insert(supInventory)
+    .values(items.map(([itemId]) => ({ itemId, quantity: 10000 })))
+    .run();
 }

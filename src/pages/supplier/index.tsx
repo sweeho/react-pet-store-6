@@ -1,4 +1,5 @@
-import { LogIn, LogOut } from "lucide-react";
+import { List, LogIn, LogOut } from "lucide-react";
+import { Link } from "react-router";
 
 import { Button } from "@/components/ui";
 
@@ -57,21 +58,39 @@ export default function SupplierHome() {
   if (state.kind === "in")
     return (
       <div>
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Supplier inventory</h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Signed in as <span className="font-mono">{state.userId}</span>.
-            </p>
-          </div>
-          <Button type="button" variant="outline" onClick={() => void logOut()}>
-            <LogOut aria-hidden="true" className="mr-2 size-4" />
-            Log out
-          </Button>
-        </div>
-        <p className="text-muted-foreground text-sm">
-          Supplier inventory will appear here once it ships.
+        <h1 className="text-2xl font-semibold">Supplier home</h1>
+        <p className="text-muted-foreground mt-1 mb-6 text-sm">
+          Check the stock on hand for every item and correct the counts that have changed.
         </p>
+        <p className="bg-background mb-6 max-w-4xl rounded-lg border p-4 text-sm">
+          <span className="font-mono font-semibold">{state.userId}</span>
+          <span className="text-muted-foreground"> · Signed in to the supplier area</span>
+        </p>
+        <div className="grid max-w-4xl gap-6 md:grid-cols-2">
+          <section className="bg-background rounded-lg border p-6">
+            <h2 className="text-base font-semibold">Inventory</h2>
+            <p className="text-muted-foreground mt-1 mb-5 text-sm">
+              See the quantity on hand for each item, enter new counts and submit the rows you mark
+              in one go.
+            </p>
+            <Button asChild>
+              <Link to="/supplier/inventory">
+                <List aria-hidden="true" className="mr-2 size-4" />
+                Display Inventory
+              </Link>
+            </Button>
+          </section>
+          <section className="bg-background rounded-lg border p-6">
+            <h2 className="text-base font-semibold">Finished?</h2>
+            <p className="text-muted-foreground mt-1 mb-5 text-sm">
+              Leave the supplier area. You&apos;ll need to sign in again to change stock.
+            </p>
+            <Button type="button" variant="outline" onClick={() => void logOut()}>
+              <LogOut aria-hidden="true" className="mr-2 size-4" />
+              Logout
+            </Button>
+          </section>
+        </div>
       </div>
     );
 
