@@ -83,7 +83,7 @@ describe("POST /api/orders", () => {
 
   it("[SWHR2-C-0216] the billing and shipping details submitted are the ones carried on the order document", async () => {
     const app = await shopper();
-    await app.place();
+    expect((await app.place()).status).toBe(200);
     const { payload } = app.client.query("select payload from messages").get() as {
       payload: string;
     };

@@ -124,6 +124,15 @@ describe("checkout page", () => {
     expect(screen.queryByLabelText(/given name/i)).toBeNull();
   });
 
+  it("[SWHR2-C-0174] a customer who has just created an account can place an order from checkout", async () => {
+    const post = vi.fn(() => Response.json({ orderId: "10013" }));
+    mount({ ...base, "POST /api/orders": post });
+    await screen.findAllByLabelText(/given name/i);
+    fireEvent.click(screen.getAllByRole("button", { name: /place order/i })[0]);
+    expect(await screen.findByRole("heading", { name: /your order is complete/i })).toBeVisible();
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
   it("[SWHR2-C-0090] an empty-cart refusal goes to the empty-cart error page", async () => {
     mount({
       ...base,
