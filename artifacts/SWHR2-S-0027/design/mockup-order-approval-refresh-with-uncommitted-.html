@@ -1,0 +1,112 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Order approval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--brand:#4f46e5;--on-brand:#ffffff;--success:#16a34a;--warning:#d97706;--danger:#dc2626;--info:#0284c7;
+--sans:Inter,system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--bg);display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr 40px;overflow:hidden;position:relative}
+a{color:inherit;text-decoration:none}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+header{grid-column:1/3;display:flex;align-items:center;gap:16px;padding:0 24px 0 16px;border-bottom:1px solid var(--border);background:var(--bg)}
+.brandmark{display:flex;align-items:center;gap:8px;width:208px;font-weight:600;font-size:16px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center}
+.search{flex:1;max-width:520px;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted)}
+.search span{flex:1}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lang{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px;font-weight:500}
+.lang a{padding:0 12px;height:32px;display:flex;align-items:center;color:var(--muted);border-right:1px solid var(--border)}
+.lang a:last-child{border-right:0}
+.lang a.on{background:var(--brand);color:var(--on-brand)}
+.ghost{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;font-weight:500;color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;font-weight:500;font-size:14px;border:1px solid transparent;font-family:var(--sans);white-space:nowrap}
+.btn.primary{background:var(--brand);color:var(--on-brand)}
+.btn.secondary{background:var(--bg);border-color:var(--border);color:var(--text)}
+.btn.ghostb{background:transparent;color:var(--text)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.sm{height:32px;padding:0 12px}
+nav.rail{grid-row:2/4;border-right:1px solid var(--border);background:var(--surface);padding:16px 12px;display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.grp h6{font-size:12px;font-weight:600;color:var(--muted);padding:0 8px 4px;letter-spacing:.02em}
+.item{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:8px;color:var(--text);font-weight:500}
+.item.on{background:var(--brand);color:var(--on-brand)}
+.lock{margin-left:auto;color:var(--muted)}
+.item.on .lock{color:var(--on-brand)}
+.lock svg{width:12px;height:12px}
+main{overflow:hidden;padding:24px 32px;background:var(--bg);display:flex;flex-direction:column;min-height:0}
+footer{grid-column:2;display:flex;align-items:center;gap:16px;padding:0 32px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+footer .sp{flex:1}
+.crumbs{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.crumbs svg{width:12px;height:12px}
+.crumbs b{color:var(--text);font-weight:500}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:16px}
+.ph h1{font-size:24px;font-weight:600;line-height:32px}
+.ph p{color:var(--muted);margin-top:4px}
+.ph .acts{display:flex;gap:8px;align-items:center}
+.who{display:flex;white-space:nowrap;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-right:8px}
+.who code{font-family:var(--mono);color:var(--text)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{display:flex;align-items:center;gap:8px;height:40px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--brand);border-color:var(--brand)}
+.count{font-size:12px;font-family:var(--mono);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:0 8px;line-height:18px;color:var(--muted)}
+.tab.on .count{color:var(--brand);border-color:var(--brand)}
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;min-height:36px}
+.toolbar .sel{font-size:12px;color:var(--muted);margin-right:4px}
+.toolbar .sel b{color:var(--text)}
+.toolbar .sp{flex:1}
+.note{font-size:12px;color:var(--muted)}
+.tablecard{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{position:sticky;top:0;background:var(--surface);text-align:left;font-size:12px;font-weight:600;color:var(--muted);height:40px;padding:0 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+thead th .ch{display:inline-flex;vertical-align:middle;margin-left:4px;color:var(--muted)}
+thead th .ch svg{width:12px;height:12px}
+thead th.sorted{color:var(--text)}
+thead th.sorted .ch{color:var(--brand)}
+th.num,td.num{text-align:right}
+tbody td{height:40px;padding:0 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.chg td{background:var(--surface)}
+td.mono,.mono{font-family:var(--mono);font-size:13px}
+td.muted{color:var(--muted)}
+.cb{width:16px;height:16px;border:1.5px solid var(--muted);border-radius:4px;display:inline-grid;place-items:center;vertical-align:middle;background:var(--bg)}
+.cb.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.cb.on svg{width:12px;height:12px;stroke-width:3}
+.cb.mixed{background:var(--brand);border-color:var(--brand)}
+.cb.mixed::after{content:"";width:8px;height:2px;background:#fff;border-radius:1px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.02em}
+.pill i{width:6px;height:6px;border-radius:999px;background:currentColor}
+.p-pend{color:var(--warning);background:color-mix(in srgb,var(--warning) 14%,white)}
+.p-appr{color:var(--success);background:color-mix(in srgb,var(--success) 12%,white)}
+.p-deny{color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,white)}
+.statsel{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 6px 0 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+.statsel .caret{color:var(--muted)}
+.statsel .caret svg{width:14px;height:14px}
+.was{font-size:12px;color:var(--muted);margin-left:8px}
+.bar{margin-top:16px;display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.bar .dot{width:8px;height:8px;border-radius:999px;background:var(--brand)}
+.bar .sp{flex:1}
+.bar b{font-weight:600}
+.legend{display:flex;gap:16px;margin-left:auto;font-size:12px;color:var(--muted)}
+</style></head><body><header>
+<a class="brandmark" href="#"><span class="logo"><svg viewBox="0 0 24 24"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span>Pet Store</a>
+<div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search pets by keyword — e.g. “angelfish”</span></div>
+<div class="hdr-right">
+<div class="lang" aria-label="Language"><a class="on" href="#">English</a><a href="#">日本語</a><a href="#">中文</a></div>
+<a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Cart</a><a class="ghost" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account</a><a class="btn secondary sm" href="#"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>Sign in</a>
+</div></header><nav class="rail" aria-label="Global">
+<div class="grp"><h6>Shop</h6><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a><a class="item" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Catalog</a><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Shopping cart</a><a class="item" href="#"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Checkout</a></div>
+<div class="grp"><h6>You</h6><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>Sign in</a><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account &amp; profile</a><a class="item" href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg>Language</a></div>
+<div class="grp"><h6>Store staff</h6><a class="item on" href="#" aria-current="page"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Order approval<span class="lock" title="Separate sign-in"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17V10"/><path d="M13 17V6"/><path d="M18 17v-4"/></svg>Sales reporting<span class="lock" title="Separate sign-in"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item" href="#"><svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>Supplier inventory<span class="lock" title="Separate sign-in"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a></div>
+</nav><main>
+<div class="crumbs"><a href="#">Home</a><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><span>Store staff</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><b>Order approval</b></div><div class="ph"><div><h1>Order approval</h1><p>Mark orders that were not auto-approved, then commit every decision together.</p></div>
+<div class="acts"><span class="who">Signed in as <code>jps_admin</code></span><button class="btn ghostb sm"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Log out</button><button class="btn secondary"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Refresh</button><button class="btn primary"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Commit 3 decisions</button></div></div><div class="tabs"><a class="tab on" href="#">Pending <span class="count">8</span></a><a class="tab" href="#">Non-pending <span class="count">14</span></a></div><div class="toolbar"><span class="sel"><b>2</b> selected</span><button class="btn secondary sm"><span class="pill p-appr" style="height:auto;padding:0;background:none"><i></i></span>Approve</button><button class="btn secondary sm"><span class="pill p-deny" style="height:auto;padding:0;background:none"><i></i></span>Deny</button><span class="sp"></span><span class="legend"><span><span class="pill p-pend"><i></i>Pending</span> not decided</span><span><span class="pill p-appr"><i></i>Approved</span> will be approved</span><span><span class="pill p-deny"><i></i>Denied</span> will be denied</span></span></div><div class="tablecard"><table><thead><tr><th style="width:48px"><span class="cb mixed"></span></th><th class="sorted">Order ID<span class="ch"><svg viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></span></th><th>User ID<span class="ch"><svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></th><th>Date<span class="ch"><svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></th><th class="num">Amount<span class="ch"><svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></th><th style="width:360px">Status<span class="ch"><svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></th></tr></thead><tbody><tr class="chg"><td><span class="cb"></span></td><td class="mono">10034</td><td>j2ee</td><td class="mono muted">10/24/2026</td><td class="num mono">612.50</td><td><span class="statsel"><span class="pill p-appr"><i></i>Approved</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span><span class="was">Not committed</span></td></tr><tr class="chg"><td><span class="cb"></span></td><td class="mono">10036</td><td>mei</td><td class="mono muted">10/24/2026</td><td class="num mono">18.50</td><td><span class="statsel"><span class="pill p-deny"><i></i>Denied</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span><span class="was">Not committed</span></td></tr><tr><td><span class="cb"></span></td><td class="mono">10039</td><td>yuki</td><td class="mono muted">10/24/2026</td><td class="num mono">52,400</td><td><span class="statsel"><span class="pill p-pend"><i></i>Pending</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></td></tr><tr class="chg"><td><span class="cb"></span></td><td class="mono">10041</td><td>chris</td><td class="mono muted">10/24/2026</td><td class="num mono">500.00</td><td><span class="statsel"><span class="pill p-appr"><i></i>Approved</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span><span class="was">Not committed</span></td></tr><tr><td><span class="cb on"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></td><td class="mono">10042</td><td>j2ee</td><td class="mono muted">10/24/2026</td><td class="num mono">1,048.00</td><td><span class="statsel"><span class="pill p-pend"><i></i>Pending</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></td></tr><tr><td><span class="cb"></span></td><td class="mono">10044</td><td>mei</td><td class="mono muted">10/24/2026</td><td class="num mono">96.00</td><td><span class="statsel"><span class="pill p-pend"><i></i>Pending</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></td></tr><tr><td><span class="cb"></span></td><td class="mono">10045</td><td>yuki</td><td class="mono muted">10/25/2026</td><td class="num mono">61,200</td><td><span class="statsel"><span class="pill p-pend"><i></i>Pending</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></td></tr><tr><td><span class="cb on"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></td><td class="mono">10047</td><td>chris</td><td class="mono muted">10/25/2026</td><td class="num mono">735.25</td><td><span class="statsel"><span class="pill p-pend"><i></i>Pending</span><span class="caret"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></td></tr></tbody></table></div><div class="bar"><span class="dot"></span><span><b>3 decisions not committed</b> — 2 approved, 1 denied. No order changes until you commit.</span><span class="sp"></span><span class="note">8 pending · loaded 10:42</span></div><div style="position:absolute;inset:0;background:rgba(15,23,42,.45);display:grid;place-items:center;z-index:5">
+<div role="alertdialog" aria-labelledby="dt" style="width:460px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:24px;box-shadow:0 20px 40px rgba(15,23,42,.18)">
+<div style="display:flex;gap:12px;align-items:flex-start"><span style="width:36px;height:36px;border-radius:999px;display:grid;place-items:center;color:var(--warning);background:color-mix(in srgb,var(--warning) 14%,white);flex:none"><svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+<div><h2 id="dt" style="font-size:16px;font-weight:600;line-height:24px">Refresh and discard 3 decisions?</h2>
+<p style="margin-top:4px;color:var(--text)">Data is not committed. Are you sure you want to refresh?</p>
+<ul style="margin:12px 0 0;padding:12px 16px;list-style:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;gap:8px">
+<li style="display:flex;justify-content:space-between;align-items:center"><span class="mono">10034</span><span class="pill p-appr"><i></i>Approved</span></li>
+<li style="display:flex;justify-content:space-between;align-items:center"><span class="mono">10036</span><span class="pill p-deny"><i></i>Denied</span></li>
+<li style="display:flex;justify-content:space-between;align-items:center"><span class="mono">10041</span><span class="pill p-appr"><i></i>Approved</span></li></ul>
+<p class="note" style="margin-top:12px">Refreshing reloads every order from the server. These orders go back to Pending.</p></div></div>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:24px"><button class="btn secondary" style="outline:2px solid var(--brand);outline-offset:2px">Keep my decisions</button><button class="btn danger">Discard and refresh</button></div>
+</div></div></main><footer><span>Pet Store</span><span>·</span><a href="#">Home</a><a href="#">Change language</a><span class="sp"></span><span>English (US)</span></footer></body></html>
