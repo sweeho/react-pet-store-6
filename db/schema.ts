@@ -169,10 +169,12 @@ export const messages = sqliteTable(
     status: text("status").notNull().default("pending"),
     error: text("error"),
     createdAt: integer("created_at").notNull(),
+    // Epoch milliseconds from which the worker may deliver the row; a failed attempt pushes it out.
+    availableAt: integer("available_at").notNull().default(0),
   },
   (t) => [
     index("messages_channel_status_idx").on(t.channel, t.status),
-    check("messages_status", sql`${t.status} in ('pending', 'done', 'failed')`),
+    check("messages_status", sql`${t.status} in ('pending', 'delivered', 'failed')`),
   ],
 );
 

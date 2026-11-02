@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Tool from "./tool";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const ORDERS = [
   { orderId: "1001", status: "PENDING", locale: "en_US", totalPrice: 600 },

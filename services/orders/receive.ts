@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import {
-  messages,
   opOrderWorkflow,
   opPoCards,
   opPoContacts,
@@ -12,6 +11,8 @@ import {
 import { fromXml } from "../documents/purchase-order";
 import type { Party, PurchaseOrder } from "../documents/purchase-order";
 import type { Executor } from "../ids";
+import { autoApproves } from "./approval";
+import { applyDecision } from "./decide";
 
 function insertOrder(tx: Executor, po: PurchaseOrder): void {
   tx.insert(opPurchaseOrders)
@@ -96,17 +97,77 @@ export async function getPurchaseOrder(orderId: string): Promise<PurchaseOrder |
   };
 }
 
+/** A new order as order processing is handed it; money is in display units (499.99). */
+export interface OrderDoc {
+  orderId: string;
+  locale: string;
+  totalPrice: number;
+  userId?: string;
+  email?: string;
+  orderDate?: number;
+  billing?: Party;
+  shipping?: Party;
+  card?: PurchaseOrder["card"];
+  lines: {
+    itemId: string;
+    lineNumber: number;
+    quantity: number;
+    unitPrice: number;
+    categoryId?: string;
+    productId?: string;
+  }[];
+}
+
+const NO_PARTY: Party = {
+  givenName: "",
+  familyName: "",
+  street: "",
+  city: "",
+  state: "",
+  zip: "",
+  country: "",
+  phone: "",
+  email: "",
+};
+
+const hundredths = (amount: number): number => Math.round(amount * 100);
+
 /**
- * Order processing's handler for one `order.new` message: decodes the document, stores the order,
- * starts its workflow as PENDING and marks the message done, in one transaction.
+ * Receipt step, inside the caller's transaction: stores the order, starts its workflow as PENDING
+ * and only then asks the rule whether it approves itself, applying the same decision as an
+ * administrator when it does (design.md P2).
  */
-export async function receiveOrder(messageId: number): Promise<void> {
-  const message = db.select().from(messages).where(eq(messages.id, messageId)).get();
-  if (!message || message.status !== "pending") return;
-  const po = fromXml(message.payload);
-  db.transaction((tx) => {
-    insertOrder(tx, po);
-    tx.insert(opOrderWorkflow).values({ orderId: po.orderId, status: "PENDING" }).run();
-    tx.update(messages).set({ status: "done" }).where(eq(messages.id, messageId)).run();
-  });
+export function receivePurchaseOrder(tx: Executor, po: PurchaseOrder): void {
+  insertOrder(tx, po);
+  tx.insert(opOrderWorkflow).values({ orderId: po.orderId, status: "PENDING" }).run();
+  if (autoApproves(po.locale, po.total)) applyDecision(tx, po.orderId, "APPROVED");
+}
+
+/** The `order.new` channel handler: decodes the order document and runs the receipt step. */
+export function receiveOrderMessage(tx: Executor, payload: string): void {
+  receivePurchaseOrder(tx, fromXml(payload));
+}
+
+/** Order processing's receipt of one order document, in one transaction (SWHR2-R-0085). */
+export async function receiveOrder(doc: OrderDoc): Promise<void> {
+  const po: PurchaseOrder = {
+    orderId: doc.orderId,
+    userId: doc.userId ?? "",
+    email: doc.email ?? doc.billing?.email ?? "",
+    locale: doc.locale,
+    orderDate: doc.orderDate ?? Date.now(),
+    total: hundredths(doc.totalPrice),
+    billing: doc.billing ?? NO_PARTY,
+    shipping: doc.shipping ?? NO_PARTY,
+    card: doc.card ?? { cardNumber: "", cardType: "", expiryDate: "" },
+    lines: doc.lines.map((l) => ({
+      lineNumber: l.lineNumber,
+      categoryId: l.categoryId ?? "",
+      productId: l.productId ?? "",
+      itemId: l.itemId,
+      quantity: l.quantity,
+      unitPrice: hundredths(l.unitPrice),
+    })),
+  };
+  db.transaction((tx) => receivePurchaseOrder(tx, po));
 }

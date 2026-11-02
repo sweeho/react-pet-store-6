@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { deliver, loadOrders, statusOf } from "../../tests/acceptance/order-approval/harness";
+import { deliver, loadOrders, statusOf } from "./approvalHarness";
 
 describe("automatic approval on receipt", () => {
   const cases: [string, string, string, number, string][] = [

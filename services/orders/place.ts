@@ -9,7 +9,7 @@ import { getItem } from "../catalog";
 import { getCustomer } from "../customers";
 import { EmptyCartOrder } from "../errors";
 import { nextId } from "../ids";
-import { enqueue } from "../messages";
+import { enqueue } from "../messaging";
 
 /** The id sequence orders draw from (SWHR2-R-0006). */
 export const ORDER_ID_PREFIX = "1001";

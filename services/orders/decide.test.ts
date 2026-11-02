@@ -1,21 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  adminCookies,
-  call,
-  deliver,
-  loadOrders,
-  messagesOn,
-  statusOf,
-} from "../../tests/acceptance/order-approval/harness";
+import { adminCookies, call, deliver, loadOrders, messagesOn, statusOf } from "./approvalHarness";
 
 const commit = (
   app: Awaited<ReturnType<typeof loadOrders>>,
   cookies: Record<string, string>,
   ids: string[],
 ) =>
-  call(app, "../../../routes/api/admin/orders/decisions.post", {
+  call(app, "../../routes/api/admin/orders/decisions.post", {
     method: "POST",
     url: "/api/admin/orders/decisions",
     cookies,
@@ -62,5 +55,39 @@ describe("decision channel", () => {
     expect(statusOf(app.client, "1001")).toBe("APPROVED");
     expect(messagesOn(app.client, "order.approval")[0].status).toBe("delivered");
     vi.doUnmock("../../db/client");
+  });
+});
+
+describe("decision step", () => {
+  it("changes only PENDING orders to APPROVED or DENIED and ignores other values", async () => {
+    const { client } = await loadOrders();
+    await deliver({ orderId: "1001", locale: "en_US", total: 600 });
+    await deliver({ orderId: "1002", locale: "en_US", total: 600 });
+    await deliver({ orderId: "1003", locale: "en_US", total: 10 });
+    const { decideBatch, toApprovalXml } = await import("./decide");
+    decideBatch(
+      toApprovalXml([
+        { orderId: "1001", status: "DENIED" },
+        { orderId: "1002", status: "COMPLETED" },
+        { orderId: "1003", status: "DENIED" },
+      ]),
+    );
+    expect(statusOf(client, "1001")).toBe("DENIED");
+    expect(statusOf(client, "1002")).toBe("PENDING");
+    expect(statusOf(client, "1003")).toBe("APPROVED");
+  });
+
+  it("leaves a message pending, with the error recorded, when its handler throws", async () => {
+    const { client, db } = await loadOrders();
+    const { enqueue } = await import("../messaging");
+    enqueue(db, "order.approval", "<not-an-approval/>");
+    const { processDue } = await import("../messaging/worker");
+    expect(await processDue()).toBe(0);
+    const row = client.query("select status, error from messages").get() as {
+      status: string;
+      error: string;
+    };
+    expect(row.status).toBe("pending");
+    expect(row.error).toMatch(/OrderApproval/);
   });
 });

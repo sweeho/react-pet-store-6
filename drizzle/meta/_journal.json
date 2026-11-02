@@ -43,6 +43,13 @@
       "when": 1793602375001,
       "tag": "0005_high_hemingway",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793607120355,
+      "tag": "0006_cool_mojo",
+      "breakpoints": true
     }
   ]
 }
