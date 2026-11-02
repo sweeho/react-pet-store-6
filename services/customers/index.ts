@@ -9,6 +9,7 @@ import {
   customers,
   signonUsers,
 } from "../../db/schema";
+import { createContact } from "./contact";
 import { inTransaction, readAddress, updateAddressField, type AddressField } from "./address";
 
 export type CustomerError = Error & { kind: "UserExists" | "CustomerExists" | "NoCustomer" };
@@ -64,18 +65,19 @@ export function createCustomer(userId: string, account: AccountInput, profile: P
         throw Object.assign(new Error(`customer ${userId} exists`), { kind: "CustomerExists" });
       const { contact, card } = account;
       const address = tx.insert(addresses).values(contact.address).returning().get();
-      const { address: _address, ...contactFields } = contact; // eslint-disable-line @typescript-eslint/no-unused-vars
-      const savedContact = tx
-        .insert(contactInfo)
-        .values({ ...contactFields, addressId: address.id })
-        .returning()
-        .get();
+      const contactId = createContact(tx, {
+        givenName: contact.givenName,
+        familyName: contact.familyName,
+        telephone: contact.telephone,
+        email: contact.email,
+        addressId: address.id,
+      });
       tx.insert(customers).values({ userId }).run();
       tx.insert(customerAccounts)
         .values({
           userId,
           status: "active",
-          contactId: savedContact.id,
+          contactId,
           cardNumber: card.cardNumber,
           cardType: card.cardType,
           cardExpiryMonth: card.expiryMonth,
