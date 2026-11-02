@@ -18,7 +18,7 @@ downstream:
 
 ## Executive Summary
 
-**Verdict: PASS.** The integrated sprint branch builds, lints, typechecks, passes all 398 unit tests (84 files) and all 20 Playwright specs. Each of the 21 customer-notifications scenarios is verified by the sprint's own service tests, which cite their case keys and pass (30 tests in `services/notifications`). No product defects were found. 6 locked acceptance tests for this capability fail inside the test harness (see warnings below); per project policy they are triaged at UAT.
+**Verdict: PASS.** The integrated sprint branch builds, lints, typechecks, passes all 398 unit tests (84 files) and all 20 Playwright specs. Each of the 22 customer-notifications scenarios is verified by the sprint's own service tests, which cite their case keys and pass (30 tests in `services/notifications`). No product defects were found. 6 locked acceptance tests for this capability fail inside the test harness (see warnings below); per project policy they are triaged at UAT.
 
 ## E2E Test Status
 
