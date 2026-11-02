@@ -23,7 +23,9 @@ describe("invoice receipt", () => {
     await f.approvedOrder("10011", [["EST-1", 3]]);
     f.messaging.enqueue(f.db, "supplier.invoice", xml);
     await f.worker.processDue();
-    const row = messages(f.client, "supplier.invoice", "%10011%")[0];
+    const row = messages(f.client, "supplier.invoice", "%10011%").find(
+      (m) => m.subscriber === "order-processing.invoice",
+    )!;
     expect(row.status).toBe("pending");
     expect(row.attempts).toBeGreaterThan(0);
   });
