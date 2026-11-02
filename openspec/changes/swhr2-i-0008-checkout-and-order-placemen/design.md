@@ -126,3 +126,46 @@ The order-processing tables keep no foreign key into the storefront group (data-
 - `fast-xml-parser` (pure JavaScript, runs under Bun) to build and parse the `PurchaseOrder` document with element order preserved. This dependency is assumed, because no XML library is in the pinned stack.
 - The asynchronous hand-off goes through the persisted outbox table instead of a message broker (PRD constraints).
 - Tests: unit tests for `nextId` and the codec (round trip, both rejection messages); route integration tests for empty cart, unsigned visitor, sequential ids and the cart cleared after placement; a test that a failing card insert leaves no order rows.
+
+## Planning (sprint SWHR2-S-0026)
+
+Added by planning on 2026-11-02. Everything above this heading is the extracted change and is unchanged. The FEATURE is SWHR2-T-0290; its plan is `artifacts/SWHR2-S-0026/SWHR2-T-0290/PLAN.md`.
+
+### Codebase findings
+
+- **F1 Schema is one file.** `db/schema.ts` holds every table (users, sign-on, catalog, customers). There is no `db/schema/` directory and no `messages`, `id_sequences`, `op_*` table. The last migration is `drizzle/0004_watery_jasper_sitwell.sql`.
+- **F2 Database bootstrap.** `db/client.ts` runs the `drizzle/` migrations on open, enables foreign keys after migrating, uses `:memory:` under Vitest, and seeds the dev database (customer j2ee, a small catalog) only when the tables are empty.
+- **F3 Failure routing exists.** `services/errors.ts` already defines `AppFailure`, `OrderFailure`, `EmptyCartOrder` and `guardRoute`, which answers any failure as an `HTTPError` whose data is `{ kind, kinds, message, trace }`.
+- **F4 Screens partly exist.** `src/pages/petstore/error/empty-cart.tsx` and `error/server.tsx` exist. `server.tsx` is a static "Server error" page with no message, trace or administrator notice. `src/pages/petstore/cart.tsx` already links Check Out to `/petstore/checkout`, which has no page yet.
+- **F5 Cart and session.** The cart is in memory (`services/cart.ts`, with `cartFor`, `lines`, `clearCart`), keyed by session id. `services/session/guards.ts#requireCustomer` guards customer routes. Contact and address data come from `services/customers/`.
+- **F6 Locked acceptance suite (v85, commit 95e50ea).** `tests/acceptance/checkout/` (`unit.test.ts`, `orders.test.ts`, `e2e/checkout.spec.ts`, `harness.ts`) cites all 16 approved cases, SWHR2-C-0212 to SWHR2-C-0227. It fixes these module paths and exports: `services/ids#nextId`, `services/documents/purchase-order#toXml/fromXml`, `services/orders/receive#createPurchaseOrder(db, po)/getPurchaseOrder(orderId)`, and `routes/api/orders/index.post`. It also fixes these tables: `id_sequences(prefix, next_value)`, `op_purchase_orders`, `op_po_contacts`, `op_po_cards`, `op_po_line_items(item_id, quantity, quantity_shipped)`, `messages(channel, payload, status)` and `op_order_workflow(order_id, status)`. Its order shape is `harness.ts#purchaseOrder`, with lines numbered from 1.
+- **F7 CI.** `.github/workflows/ci.yml` runs on pull requests to `vortex/**`. It runs the unit, acceptance (Vitest) and acceptance e2e (Playwright) tiers. No `fast-xml-parser` or other XML library is in `package.json`.
+
+### Spec discrepancies
+
+Recorded here and on SWHR2-T-0290. The delta spec is not edited.
+
+- **SD1 Schema location.** The Target design places tables in `db/schema/storefront.ts` and `db/schema/order-processing.ts`. The repository keeps one `db/schema.ts` (F1). The FEATURE adds the tables to `db/schema.ts`.
+- **SD2 Outbox and workflow tables come earlier than the design says.** The Target design treats the `messages` table and the order workflow as order-fulfillment's (SWHR2-I-0011). The locked cases need them now. SWHR2-C-0220 reads `messages` and queries `op_order_workflow`, which must exist. SWHR2-C-0216 (e2e) needs the order stored in the running dev server, so something must consume `order.new` and call `createPurchaseOrder`. The FEATURE therefore creates a minimal `messages` table, a minimal `op_order_workflow(order_id, status)` table, and an in-process `order.new` consumer that order-fulfillment later extends. The consumer is started by a Nitro plugin, not under Vitest. Receipt inserts the workflow row as PENDING. Auto-approval stays with order-approval (SWHR2-I-0009).
+- **SD3 Line numbering.** tasks.md 4.3 and the legacy notes number lines from 0. The locked harness numbers them from 1, and the codec round trip must reproduce what it is given. The route numbers lines from 1 so the stored data matches what the tests build. No requirement in the spec states the start.
+- **SD4 Seed data versus the case preconditions.** SWHR2-C-0215 and SWHR2-C-0216 expect j2ee's account to hold "1 Main St" and "abc@xyz.com". SWHR2-C-0212 (e2e) orders item EST-4. The dev seed in `db/client.ts` has "901 San Antonio Road", "j2ee@example.com" and no EST-4. Nothing else in the repository reads those values. The FEATURE aligns the j2ee seed and adds EST-4. The seed itself belongs to data-population (SWHR2-I-0014).
+- **SD5 Server Error heading.** The design gives the heading as "Server Error". The existing page says "Server error" and shows neither the message nor the trace. The FEATURE rebuilds the page to the approved mockup.
+- **SD6 Order Placed screen.** PRD open question 6 asks whether the screen is in scope. The approved mockup SWHR2-MCK-25 ("Order placed", "Your order number") settles it as in scope, so the FEATURE builds it at `/petstore/order-placed`.
+- **SD7 Payment card (D1/D2).** tasks.md 4.6 says "as decided for the fixed-card defect". No decision is recorded. Until the Business Owner decides, the FEATURE stores the signed-on customer's account card (number, type, expiry) on the order and never charges it, and does not reproduce the legacy argument swap.
+
+### Decisions
+
+- **P1 Outbox hand-off.** Placement writes the `PurchaseOrder` XML as one `pending` row on channel `order.new` in `messages`, inside the same synchronous transaction that issues the order id. If that insert fails, nothing is kept and the route answers 500 `AppFailure`. The cart is cleared only after the commit.
+- **P2 In-process consumer.** `services/messages/` provides `enqueue(tx, channel, payload)` and a polling `startWorker(handlers)`. A Nitro plugin starts the worker in the dev and production server. Tests do not start it, which is what C-0220 relies on. The `order.new` handler calls `receiveOrder(xml)`: parse, store the order, insert the PENDING workflow row, and mark the message done in one transaction.
+- **P3 Ids.** `nextId(prefix, tx?)` joins a caller's transaction or opens its own (ARCHITECTURE Key Decisions, "Data operations join the caller's transaction"). A missing, empty or null prefix throws before any database call.
+- **P4 XML dependency.** Add `fast-xml-parser`, as the design proposes, with `preserveOrder` off and the element order fixed by the builder's input object.
+
+### Phases
+
+1. **Data model.** Add the tables to `db/schema.ts` and generate one migration (tasks 1.x).
+2. **Ids and codec.** `services/ids.ts` and `services/documents/purchase-order.ts`, with unit tests (2.x, 5.1 to 5.3, 6.2, 7.1, 7.3).
+3. **Receipt and outbox.** `services/messages/`, `services/orders/receive.ts`, the Nitro plugin and the workflow row (5.4 to 5.7, 6.1).
+4. **Placement routes.** `GET /api/checkout` and `POST /api/orders`, with route integration tests (4.x, 7.2).
+5. **Screens.** The checkout form, Order Placed, and the Server Error rebuild, with UI tests and per-locale screen text (3.x, 4.7, 4.8, 7.4).
+6. **Test harness.** Align the dev seed (SD4) so the locked e2e preconditions hold on a fresh database. Run every locked case in `tests/acceptance/checkout/` green, and keep the locked shopping-cart, sign-on and customer-account suites green.
+7. **CI.** No workflow change is needed (F7). The ticket's pull request into the sprint branch must pass the unit, acceptance and acceptance e2e jobs.
