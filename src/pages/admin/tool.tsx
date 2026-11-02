@@ -86,11 +86,9 @@ export default function Tool() {
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<Record<string, OrderRow[]>>({});
   const [charts, setCharts] = useState<Charts>({ revenue: [], count: [] });
-  const [drafts, setDrafts] = useState<{ revenue: Range; count: Range }>({
-    revenue: DEFAULT_RANGE,
-    count: DEFAULT_RANGE,
-  });
-  const [applied, setApplied] = useState(drafts);
+  // One date range drives both charts; Submit applies the typed range, Refresh reuses the applied one.
+  const [draft, setDraft] = useState<Range>(DEFAULT_RANGE);
+  const [applied, setApplied] = useState<Range>(DEFAULT_RANGE);
   const [marks, setMarks] = useState<Record<string, Decision>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -106,7 +104,7 @@ export default function Tool() {
    * at once and each reply is applied as it arrives. The pending list is requested last and the
    * actions come back once it is applied, since Approve, Deny and Commit work on that list.
    */
-  const loadAll = async (ranges: typeof applied) => {
+  const loadAll = async (range: Range) => {
     setBusy("retrieve");
     setError(null);
     const apply = <T,>(request: Promise<T>, use: (value: T) => void) =>
@@ -114,12 +112,8 @@ export default function Tool() {
     for (const status of ["APPROVED", "DENIED", "COMPLETED"]) {
       void apply(loadOrders(status), (rows) => setOrders((o) => ({ ...o, [status]: rows })));
     }
-    void apply(loadChart("revenue", ranges.revenue), (revenue) =>
-      setCharts((c) => ({ ...c, revenue })),
-    );
-    void apply(loadChart("order-count", ranges.count), (count) =>
-      setCharts((c) => ({ ...c, count })),
-    );
+    void apply(loadChart("revenue", range), (revenue) => setCharts((c) => ({ ...c, revenue })));
+    void apply(loadChart("order-count", range), (count) => setCharts((c) => ({ ...c, count })));
     await apply(loadOrders("PENDING"), (rows) => {
       setOrders((o) => ({ ...o, PENDING: rows }));
       setMarks({});
@@ -140,13 +134,16 @@ export default function Tool() {
     void loadAll(applied);
   };
 
-  const submitChart = async (which: "revenue" | "count") => {
+  const submitRange = async () => {
     setBusy("retrieve");
     setError(null);
     try {
-      const data = await loadChart(which === "revenue" ? "revenue" : "order-count", drafts[which]);
-      setCharts((c) => ({ ...c, [which]: data }));
-      setApplied((a) => ({ ...a, [which]: drafts[which] }));
+      const [revenue, count] = await Promise.all([
+        loadChart("revenue", draft),
+        loadChart("order-count", draft),
+      ]);
+      setCharts({ revenue, count });
+      setApplied(draft);
     } catch (e) {
       fail(e);
     } finally {
@@ -338,20 +335,20 @@ export default function Tool() {
           title="Revenue by category"
           kind="pie"
           data={charts.revenue}
-          {...drafts.revenue}
+          {...draft}
           disabled={off}
-          onChange={(r) => setDrafts((d) => ({ ...d, revenue: r }))}
-          onSubmit={() => void submitChart("revenue")}
+          onChange={setDraft}
+          onSubmit={() => void submitRange()}
         />
         <ChartPanel
           id="count"
           title="Orders by category"
           kind="bar"
           data={charts.count}
-          {...drafts.count}
+          {...draft}
           disabled={off}
-          onChange={(r) => setDrafts((d) => ({ ...d, count: r }))}
-          onSubmit={() => void submitChart("count")}
+          onChange={setDraft}
+          onSubmit={() => void submitRange()}
         />
       </div>
     </div>
