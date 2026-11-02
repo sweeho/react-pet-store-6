@@ -327,3 +327,8 @@ if (!process.env.VITEST && db.select().from(supInventory).all().length === 0) {
     .values(items.map(([itemId]) => ({ itemId, quantity: 10000 })))
     .run();
 }
+
+/* eslint-disable-next-line @typescript-eslint/no-unused-vars -- red-phase stub */
+export function repairMissingTables(_sqlite: Database, _migrationsFolder: string): void {
+  throw new Error("VortexNotImplemented");
+}
