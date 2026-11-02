@@ -36,3 +36,9 @@ export function OrderTable({ rows }: { rows: OrderRow[] }) {
     </div>
   );
 }
+
+/** Stub (red phase). */
+export default function OrderTableStub(props: { orders: OrderRow[] }): never {
+  void props;
+  throw new Error("VortexNotImplemented");
+}
