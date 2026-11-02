@@ -122,6 +122,7 @@ Ticket: SWHR2-T-0299 (FEATURE) owns every task group. The locked acceptance suit
   - Behaviour on each reply: a 401 goes to `/supplier`; a 400 shows an inline alert and keeps the entries; success follows SD6.
   - Loading and error states use `useApi` and the shared frames, and the empty state is SD7.
   - Screen text is English only, like the administration tool.
+- P6. **Demo stock for dev and e2e.** Deferred sign-on cases SWHR2-C-0255 and SWHR2-C-0256 (`tests/acceptance/sign-on/e2e/sign-on.spec.ts`) now land here. They sign in as supplier on the e2e database and expect Display Inventory and at least one inventory row, without seeding stock themselves. So `db/client.ts` seeds one `sup_inventory` record of 10000 per demo catalog item when the table is empty, following its existing demo-catalog block and never under Vitest. The real seeding is data-population's (change `swhr2-i-0014-sample-data-population`), which replaces this block.
 
 ### Phases
 

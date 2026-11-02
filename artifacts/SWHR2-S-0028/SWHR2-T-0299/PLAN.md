@@ -8,7 +8,7 @@ A signed-in supplier opens Supplier inventory from the supplier home and sees ev
 
 ## Steps
 
-1. `sup_inventory` in `db/schema.ts` and migration 0007 (design.md P1, SD2). Tasks 1.1, 1.2.
+1. `sup_inventory` in `db/schema.ts` and migration 0007 (design.md P1, SD2). Tasks 1.1, 1.2. Seed demo stock in `db/client.ts` (P6).
 2. `services/supplier/inventory.ts`: `listInventory`, `updateInventory`, `reduceStock` (P2, SD4, SD5). Tasks 1.3–1.5, 3.x, 4.x.
 3. `routes/api/supplier/inventory.get.ts` and `inventory.post.ts` (P3, SD1, SD3). Tasks 2.x, 6.1.
 4. Supplier home signed-in state (P4) and `/supplier/inventory` page (P5, SD6, SD7), built against the mockups below. Tasks 5.x.
@@ -27,6 +27,7 @@ Create:
 Modify:
 
 - `db/schema.ts` (append `supInventory`)
+- `db/client.ts` (demo stock block, P6)
 - `src/pages/supplier/index.tsx` and `src/pages/supplier/index.test.tsx`
 
 Do not edit: `tests/acceptance/**`, `openspec/**`, `services/supplier/fulfil.ts` and `services/supplier/orders.ts` (order-fulfilment's).
@@ -46,5 +47,5 @@ Known deviations, decided in advance:
 ## Definition of Done
 
 - AC-1 to AC-5 on the ticket, one per scenario.
-- Linked cases SWHR2-C-0041 to SWHR2-C-0045 pass in the locked suite.
+- Linked cases SWHR2-C-0041 to SWHR2-C-0045 pass in the locked suite, and so do the deferred sign-on cases SWHR2-C-0255 and SWHR2-C-0256.
 - The supplier steps of the locked sign-on e2e keep passing.
