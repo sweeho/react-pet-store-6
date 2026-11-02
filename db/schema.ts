@@ -151,3 +151,95 @@ export const customerProfiles = sqliteTable("customer_profiles", {
   myListOn: integer("my_list_on", { mode: "boolean" }).notNull().default(true),
   bannerOn: integer("banner_on", { mode: "boolean" }).notNull().default(true),
 });
+
+// Checkout and order placement (SWHR2-I-0008). Table and column names are fixed by
+// tests/acceptance/checkout/. Money is integer hundredths of the order currency.
+export const idSequences = sqliteTable("id_sequences", {
+  prefix: text("prefix").primaryKey(),
+  nextValue: integer("next_value").notNull(),
+});
+
+// Persisted outbox: placement enqueues, the in-process worker consumes (design.md P1, P2).
+export const messages = sqliteTable(
+  "messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    channel: text("channel").notNull(),
+    payload: text("payload").notNull(),
+    status: text("status").notNull().default("pending"),
+    error: text("error"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [
+    index("messages_channel_status_idx").on(t.channel, t.status),
+    check("messages_status", sql`${t.status} in ('pending', 'done', 'failed')`),
+  ],
+);
+
+// Order processing keeps no foreign key into the storefront tables (data-population).
+export const opPurchaseOrders = sqliteTable("op_purchase_orders", {
+  orderId: text("order_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  locale: text("locale").notNull(),
+  orderDate: integer("order_date").notNull(),
+  total: integer("total").notNull(),
+  // Billing contact and address (the order e-mail is the billing e-mail).
+  givenName: text("given_name").notNull(),
+  familyName: text("family_name").notNull(),
+  street: text("street").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zip: text("zip").notNull(),
+  country: text("country").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+});
+
+// The shipping contact and address of an order.
+export const opPoContacts = sqliteTable("op_po_contacts", {
+  orderId: text("order_id")
+    .primaryKey()
+    .references(() => opPurchaseOrders.orderId, { onDelete: "cascade" }),
+  givenName: text("given_name").notNull(),
+  familyName: text("family_name").notNull(),
+  street: text("street").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zip: text("zip").notNull(),
+  country: text("country").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+});
+
+// Card details are captured and never charged.
+export const opPoCards = sqliteTable("op_po_cards", {
+  orderId: text("order_id")
+    .primaryKey()
+    .references(() => opPurchaseOrders.orderId, { onDelete: "cascade" }),
+  cardNumber: text("card_number").notNull(),
+  cardType: text("card_type").notNull(),
+  expiryDate: text("expiry_date").notNull(),
+});
+
+export const opPoLineItems = sqliteTable(
+  "op_po_line_items",
+  {
+    orderId: text("order_id")
+      .notNull()
+      .references(() => opPurchaseOrders.orderId, { onDelete: "cascade" }),
+    lineNumber: integer("line_number").notNull(),
+    categoryId: text("category_id").notNull(),
+    productId: text("product_id").notNull(),
+    itemId: text("item_id").notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPrice: integer("unit_price").notNull(),
+    quantityShipped: integer("quantity_shipped").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.orderId, t.lineNumber] })],
+);
+
+// Minimal workflow row: receipt starts it PENDING; order-approval extends it (design.md SD2).
+export const opOrderWorkflow = sqliteTable("op_order_workflow", {
+  orderId: text("order_id").primaryKey(),
+  status: text("status").notNull(),
+});
