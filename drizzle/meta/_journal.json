@@ -50,13 +50,6 @@
       "when": 1793607120355,
       "tag": "0006_cool_mojo",
       "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1793611024182,
-      "tag": "0007_nebulous_boomerang",
-      "breakpoints": true
     }
   ]
 }

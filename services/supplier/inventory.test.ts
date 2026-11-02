@@ -2,16 +2,20 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { loadApp } from "../../tests/acceptance/sign-on/harness";
+import { listInventory } from "./inventory";
 
 type App = Awaited<ReturnType<typeof loadApp>>;
 type Svc = typeof import("./inventory");
 
-const seed = (app: App, rows: [string, number][]) =>
+// Raw seeding starts with a read through the service, so the store is known to answer first.
+const seed = (app: App, rows: [string, number][]) => {
+  listInventory();
   rows.forEach(([id, q]) =>
     app.client.exec(
       `insert or replace into sup_inventory (item_id, quantity) values ('${id}', ${q})`,
     ),
   );
+};
 const qty = (app: App, id: string) =>
   (
     app.client.query("select quantity q from sup_inventory where item_id = ?").get(id) as {
@@ -105,6 +109,7 @@ describe("stock record rules", () => {
 
   it("[SWHR2-C-0045] refuses a record without a quantity", async () => {
     const app = await loadApp();
+    listInventory();
     expect(() =>
       app.client.exec("insert into sup_inventory (item_id, quantity) values ('EST-2', null)"),
     ).toThrow(/not null|constraint/i);

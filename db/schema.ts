@@ -245,13 +245,3 @@ export const opOrderWorkflow = sqliteTable("op_order_workflow", {
   orderId: text("order_id").primaryKey(),
   status: text("status").notNull(),
 });
-
-// Supplier stock, one record per item; no foreign key into the catalog (supplier-inventory design P1).
-export const supInventory = sqliteTable(
-  "sup_inventory",
-  {
-    itemId: text("item_id").primaryKey(),
-    quantity: integer("quantity").notNull(),
-  },
-  (t) => [check("sup_inventory_quantity_integer", sql`typeof(${t.quantity}) = 'integer'`)],
-);
