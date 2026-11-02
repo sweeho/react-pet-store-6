@@ -113,6 +113,8 @@ test.describe("sign up", () => {
   test("SWHR2-C-0164: signing up as newuser registers the name and continues to account creation", async ({
     page,
   }) => {
+    // precondition: the name newuser is not registered, even by an earlier run
+    forgetUser("newuser");
     await page.goto("/petstore/signin");
     await fillSignUp(page, "newuser", "secret1", "secret1");
     const registered = page.waitForResponse(
