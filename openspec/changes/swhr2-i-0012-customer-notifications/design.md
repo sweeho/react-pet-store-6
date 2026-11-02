@@ -108,3 +108,50 @@ No new table. The four channels `notify.approval`, `notify.shipment` (the invoic
 - The persisted outbox and Nitro worker plugin (order-fulfillment) in place of JMS queues (PRD constraints).
 - Locale templates are TypeScript modules rendering HTML strings, and `Intl.NumberFormat` handles money.
 - Tests: unit tests for request validation, recipient parsing and the content passed through unchanged (nodemailer stream transport); handler tests for each switch off consuming without mail, and for the completed-order subject and body in en_US and ja_JP.
+
+## Sprint planning (SWHR2-S-0031)
+
+Implemented end-to-end by FEATURE SWHR2-T-0313 (plan: `artifacts/SWHR2-S-0031/SWHR2-T-0313/PLAN.md`). Where this section and "Target design" differ, this section wins. Where `tasks.md` and the locked acceptance suite (`tests/acceptance/customer-notifications/`) differ, the suite wins; see "Spec discrepancies".
+
+### Codebase findings
+
+- **Outbox and worker exist** (order-fulfillment, checkout). `services/messaging/index.ts#enqueue(tx, channel, payload)` writes `pending` rows; `SUBSCRIBERS` makes `supplier.invoice` publish/subscribe (today one subscriber, `order-processing.invoice`). `services/messaging/worker.ts#processDue()` is `async`, but every `Handler` is `(tx, payload) => void` and runs **synchronously inside a `bun:sqlite` transaction**. A thrown handler leaves the row `pending`, `attempts + 1`, due again 30 s later. Nothing ever sets `failed`, although the CHECK on `messages.status` allows it.
+- **Trigger points.** The approval decision is `services/orders/decide.ts#applyDecision` (moves PENDING → APPROVED/DENIED via `setStatus`, then hands the supplier order off in the same transaction). COMPLETED is set in `services/orders/invoice.ts#handleInvoice` (`setStatus(tx, id, done ? "COMPLETED" : "SHIPPED_PART")`). Each invoice arrives as one `supplier.invoice` message, one per shipment (`services/supplier/fulfil.ts#fulfilOrder`).
+- **Order data for e-mails.** `op_purchase_orders.email` / `.locale`, and `op_po_line_items` (`category_id`, `product_id`, `quantity`, `unit_price` in hundredths). Money formatting lives in `shared/i18n/format.ts`.
+- **No mail library is installed.** `nodemailer` is a new dependency. The locked harness mocks `nodemailer` (`createTransport(options).sendMail(message)`) and renders the captured message with the real `nodemailer` stream transport (C-0065), so the dependency is fixed by the tests, not only assumed.
+- **Locked acceptance contract** (`tests/acceptance/customer-notifications/harness.ts`):
+  - `services/notifications/send#sendMail({ to, subject, content })` returns a promise and rejects with a message naming the missing field.
+  - `services/notifications/config#notificationSwitches()` returns `{ approval, shipment, completed }`.
+  - The channels are `notify.approval`, `notify.completed` and `mail.outbound`, and the subscriber is `notify.shipment` on `supplier.invoice`. The `mail.outbound` payload is the JSON triple `[recipient, subject, content]`.
+  - The settings are read from `process.env` per test, so they must be read when used, not frozen at import.
+- No root route, page or UI is touched. `plugins/order-worker.ts` already starts the worker; nothing to add there.
+
+### Decisions
+
+- **P1 The mail send runs outside the delivery transaction.** SMTP is asynchronous and a `bun:sqlite` transaction is synchronous, so `mail.outbound` cannot be an ordinary `Handler`. The worker gets a second handler kind for that one channel: `await` the send, then mark the row `delivered`. A send that throws takes the existing retry path (`pending`, `attempts + 1`, delayed). That is at-least-once delivery: a crash between send and mark resends one e-mail. This is accepted.
+- **P2 A rejected request is marked `failed`, not retried.** A `mail.outbound` payload that does not parse to three non-empty strings is rejected without sending, and its row is set `failed` with the error. Retrying a malformed request can never succeed, and on this outbox a retry would repeat forever every 30 s.
+- **P3 Switches.** `NOTIFY_*_ENABLED` are read on every call. `true` (case-insensitive) is on. Absent or `false` is off. Any other value throws when the switch is read, so the notification handler fails loudly and its trigger stays `pending` until an operator corrects it. This is the narrow reading of tasks 5.6 that does not contradict SWHR2-R-0014.
+- **P4 Producers enqueue only.** `applyDecision` enqueues `notify.approval` `{ orderId, status }` when `setStatus` succeeds. `handleInvoice` enqueues `notify.completed` `{ orderId }` when the order becomes COMPLETED. `notify.shipment` is added to `SUBSCRIBERS["supplier.invoice"]`. Producers always enqueue. The switch is checked by the notification handler, which marks the trigger delivered without mail when off (SWHR2-R-0063), so turning a switch on later does not send anything late.
+- **P5 Approval e-mail on DENIED.** "Target design" sends the status e-mail for APPROVED and DENIED, with subject "Order Status: <orderId>". The approved spec specifies only the approval e-mail (D4), and no test covers denial. Keep the target design's behaviour; a denial e-mail is not asserted either way.
+- **P6 Content and encoding.** The transport receives `{ from, to, subject, html: content }` exactly as supplied. nodemailer declares the `text/html` charset as UTF-8, which closes the legacy charset mismatch. No `text` alternative is generated, because that would change "content as supplied".
+
+### Phases
+
+1. **E-mail request contract** (tasks §1). `services/notifications/request.ts`: parse/validate the triple and the `{ to, subject, content }` object, and parse the recipient list.
+2. **Delivery channels** (§2). Channel constants, the subscriber registry entry, and the async `mail.outbound` path in the worker (P1, P2). No setup step is needed: an outbox channel exists once it is written to.
+3. **Mail-delivery service** (§3). `services/notifications/send.ts#sendMail` and the `mail.outbound` handler.
+4. **Mail server configuration** (§4). `services/notifications/config.ts`: `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` (default `customerservice@javapetstoredemo.com`), plus the three switches (P3).
+5. **Order notifications** (§5). Handlers `notify.approval`, `notify.shipment` and `notify.completed`, locale templates `services/notifications/templates/{en_US,ja_JP,zh_CN}.ts`, and the producer hooks in `decide.ts` and `invoice.ts` (P4).
+6. **Test harness** (§6). Unit tests beside each new module. The completed-order body is tested in en_US and ja_JP with a capturing transport, and the worker tests are extended for the async path and `failed` rows. Do not edit `tests/acceptance/**`.
+7. **CI.** No workflow change. The existing CI job (lint, typecheck, unit, acceptance, E2E) on `vortex/**` pushes and PRs must be green on the ticket branch, with all 22 customer-notifications acceptance cases passing.
+
+## Spec discrepancies
+
+Recorded, not edited into the delta spec or `tasks.md`.
+
+- **X1 Send failure: discard vs retry.** tasks 3.4 says to log the failure, consume the request and not retry (the legacy behaviour, D2). "Target design" and locked case SWHR2-C-0061 require the request to stay pending and be retried while the mail server is down, and SWHR2-R-0067 requires durability. The implementation follows the suite (P1); line 3.4 is satisfied only in "log a diagnostic".
+- **X2 Missing switch: startup failure vs off.** tasks 5.6 says startup fails when a switch is absent (legacy `ServiceLocator`). SWHR2-R-0014 and cases C-0046/C-0047/C-0067 require an absent switch to mean off. The implementation follows the spec and fails only on a non-boolean value (P3).
+- **X3 Malformed request: back to the queue vs rejected.** tasks 3.5 says to return the request to the queue. SWHR2-R-0130.02 says it is rejected and nothing is sent. Re-queueing a malformed request on this outbox is an endless retry, so it is marked `failed` (P2).
+- **X4 Channel setup.** tasks 2.4 says to create the channels at installation (legacy `setup.xml`). Outbox channels need no creation, so the line is met by registering channel names and handlers.
+- **X5 Shipment channel.** tasks §2 lists only the approval, completed and mail channels. The shipment notification rides the existing `supplier.invoice` publish/subscribe channel as subscriber `notify.shipment` (legacy `MailInvoiceMDB` was a topic subscriber). This is consistent with SWHR2-R-0067, which names approval and completed only.
+- **X6 Denial e-mail.** "Target design" sends a status e-mail on DENIED. The brief and the approved spec mention only approval (D4). See P5.
