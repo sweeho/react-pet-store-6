@@ -13,7 +13,7 @@ const areas = [
   { label: "Sign in", to: "/petstore/signin" },
   { label: "Account & profile", to: "/petstore/account" },
   { label: "Order approval", to: "/admin" },
-  { label: "Sales reporting", to: "/admin" },
+  { label: "Orders and sales", to: "/admin/tool" },
   { label: "Supplier inventory", to: "/supplier" },
 ];
 

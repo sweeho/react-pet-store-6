@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Sales — Pie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--brand:#4f46e5;--on-brand:#ffffff;--success:#16a34a;--warning:#d97706;--danger:#dc2626;--info:#0284c7;
+--sans:Inter,system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--bg);display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr 40px;overflow:hidden}
+a{color:inherit;text-decoration:none}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+header{grid-column:1/3;display:flex;align-items:center;gap:16px;padding:0 24px 0 16px;border-bottom:1px solid var(--border);background:var(--bg)}
+.brandmark{display:flex;align-items:center;gap:8px;width:208px;font-weight:600;font-size:16px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center}
+.search{flex:1;max-width:520px;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted)}
+.search span{flex:1}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lang{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px;font-weight:500}
+.lang a{padding:0 12px;height:32px;display:flex;align-items:center;color:var(--muted);border-right:1px solid var(--border)}
+.lang a:last-child{border-right:0}
+.lang a.on{background:var(--brand);color:var(--on-brand)}
+.who{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;padding:0 4px}
+.who b{font-family:var(--mono);font-weight:500;color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:8px;font-weight:500;font-size:14px;border:1px solid transparent;white-space:nowrap}
+.btn.primary{background:var(--brand);color:var(--on-brand)}
+.btn.secondary{background:var(--bg);border-color:var(--border);color:var(--text)}
+.btn.sm{height:32px;padding:0 12px}
+.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+nav.rail{grid-row:2/4;border-right:1px solid var(--border);background:var(--surface);padding:16px 12px;display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.grp h6{font-size:12px;font-weight:600;color:var(--muted);padding:0 8px 4px;letter-spacing:.02em}
+.item{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:8px;color:var(--text);font-weight:500}
+.item.on{background:var(--brand);color:var(--on-brand)}
+.sub{margin:2px 0 2px 24px;border-left:1px solid var(--border);padding-left:8px}
+.sub .item{height:28px;font-weight:400;color:var(--muted)}
+.lock{margin-left:auto;color:var(--muted)}
+.item.on .lock{color:var(--on-brand);opacity:.8}
+.lock svg{width:12px;height:12px}
+main{overflow:hidden;padding:20px 32px 24px;background:var(--bg);display:flex;flex-direction:column;min-height:0}
+.card{border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+footer{grid-column:2;display:flex;align-items:center;gap:16px;padding:0 32px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+footer .sp{flex:1}
+.crumbs{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.crumbs svg{width:12px;height:12px}
+.crumbs .cur{color:var(--text);font-weight:500}
+.ptitle{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px}
+.ptitle h1{font-size:24px;font-weight:600;line-height:32px}.ptitle p{color:var(--muted);margin-top:2px}
+.pact{display:flex;align-items:center;gap:12px}
+.stamp{font-size:12px;color:var(--muted)}
+.bar{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);margin-bottom:16px}
+.views{display:flex;gap:4px;padding:3px;border:1px solid var(--border);border-radius:8px;background:var(--surface);margin-bottom:-1px;transform:translateY(-10px)}
+.views a{display:flex;align-items:center;gap:8px;height:30px;padding:0 14px;border-radius:6px;font-weight:500;color:var(--muted)}
+.views a.on{background:var(--bg);color:var(--text);box-shadow:0 0 0 1px var(--border)}
+.tabs{display:flex;gap:24px}
+.tabs a{display:flex;align-items:center;gap:6px;height:40px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs a.on{color:var(--brand);border-color:var(--brand)}
+.tabs a svg{width:12px;height:12px}
+.mono{font-family:var(--mono)}
+.panel{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px}
+.range{display:flex;align-items:flex-end;gap:12px;padding:16px;border-bottom:1px solid var(--border)}
+.fld label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:4px}
+.inp{display:flex;align-items:center;gap:8px;width:180px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:13px;background:var(--bg)}
+.inp svg{color:var(--muted)}
+.chartcard{display:flex;flex-direction:column}
+.chartbody{flex:1;display:flex;align-items:center;justify-content:center;padding:16px 24px}
+.ch{padding:16px 16px 0;display:flex;justify-content:space-between;align-items:baseline}
+.ch h2{font-size:16px;font-weight:600}.ch span{font-size:12px;color:var(--muted)}
+.side .ch{padding:16px}
+.leg{width:100%;border-collapse:collapse}
+.leg th{font-size:12px;color:var(--muted);font-weight:600;text-align:left;height:36px;padding:0 16px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.leg td{height:40px;padding:0 16px;border-bottom:1px solid var(--border)}
+.leg .r{text-align:right}
+.sw{display:inline-block;width:12px;height:12px;border-radius:4px;background:var(--brand);margin-right:10px;vertical-align:-1px}
+.side p.foot{font-size:12px;color:var(--muted);padding:12px 16px;line-height:18px}
+svg.chart{width:auto;height:auto;max-width:100%;stroke:none}
+svg.chart text{font-family:var(--sans);fill:var(--text)}
+</style></head><body><header>
+<a class="brandmark" href="#"><span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span>Pet Store</a>
+<div class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Search pets by keyword — e.g. “angelfish”</span></div>
+<div class="hdr-right">
+<div class="lang" aria-label="Language"><a class="on" href="#">English</a><a href="#">日本語</a><a href="#">中文</a></div>
+<span class="who"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Administrator <b>admin</b></span><a class="btn secondary sm" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</a>
+</div></header><nav class="rail" aria-label="Global">
+<div class="grp"><h6>Shop</h6><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Catalog</a><div class="sub"><a class="item" href="#">Birds</a><a class="item" href="#">Fish</a><a class="item" href="#">Dogs</a><a class="item" href="#">Reptiles</a><a class="item" href="#">Cats</a></div><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Shopping cart</a><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Checkout</a></div>
+<div class="grp"><h6>You</h6><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>Sign in</a><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Account &amp; profile</a><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg>Language</a></div>
+<div class="grp"><h6>Store staff</h6><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Order approval<span class="lock" title="Separate sign-in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item on" href="#" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M8 17V10"/><path d="M13 17V6"/><path d="M18 17v-4"/></svg>Orders and sales<span class="lock" title="Separate sign-in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a><a class="item" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>Supplier inventory<span class="lock" title="Separate sign-in"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></a></div>
+</nav><main><div class="crumbs"><a href="#">Home</a><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg><span>Store staff</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg><span class="cur">Orders and sales</span></div>
+<div class="ptitle"><div><h1>Orders and sales</h1><p>Orders that have been decided, and revenue and items ordered per category over a date range.</p></div>
+<div class="pact"><span class="stamp">Loaded 2:14 PM · refreshes order lists and both charts</span><a class="btn primary" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M8 16H3v5"/></svg>Refresh</a></div></div>
+<div class="bar"><nav class="tabs" aria-label="Tabs"><a class="on" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>Pie chart · revenue</a><a href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M8 17V10"/><path d="M13 17V6"/><path d="M18 17v-4"/></svg>Bar chart · items ordered</a></nav><div class="views" role="tablist" aria-label="View"><a href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Orders</a><a class="on" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>Sales</a></div></div><div class="panel"><div class="card chartcard"><div class="ch"><h2>Revenue per category</h2><span>1/1/2001 – 12/31/2002 · all orders placed in the range</span></div><div class="range"><div class="fld"><label>Start date</label><div class="inp"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>01/01/2001</div></div><div class="fld"><label>End date</label><div class="inp"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>12/31/2002</div></div><a class="btn secondary" href="#">Show chart</a></div><div class="chartbody"><svg class="chart" width="460" height="460" viewBox="0 0 460 460" role="img" aria-label="Revenue per category, pie chart"><path d="M230,230 L230.0,30.0 A200,200 0 0 1 298.1,418.0 Z" fill="#4f46e5" fill-opacity="1" stroke="#ffffff" stroke-width="2"/><path d="M230,230 L298.1,418.0 A200,200 0 0 1 52.4,321.9 Z" fill="#4f46e5" fill-opacity="0.78" stroke="#ffffff" stroke-width="2"/><path d="M230,230 L52.4,321.9 A200,200 0 0 1 52.8,137.2 Z" fill="#4f46e5" fill-opacity="0.58" stroke="#ffffff" stroke-width="2"/><path d="M230,230 L52.8,137.2 A200,200 0 0 1 144.4,49.3 Z" fill="#4f46e5" fill-opacity="0.4" stroke="#ffffff" stroke-width="2"/><path d="M230,230 L144.4,49.3 A200,200 0 0 1 230.0,30.0 Z" fill="#4f46e5" fill-opacity="0.24" stroke="#ffffff" stroke-width="2"/><text x="360" y="203" text-anchor="middle" font-size="14" font-weight="600" style="fill:#ffffff">Dogs</text><text x="360" y="221" text-anchor="middle" font-size="12" style="fill:#ffffff">44.5%</text><text x="182" y="349" text-anchor="middle" font-size="14" font-weight="600" style="fill:#ffffff">Fish</text><text x="182" y="367" text-anchor="middle" font-size="12" style="fill:#ffffff">22.9%</text><text x="98" y="226" text-anchor="middle" font-size="14" font-weight="600" style="fill:#ffffff">Cats</text><text x="98" y="244" text-anchor="middle" font-size="12" style="fill:#ffffff">15.3%</text><text x="139" y="131" text-anchor="middle" font-size="14" font-weight="600" style="fill:#0f172a">Birds</text><text x="139" y="149" text-anchor="middle" font-size="12" style="fill:#0f172a">10.3%</text><text x="201" y="97" text-anchor="middle" font-size="14" font-weight="600" style="fill:#0f172a">Reptiles</text><text x="201" y="115" text-anchor="middle" font-size="12" style="fill:#0f172a">7.0%</text></svg></div></div>
+<div class="card side"><div class="ch"><h2>By category</h2><span>5 categories</span></div><table class="leg"><thead><tr><th>Category</th><th class="r">Revenue</th><th class="r">Share</th></tr></thead><tbody><tr><td><span class="sw" style="opacity:1"></span>Dogs</td><td class="r mono">9,345.50</td><td class="r mono" style="color:var(--muted)">44.5%</td></tr><tr><td><span class="sw" style="opacity:0.78"></span>Fish</td><td class="r mono">4,820.00</td><td class="r mono" style="color:var(--muted)">22.9%</td></tr><tr><td><span class="sw" style="opacity:0.58"></span>Cats</td><td class="r mono">3,210.00</td><td class="r mono" style="color:var(--muted)">15.3%</td></tr><tr><td><span class="sw" style="opacity:0.4"></span>Birds</td><td class="r mono">2,160.50</td><td class="r mono" style="color:var(--muted)">10.3%</td></tr><tr><td><span class="sw" style="opacity:0.24"></span>Reptiles</td><td class="r mono">1,480.00</td><td class="r mono" style="color:var(--muted)">7.0%</td></tr></tbody></table><p class="foot">Every order placed in the range counts, whatever its status — denied orders included.</p></div></div></main><footer><span>Pet Store</span><span>·</span><a href="#">Home</a><a href="#">Change language</a><span class="sp"></span><span>Administration · session ends after 54 min idle</span><span>English (US)</span></footer></body></html>

@@ -24,6 +24,8 @@ interface Props {
   start: string;
   end: string;
   disabled: boolean;
+  /** The larger Sales-view size. */
+  large?: boolean;
   onChange: (range: { start: string; end: string }) => void;
   onSubmit: () => void;
 }
@@ -40,9 +42,12 @@ export function ChartPanel({
   start,
   end,
   disabled,
+  large = false,
   onChange,
   onSubmit,
 }: Props) {
+  const width = large ? 640 : 360;
+  const height = large ? 340 : 260;
   const points = data.map((d, i) => ({ ...d, fill: COLOURS[i % COLOURS.length] }));
   return (
     <section aria-labelledby={`${id}-title`} className="bg-background rounded-lg border p-4">
@@ -79,19 +84,19 @@ export function ChartPanel({
         </Button>
       </div>
       {kind === "pie" ? (
-        <PieChart width={360} height={260}>
+        <PieChart width={width} height={height}>
           <Pie
             data={points}
             dataKey="value"
             nameKey="label"
-            outerRadius={90}
+            outerRadius={large ? 120 : 90}
             isAnimationActive={false}
           />
           <Legend />
           <Tooltip />
         </PieChart>
       ) : (
-        <BarChart width={360} height={260} data={points}>
+        <BarChart width={width} height={height} data={points}>
           <XAxis dataKey="label" />
           <YAxis allowDecimals={false} />
           <Tooltip />

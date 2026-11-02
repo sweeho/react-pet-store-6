@@ -109,7 +109,7 @@ describe("administration tool", () => {
     await openTool();
     expect(statusUrls(f.calls).sort()).toEqual(["APPROVED", "COMPLETED", "DENIED", "PENDING"]);
     expect(f.calls.some((c) => /sales\/revenue/.test(c.url))).toBe(true);
-    expect(f.calls.some((c) => /sales\/order-count/.test(c.url))).toBe(true);
+    expect(f.calls.some((c) => /sales\/order-counts/.test(c.url))).toBe(true);
   });
 
   it("[SWHR2-C-0241] refresh reloads the four statuses and charts", async () => {
@@ -193,5 +193,57 @@ describe("administration tool", () => {
     fireEvent.click(btn(/refresh/i));
     await waitFor(() => expect(statusUrls(f.calls)).toHaveLength(4));
     expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("[SWHR2-C-0009] opens on the Orders view with lists and both charts loaded", async () => {
+    const f = stubFetch();
+    await openTool();
+    expect(screen.getByRole("heading", { name: "Orders and sales" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /^orders/i })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /^pending/i })).toHaveAttribute("aria-selected", "true");
+    expect(f.calls.some((c) => /sales\/order-counts/.test(c.url))).toBe(true);
+    expect(await screen.findAllByText("Fish")).not.toHaveLength(0);
+  });
+
+  it("[SWHR2-C-0011] the Sales view shows Pie chart and Bar chart tabs and no order rows", async () => {
+    stubFetch();
+    await openTool();
+    fireEvent.click(screen.getByRole("tab", { name: /^sales/i }));
+    expect(screen.getByRole("tab", { name: /pie chart/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /bar chart/i })).toBeInTheDocument();
+    expect(screen.queryByText("1001")).toBeNull();
+  });
+
+  it("[SWHR2-C-0003] both chart tabs open on 01/01/2001 to 12/31/2002", async () => {
+    stubFetch();
+    await openTool();
+    fireEvent.click(screen.getByRole("tab", { name: /^sales/i }));
+    for (const name of [/pie chart/i, /bar chart/i]) {
+      fireEvent.click(screen.getByRole("tab", { name }));
+      expect(screen.getAllByLabelText("Start date")[0]).toHaveValue("01/01/2001");
+      expect(screen.getAllByLabelText("End date")[0]).toHaveValue("12/31/2002");
+    }
+  });
+
+  it("[SWHR2-C-0004] the Non-pending tab lists decided orders and no pending order", async () => {
+    stubFetch();
+    await openTool();
+    fireEvent.click(screen.getByRole("tab", { name: /non-?pending/i }));
+    expect(await screen.findByText("2001")).toBeInTheDocument();
+    expect(screen.queryByText("1001")).toBeNull();
+  });
+
+  it("[SWHR2-C-0005] [SWHR2-C-0010] Refresh shows an order decided after opening", async () => {
+    const f = stubFetch();
+    await openTool();
+    fireEvent.click(screen.getByRole("tab", { name: /non-?pending/i }));
+    expect(screen.queryByText("1001")).toBeNull();
+    DONE.push({ orderId: "1001", status: "DENIED", locale: "en_US", totalPrice: 600 });
+    f.calls.length = 0;
+    fireEvent.click(btn(/refresh/i));
+    expect(await screen.findByText("1001")).toBeInTheDocument();
+    expect(f.calls.some((c) => /sales\/revenue/.test(c.url))).toBe(true);
+    expect(f.calls.some((c) => /sales\/order-counts/.test(c.url))).toBe(true);
+    DONE.pop();
   });
 });

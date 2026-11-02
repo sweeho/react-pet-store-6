@@ -120,3 +120,73 @@ All routes need administrator authorisation (`requireAdmin`).
 - Drizzle ORM aggregate queries (`sum`, `countDistinct`, `groupBy`) over SQLite, and Nitro (H3) routes under `routes/api/admin/`.
 - `recharts` for the pie and bar charts in the React SPA. This dependency is assumed, because the pinned stack names no chart library. `@headlessui/react` `Tab` provides the view tabs.
 - Tests: route integration tests for exact-case status match, M/D/YYYY dates, the category versus item breakdown and denied orders counted in revenue; UI tests for column sorting, the -1 id and the default dates.
+
+## Sprint planning (SWHR2-S-0032)
+
+Implemented end-to-end by FEATURE SWHR2-T-0317 (plan: `artifacts/SWHR2-S-0032/SWHR2-T-0317/PLAN.md`). Where this section and "Target design" differ, this section wins. The locked acceptance suites (`tests/acceptance/sales-reporting/` and the already-green `tests/acceptance/order-approval/`) fix the contracts below.
+
+### Codebase findings
+
+Order-approval (SWHR2-S-0027) already built most of the surface this change extends. The work is to modify it, not to create new modules:
+
+- **`routes/api/admin/orders/index.get.ts`**:
+  - accepts only PENDING/APPROVED/DENIED/COMPLETED (any other value → 400 `InvalidStatus`)
+  - returns `{ items, orders }`, rows `{ id, orderId, userId, locale, date: ISO, amount, totalPrice, status }`, ordered by id
+  - its unit test `routes/api/admin/orders/orders.test.ts` asserts that object shape and the 400
+- **`services/orders/sales.ts#salesByCategory(kind, start, end)`**:
+  - computes revenue (`sum(quantity × unit_price)/100`) or `count(distinct order)` per category over an inclusive day range, with no status filter
+  - has no `category` parameter
+  - is served by `routes/api/admin/sales/revenue.get.ts` and `routes/api/admin/sales/order-count.get.ts`
+  - there is no `services/reports/` module
+- **`src/pages/admin/tool.tsx`** (`/admin/tool`, headed "Order approval"):
+  - one TabGroup with Pending and Non-pending tabs, and both `ChartPanel`s (pie and bar, one shared Start/End date pair defaulting to `01/01/2001`/`12/31/2002`, Submit) always shown below it
+  - loads the four statuses and both charts on start and on Refresh
+  - reads `body.orders ?? body.items`
+- **`src/components/admin/OrderTable.tsx`**:
+  - a named export `OrderTable({ rows })`, with the five columns but no sorting and no -1 fallback
+  - `format.ts#formatDate` re-parses the date and prints `03/05/2002` (zero-padded)
+  - `PendingTable.tsx` uses the same `formatDate` and is not sortable
+- **Navigation**: `src/components/shell/areas.ts` has "Order approval" → `/admin` and "Sales reporting" → `/admin`. The mockups label the entry "Orders and sales". The unit test `src/components/shell/GlobalNav.test.tsx` pins the current labels.
+- **Locked contracts** (`tests/acceptance/sales-reporting/`):
+  - `GET /api/admin/orders?status=` returns a bare JSON array `{ id, userId, date: "M/D/YYYY", amount, status }[]` and returns 200 + `[]` for `approved` (C-0012…C-0015)
+  - `GET /api/admin/sales/revenue?start&end&category=FISH` returns `[{ key: itemId, value }]` for that category's items only (C-0001/0002)
+  - `src/components/admin/OrderTable` has a **default** export taking `orders`
+  - the header cells are role `columnheader` with exact texts `ID`, `User ID`, `Date`, `Amount`, `Status`; clicking one sorts; amount renders `120.50`; a non-numeric id renders `-1` (C-0006…0008)
+  - the e2e opens `/admin/tool`, requests `/api/admin/sales/order-counts` (plural, C-0010) and fakes the orders reply as `{ items, orders }`
+  - tabs (or buttons) are named Orders, Sales, Non-pending, Pending, Pie and Bar; there are `.recharts-pie-sector` / `.recharts-bar-rectangle`; Start/End inputs are labelled on each chart tab (C-0003)
+  - after switching to Sales, no order row is visible (C-0011)
+- **Locked order-approval e2e** (`tests/acceptance/order-approval/e2e/tool.spec.ts`), already green, must stay green:
+  - on opening `/admin/tool`, with no click, a `.recharts-wrapper` containing "Fish" and a pie sector or bar is visible (C-0240)
+  - the first labelled Start/End inputs and the first Submit button can be filled immediately (C-0241)
+  - the first tabpanel is the pending list (C-0242)
+- `recharts` and `@headlessui/react` are already dependencies. No schema change.
+
+### Decisions
+
+- **P1 One route, one page.** The "Orders and sales" page is `/admin/tool`, extended in place, because both locked e2e suites open that route. The page heading becomes "Orders and sales" and the navigation entry "Orders and sales" points to `/admin/tool` (replacing "Sales reporting" → `/admin`). "Order approval" stays as it is.
+- **P2 Orders view keeps compact charts.** The page has a top-level Orders | Sales view switch and opens on Orders. The Orders view holds the Pending (first) and Non-pending tabs **and keeps the existing pair of compact chart panels below them**, because locked order-approval C-0240/C-0241 require a chart and date inputs visible without any click. The Sales view holds Pie chart and Bar chart tabs, each with its own labelled Start/End inputs and Submit, and shows no order rows. Both views share one applied date range, so the default is `01/01/2001`–`12/31/2002` everywhere. The compact charts are a deliberate divergence from mockup `SWHR2-MCK-34` (see X2).
+- **P3 Orders route returns a bare array.** `GET /api/admin/orders` returns the row array directly, with `date` as `M/D/YYYY` in UTC and `amount` in units. Rows keep `orderId`, `totalPrice` and `locale`, so existing readers keep working. Any status string is accepted and matched exactly and case-sensitively; an unmatched one returns `[]` with 200 (SWHR2-R-0143.02). A missing `status` is still a 400. The tool's reader accepts the array or `{ orders | items }`, because the locked e2e fakes the object form. The route's own unit test is updated to the new shape.
+- **P4 Category breakdown.** `salesByCategory(kind, start, end, category?)` groups by `item_id` restricted to that category when a category is given, otherwise by category. Both sales routes pass `category`. The `order-count` route moves to `routes/api/admin/sales/order-counts.get.ts` (the locked e2e path), and the tool and unit tests follow. No UI control sends a category (SWHR2-R-0025, D4). The figure stays the distinct-order count already shipped (D1 left as is).
+- **P5 Tables.** `OrderTable` becomes a default export `OrderTable({ orders })`, with the named export kept as an alias so `tool.tsx` changes minimally. It has client-side sorting on every header (header is a button inside `th`, `aria-sort` set), and a click on the active column reverses the order. It renders the id as `-1` when it is not all digits, and shows an "No orders in this status" empty state instead of an empty table (mockup `SWHR2-MCK-35`). `PendingTable` gets the same sorting and -1 rule (SWHR2-R-0111 covers both lists). `formatDate` passes `M/D/YYYY` through unchanged and formats ISO input as UTC `M/D/YYYY`.
+
+### Phases
+
+1. **Order queries** (tasks §1): P3 in the orders route.
+2. **Sales chart data** (§2): P4. Lines 2.1 and 2.4 ("confirm with the SME") cannot be done by the implementer; they are met by the stated default and the API-only breakdown (X3).
+3. **Load and refresh** (§3): P1/P2 in `tool.tsx`, plus the nav entry.
+4. **Non-pending screen** (§4): the non-pending tab as today, with the empty state.
+5. **Order list columns** (§5): P5.
+6. **Test harness.** Update the unit tests the change breaks: `routes/api/admin/orders/orders.test.ts` (shape, exact match, `order-counts`), `src/pages/admin/tool.test.tsx` and `src/components/shell/GlobalNav.test.tsx`. Add `src/components/admin/OrderTable.test.tsx` (sorting, -1, empty state) and a `services/orders/sales.test.ts` case for the category breakdown. Do not edit `tests/acceptance/**`.
+7. **CI.** No workflow change. The existing CI job (lint, typecheck, unit, acceptance, E2E) on `vortex/**` pushes and PRs must be green, with both the sales-reporting and the order-approval locked suites passing.
+
+## Spec discrepancies
+
+Recorded, not edited into the delta spec or `tasks.md`.
+
+- **X1 Orders route shape and status set.** Order-approval shipped `GET /api/admin/orders` as `{ items, orders }` with ISO dates and a 400 for any status outside the four lifecycle values. SWHR2-R-0143.02 and SWHR2-R-0113.01 require exact-match filtering of any string (empty result, not an error) and `M/D/YYYY` dates, and the locked server test reads a bare array. The locked e2e still fakes the object form. Resolved by P3.
+- **X2 Charts on the Orders view.** The brief and mockups `SWHR2-MCK-34`/`35` show the Orders view with no charts, and put the charts only in the Sales view. The locked order-approval cases C-0240/C-0241 (shipped, green) require a chart and date inputs visible on opening `/admin/tool`. P2 keeps compact charts on the Orders view so both suites pass. A human should decide at UAT whether C-0240/C-0241 or the mockup changes.
+- **X3 SME confirmations in tasks.** tasks 2.1 and 2.4 ask for SME confirmation of the default range and of per-item reachability. That is not implementation work; D4/D5 already record both as legacy-stated and low confidence.
+- **X4 Route name.** "Target design" names `GET /api/admin/sales/order-counts`; the shipped route is `order-count`. The locked e2e uses `order-counts` (P4).
+- **X5 Report service location.** "Target design" places queries in `services/reports/index.ts`. The shipped aggregation lives in `services/orders/sales.ts` and the orders query in the route. The plan extends those in place rather than moving them.
+- **X6 Sales count meaning.** The legacy figure is units sold (D1), while the target design and the shipped code count distinct orders. No approved scenario asserts the count value. Unchanged.
+- **X7 Navigation label.** The brief names the entry "Orders and sales" in the Administration group; the shipped nav says "Sales reporting" → `/admin`. P1 renames and repoints it.
