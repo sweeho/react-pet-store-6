@@ -97,6 +97,7 @@ Four tiers, one worked example each. Commands and how to extend: [README.md](./R
 
 - `ecosystem.config.js` (PM2) runs the real build: `.output/server/index.mjs`, under Bun (`interpreter: "bun"`) — required by `db/client.ts`'s `bun:sqlite` import. `nitro.service` (systemd) is the non-PM2 equivalent, same requirement.
 - The server runs as exactly one process (`instances: 1`): the session store, the cart and the catalog page cache live in that process's memory, and the message worker runs in that same process. Scaling out needs a shared store for all three first, and a claim step so that two workers cannot consume the same message.
+- The file database (`sqlite.db`) runs in WAL mode with a 5 s busy timeout, set in `db/client.ts` (not under Vitest), because the message worker polls it while requests and other processes write. A writer that bypasses `db/client.ts` must expect `SQLITE_BUSY` without them.
 - `Dockerfile`/`docker-compose.yml` build a static `dist/` served by nginx — don't rely on them for the Nitro/DB-backed API without fixing first (they never run `.output/server/index.mjs`)
 
 ## Key Decisions
