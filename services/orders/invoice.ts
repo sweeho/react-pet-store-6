@@ -4,6 +4,7 @@ import { db } from "../../db/client";
 import { opOrderWorkflow, opPoLineItems } from "../../db/schema";
 import { readInvoiceDocument } from "../documents/invoice";
 import type { Executor } from "../ids";
+import { enqueue } from "../messaging";
 import { setStatus } from "./workflow";
 
 export interface InvoiceRead {
@@ -66,5 +67,6 @@ export function handleInvoice(xml: string, exec: Executor = db): void {
     }
     const done = lines.every((l) => l.quantityShipped >= l.quantity);
     setStatus(tx, invoice.orderId, done ? "COMPLETED" : "SHIPPED_PART");
+    if (done) enqueue(tx, "notify.completed", JSON.stringify({ orderId: invoice.orderId }));
   });
 }

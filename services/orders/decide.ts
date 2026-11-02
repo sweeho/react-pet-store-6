@@ -3,6 +3,7 @@ import { XMLBuilder, XMLParser } from "fast-xml-parser";
 import { db } from "../../db/client";
 import { buildSupplierOrder } from "../documents/supplier-order";
 import type { Executor } from "../ids";
+import { enqueue } from "../messaging";
 import { readPurchaseOrder } from "./receive";
 import { handOff } from "./transitions";
 import { setStatus } from "./workflow";
@@ -46,7 +47,10 @@ export function readApprovalBatch(xml: string): DecisionEntry[] {
  */
 export function applyDecision(tx: Executor, orderId: string, status: string): void {
   if (status !== "APPROVED" && status !== "DENIED") return;
-  if (!setStatus(tx, orderId, status) || status !== "APPROVED") return;
+  if (!setStatus(tx, orderId, status)) return;
+  // Only enqueue: the notification handler decides, on its own switch, whether mail goes out.
+  enqueue(tx, "notify.approval", JSON.stringify({ orderId, status }));
+  if (status !== "APPROVED") return;
   const po = readPurchaseOrder(tx, orderId);
   if (!po) throw new Error(`Approved order ${orderId} has no stored purchase order.`);
   const xml = buildSupplierOrder({
