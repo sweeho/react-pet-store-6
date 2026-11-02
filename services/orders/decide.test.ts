@@ -51,6 +51,7 @@ describe("decision channel", () => {
     await deliver({ orderId: "1001", locale: "en_US", total: 600 });
     const cookies = await adminCookies(app);
     await commit(app, cookies, ["1001"]);
+    expect(messagesOn(app.client, "order.approval")).toHaveLength(1);
     expect(messagesOn(app.client, "order.approval")[0].status).toBe("pending");
     const { db } = await import("../../db/client");
     vi.resetModules();
