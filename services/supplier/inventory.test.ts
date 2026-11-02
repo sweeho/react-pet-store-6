@@ -92,3 +92,22 @@ describe("supplier inventory service", () => {
     expect(svc.reduceStock(db, "EST-7", 1)).toBe(false);
   });
 });
+
+describe("stock record rules", () => {
+  it("[SWHR2-C-0044] refuses a second record for the same item", async () => {
+    const app = await loadApp();
+    seed(app, [["EST-1", 40]]);
+    expect(() =>
+      app.client.exec("insert into sup_inventory (item_id, quantity) values ('EST-1', 99)"),
+    ).toThrow(/unique|primary key|constraint/i);
+    expect(qty(app, "EST-1")).toBe(40);
+  });
+
+  it("[SWHR2-C-0045] refuses a record without a quantity", async () => {
+    const app = await loadApp();
+    expect(() =>
+      app.client.exec("insert into sup_inventory (item_id, quantity) values ('EST-2', null)"),
+    ).toThrow(/not null|constraint/i);
+    expect(qty(app, "EST-2")).toBeUndefined();
+  });
+});

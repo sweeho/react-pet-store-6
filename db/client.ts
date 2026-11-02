@@ -23,6 +23,7 @@ import {
   opPoContacts,
   opPoLineItems,
   opPurchaseOrders,
+  supInventory,
   signonUsers,
   users,
 } from "./schema";
@@ -67,6 +68,7 @@ export const db = drizzle(sqlite, {
     opPoCards,
     opPoLineItems,
     opOrderWorkflow,
+    supInventory,
   },
 });
 
