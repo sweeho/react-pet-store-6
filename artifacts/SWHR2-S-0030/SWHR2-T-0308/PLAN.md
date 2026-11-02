@@ -10,6 +10,10 @@ Take an approved order from hand-off to COMPLETED: order workflow status store a
 
 The brief has no approved mockup; this capability has no user interface. Nothing to render.
 
+## Prior work — start here
+
+Sprint SWHR2-S-0029 built this change on ticket SWHR2-T-0304, branch `vortex/feat/SWHR2-T-0304-order-fulfilment-and-invoicing-796e1cc4` (commits `654bdbb`, `bf1ec76` = tests `[tdd:red]`, `e605806` = implementation `[tdd:green]`). It was never merged; its follow-up SWHR2-T-0305 was cancelled. Its own summary reports the full gate green and every order-fulfillment case passing except C-0136, and its design matches P1–P8. Fetch that branch and reuse it — bring the test commits over first for your red run, then the implementation for green — rather than rebuilding from nothing. Re-check it against this sprint branch (it forked from `6236386`, the same base) and against the locked suite; do not take its `artifacts/SWHR2-S-0029/**` or `openspec/**` files. Its `services/orders/fulfilmentHarness.ts` (a copy of the acceptance harness) and the `receive.ts` ↔ `decide.ts` import cycle are its own choices; keep or remove them on their merits.
+
 ## Steps
 
 Work the `tasks.md` groups in order; tick nothing yourself (the platform ticks on merge).
