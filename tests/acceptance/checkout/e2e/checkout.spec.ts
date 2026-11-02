@@ -33,7 +33,13 @@ async function toCheckout(page: Page, itemId = "EST-1") {
     });
   await signIn.getByLabel(/^user id:?$/i).fill("j2ee");
   await signIn.getByLabel(/^password:?$/i).fill("j2ee");
+  // wait for the sign-in response before navigating: a goto issued while the sign-in request is
+  // in flight aborts it, its session cookie is lost, and the shopper reaches checkout anonymous
+  const signedIn = page.waitForResponse(
+    (r) => r.url().endsWith("/api/session/sign-in") && r.request().method() === "POST",
+  );
   await signIn.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
+  await signedIn;
   await page.goto(`/petstore/item/${itemId}`);
   // every Add to Cart control on the item page adds this item, so any one of them will do
   await page
