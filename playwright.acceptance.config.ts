@@ -39,7 +39,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `bun --bun ./node_modules/vite/bin/vite.js --port ${PORT} --strictPort`,
+    command: `bun scripts/seed.ts && bun --bun ./node_modules/vite/bin/vite.js --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

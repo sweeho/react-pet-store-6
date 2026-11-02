@@ -114,3 +114,80 @@ The redirect requirement deliberately specifies one destination per outcome and 
 - A JSON seed file, which keeps the data set UTF-8 and editable without code changes.
 - The Bun runtime for the script, which `bun:sqlite` requires.
 - Tests: a loader test against the in-memory database asserting 4 users and 4 customers, 5 categories, 16 products, 28 items × 3 locales and 29 inventory rows at 10000; a test that re-seeding restores "j2ee" and keeps "alice"; tests for the missing-quantity entry and the added product.
+
+## Sprint planning (SWHR2-S-0033)
+
+Implemented end-to-end by FEATURE SWHR2-T-0321 (plan: `artifacts/SWHR2-S-0033/SWHR2-T-0321/PLAN.md`). Where this section and "Target design" differ, this section wins. The locked suite `tests/acceptance/data-population/` (`harness.ts`, `population.test.ts`, `e2e/areas.spec.ts`) fixes the contracts below.
+
+### Codebase findings
+
+- **`db/client.ts` seeds on import today.**
+  - It runs `migrate()`, enables foreign keys, then inserts:
+    - two template `users` rows ("John Doe", "Jane Smith"), **always, including under Vitest**
+    - outside Vitest only: a demo `j2ee` sign-on user and customer
+    - outside Vitest only: a 5-category / 6-product / 6-item inline catalog fixture in three locales, and `sup_inventory` at 10000 for those 6 items
+  - The dev server and both Playwright configs (`playwright.config.ts`, `playwright.acceptance.config.ts`, whose `webServer.command` starts vite directly) rely on that.
+  - `routes/api/users/{index.get,[id]}.test.ts` assert the two `users` rows.
+  - There is no `db/seed/`, no `scripts/seed.ts` and no `db:seed` script.
+- **Schema**: one `db/schema.ts`, where the table groups are already separable by name: storefront (`users`, `signon_users`, `addresses`, `contact_info`, `customers`, `customer_*`, `catalog_*`, `id_sequences`), supplier (`sup_*`), order processing (`op_*`) and the outbox (`messages`). No foreign key crosses a group.
+- **Customers**:
+  - `services/customers/index.ts` has `registerUser`, `createCustomer` and `listCustomers()`, the last of which already returns `db.select().from(customers).all()`
+  - `createCustomer` inserts `contact_info` inline
+  - there is no `services/customers/contact.ts`
+- **Legacy seed source** (branch `vortex/legacy-spec/sx-0001`):
+  - `legacy-source/petstore1.3.2/src/apps/petstore/src/docroot/populate/Populate-UTF8.xml` has 4 users (j2ee, j2ee-ja, shopper, j2ee-zh), 5 categories (15 details), 16 products (48 details), 28 items EST-1…EST-28, and only **27** ja-JP item details: **EST-15 has none**.
+  - The supplier `src/apps/supplier/src/docroot/populate/Populate-UTF8.xml` has `<Inventory id="EST-n" quantity="10000"/>` for EST-1…EST-29.
+- **Locked contracts**:
+  - `db/seed/petstore.json`, read as JSON, has arrays `products` (each with `id` or `productId`, and localized detail objects whose `name` is the product name), `customers` and `inventory`.
+  - `scripts/seed.ts` is importable without side effects and exports `loadSeed(data?)` (default: the file) and `seedInventory(exec, entries: { itemId, quantity? }[])`.
+  - `services/customers/contact.ts` exports `createContact(exec, { givenName, familyName, telephone, email, addressId })`, writing `contact_info (given_name, family_name, telephone, email, address_id)`.
+  - `services/customers` keeps `listCustomers`, `registerUser` and `createCustomer`.
+  - C-0077: under Vitest, after migrations, **every** non-sqlite, non-migrations table holds 0 rows.
+  - C-0078: in a scratch working directory, importing `db/client.ts` outside Vitest, then dropping every `sup_*`, `op_*` and `messages` table, then running `bun scripts/seed.ts` must:
+    - recreate exactly those tables
+    - leave every storefront table's `CREATE` SQL byte-identical
+    - keep a non-sample `customers` row
+  - C-0079 (browser, acceptance webServer): `/petstore` answers 200 with a heading; `/admin` and `/supplier` render their sign-in forms; `j2ee`/`j2ee` signs in, adds EST-1 to the cart and places an order.
+
+### Decisions
+
+- **P1 Seeding moves out of `db/client.ts`.** The client only opens the database, migrates, repairs missing tables (P2) and enables foreign keys. It inserts no rows, which makes C-0077 hold.
+  - The inline demo customer, catalog fixture and stock are deleted; their content now comes from the seed file.
+  - The template `users` rows go too. `routes/api/users/*.test.ts` insert their own two rows in setup.
+- **P2 Missing-table repair.** Drizzle's journal records that migrations ran, so a table dropped afterwards is never recreated by `migrate()`. After migrating, `db/client.ts` builds a reference schema by running the same `drizzle/` migrations on a throwaway `:memory:` database. For every table present there but absent from the real database, it executes the reference `CREATE TABLE` SQL and that table's `CREATE INDEX` SQL, in reference order. Existing tables are never touched. This satisfies SWHR2-R-0074.02 (C-0078) with no new dependency and no hand-written DDL.
+- **P3 One file, table groups by prefix.** The table groups stay in the single `db/schema.ts`; it is not split into `db/schema/*.ts` as "Target design" proposes. A split changes no table and no test, while it touches every importer and the drizzle config. The groups are already distinct by name and no foreign key crosses one (SWHR2-R-0074; PRD open question 5).
+- **P4 Seed file and loader.**
+  - `db/seed/petstore.json` is ported from the two legacy `Populate-UTF8.xml` files, with prices in integer hundredths per locale, as the catalog tables store them.
+  - The ja_JP detail for EST-15 is authored by translation from its en/zh text (X1), because SWHR2-R-0072 requires all 28 items in three locales.
+  - `db/seed/types.ts` describes the file; the loader validates it, and a malformed file writes nothing.
+  - `scripts/seed.ts` exports `loadSeed(data = file)` and `seedInventory(exec, entries)`, and runs `loadSeed()` only when `import.meta.main`.
+  - In one transaction, the loader does the following:
+    - deletes and recreates each sample user and customer by id: `signon_users`, `customers`, `customer_accounts` with its contact and address, and `customer_profiles`
+    - upserts the catalog and its details by id
+    - upserts the inventory, with a missing quantity meaning 0
+  - Seed passwords are hashed with `Bun.password`.
+  - `package.json` gains `"db:seed": "bun scripts/seed.ts"`.
+- **P5 Contacts.** `services/customers/contact.ts#createContact` is the one contact writer. `createCustomer` and the loader both call it with the id of an address already inserted (SWHR2-R-0070).
+- **P6 Installation runs the seed.** Both Playwright `webServer.command`s become `bun scripts/seed.ts && <the existing vite command>`, so e2e and acceptance browser runs start from the sample data. A `predev` hook does the same for `bun run dev`. Re-seeding resets only the four sample accounts, so a developer's own registrations survive. No HTTP route seeds (D1).
+- **P7 Existing test data.** Every value the inline fixture held (EST-1/2/4/6/7/18, their products and prices) must come out of the seed file unchanged. The legacy file is the source of both, and existing e2e and locked suites pin some of them (e.g. EST-1 at 16.50 en_US). Any mismatch is reported, not silently re-priced.
+
+### Phases
+
+1. **Seed data** (tasks §1): P4, P7, X1, X2.
+2. **Datastore provisioning** (§2): P1, P2, P3. Lines 2.4/2.5 are already met by the existing `/petstore`, `/admin`, `/supplier` pages and the worker plugin; C-0079 proves them once P6 seeds the browser runs.
+3. **Seeding operations** (§3): P5; `listCustomers` exists and stays.
+4. **Test harness** (§4).
+   - Unit tests: `scripts/seed.test.ts` (or under `services/` if the server project must pick it up) for counts, re-seed and missing quantity; `services/customers/contact.test.ts`; a `db/client` repair test.
+   - `routes/api/users/*.test.ts` get their own fixtures.
+   - Do not edit `tests/acceptance/**`.
+5. **CI.** No workflow change. The existing CI job (lint, typecheck, unit, acceptance, E2E) on `vortex/**` pushes and PRs must be green. Playwright's webServer seeds before starting (P6), so CI needs no extra step.
+
+## Spec discrepancies
+
+Recorded, not edited into the delta spec or `tasks.md`.
+
+- **X1 EST-15 has no Japanese details in the legacy data.** SWHR2-R-0072.01 requires every item in English, Japanese and Chinese (28 ja_JP item details, C-0075). The legacy `Populate-UTF8.xml` has 27. The seed authors the missing ja_JP row (P4); a Business Owner should confirm the wording.
+- **X2 EST-29 (finding F1).** tasks 1.3 asks to resolve F1 with the Business Owner. The approved scenario SWHR2-R-0071.01 (C-0073) fixes 29 inventory rows, so EST-29 stays stocked and uncatalogued. The confirmation is not implementation work.
+- **X3 Three datastores vs one file.** SWHR2-R-0074 says "separate datastores"; the PRD and this repository use one SQLite file. The locked tests check table groups, which P2/P3 satisfy. The PRD open question 5 remains for the Business Owner.
+- **X4 Schema split not adopted.** "Target design" splits `db/schema.ts` into `db/schema/*.ts`; P3 keeps one file.
+- **X5 Demo data seeded by the client.** Earlier capabilities (sign-on, catalog, supplier-inventory) seeded demo rows from `db/client.ts`, and the template seeded `users` rows even under Vitest. This contradicts SWHR2-R-0074.01 (a fresh installation holds no business data) and is removed by P1.

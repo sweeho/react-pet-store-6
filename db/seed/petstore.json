@@ -1,0 +1,1462 @@
+{
+  "users": [
+    {
+      "userId": "j2ee",
+      "password": "j2ee"
+    },
+    {
+      "userId": "j2ee-ja",
+      "password": "j2ee-ja"
+    },
+    {
+      "userId": "shopper",
+      "password": "shopper"
+    },
+    {
+      "userId": "j2ee-zh",
+      "password": "j2ee-zh"
+    }
+  ],
+  "customers": [
+    {
+      "userId": "shopper",
+      "account": {
+        "contact": {
+          "givenName": "XYZ",
+          "familyName": "ABC",
+          "telephone": "555-555-5555",
+          "email": "aaa@bbb.ccc",
+          "address": {
+            "street1": "1234 Anywhere Street",
+            "street2": "Unit 555",
+            "city": "Palo Alto",
+            "state": "CA",
+            "zip": "94303",
+            "country": "USA"
+          }
+        },
+        "card": {
+          "cardNumber": "123456789",
+          "cardType": "Meow Card",
+          "expiryMonth": 4,
+          "expiryYear": 2004
+        }
+      },
+      "profile": {
+        "preferredLanguage": "en_US",
+        "favouriteCategory": "REPTILES",
+        "myListOn": true,
+        "bannerOn": false
+      }
+    },
+    {
+      "userId": "j2ee",
+      "account": {
+        "contact": {
+          "givenName": "ABC",
+          "familyName": "XYZ",
+          "telephone": "555-555-5555",
+          "email": "abc@xyz.com",
+          "address": {
+            "street1": "1 Main St",
+            "street2": "",
+            "city": "Palo Alto",
+            "state": "CA",
+            "zip": "94303",
+            "country": "USA"
+          }
+        },
+        "card": {
+          "cardNumber": "4111111111111111",
+          "cardType": "Java(TM) Card",
+          "expiryMonth": 12,
+          "expiryYear": 2030
+        }
+      },
+      "profile": {
+        "preferredLanguage": "en_US",
+        "favouriteCategory": null,
+        "myListOn": true,
+        "bannerOn": true
+      }
+    },
+    {
+      "userId": "j2ee-ja",
+      "account": {
+        "contact": {
+          "givenName": "政憲",
+          "familyName": "富士",
+          "telephone": "555-555-5555",
+          "email": "yourname@yourdomain.com",
+          "address": {
+            "street1": "歌舞伎町1-3-5",
+            "street2": "ジャバビル２３",
+            "city": "東京都",
+            "state": "東京",
+            "zip": "511",
+            "country": "日本"
+          }
+        },
+        "card": {
+          "cardNumber": "123456789",
+          "cardType": "VISA",
+          "expiryMonth": 4,
+          "expiryYear": 2004
+        }
+      },
+      "profile": {
+        "preferredLanguage": "ja_JP",
+        "favouriteCategory": "REPTILES",
+        "myListOn": true,
+        "bannerOn": false
+      }
+    },
+    {
+      "userId": "j2ee-zh",
+      "account": {
+        "contact": {
+          "givenName": "长城",
+          "familyName": "万",
+          "telephone": "086-555-5555",
+          "email": "yourname@yourdomain.com",
+          "address": {
+            "street1": "长安街1-3-5",
+            "street2": "老胡同２３",
+            "city": "北京市",
+            "state": "北京",
+            "zip": "100001",
+            "country": "中国"
+          }
+        },
+        "card": {
+          "cardNumber": "123456789",
+          "cardType": "VISA",
+          "expiryMonth": 4,
+          "expiryYear": 2004
+        }
+      },
+      "profile": {
+        "preferredLanguage": "zh_CN",
+        "favouriteCategory": "REPTILES",
+        "myListOn": true,
+        "bannerOn": false
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": "FISH",
+      "details": {
+        "en_US": {
+          "name": "Fish",
+          "description": "Fish",
+          "image": "fish_icon.gif"
+        },
+        "ja_JP": {
+          "name": "魚",
+          "description": "魚",
+          "image": "fish_icon.gif"
+        },
+        "zh_CN": {
+          "name": "鱼",
+          "description": "鱼",
+          "image": "fish_icon.gif"
+        }
+      }
+    },
+    {
+      "id": "DOGS",
+      "details": {
+        "en_US": {
+          "name": "Dogs",
+          "description": "Dogs",
+          "image": "dogs_icon.gif"
+        },
+        "ja_JP": {
+          "name": "犬",
+          "description": "犬",
+          "image": "dogs_icon.gif"
+        },
+        "zh_CN": {
+          "name": "狗",
+          "description": "狗",
+          "image": "dogs_icon.gif"
+        }
+      }
+    },
+    {
+      "id": "REPTILES",
+      "details": {
+        "en_US": {
+          "name": "Reptiles",
+          "description": "Reptiles",
+          "image": "reptiles_icon.gif"
+        },
+        "ja_JP": {
+          "name": "爬虫類",
+          "description": "爬虫類",
+          "image": "reptiles_icon.gif"
+        },
+        "zh_CN": {
+          "name": "爬行动物",
+          "description": "爬行动物",
+          "image": "reptiles_icon.gif"
+        }
+      }
+    },
+    {
+      "id": "CATS",
+      "details": {
+        "en_US": {
+          "name": "Cats",
+          "description": "Cats",
+          "image": "cats_icon.gif"
+        },
+        "ja_JP": {
+          "name": "猫",
+          "description": "猫",
+          "image": "cats_icon.gif"
+        },
+        "zh_CN": {
+          "name": "猫",
+          "description": "猫",
+          "image": "cats_icon.gif"
+        }
+      }
+    },
+    {
+      "id": "BIRDS",
+      "details": {
+        "en_US": {
+          "name": "Birds",
+          "description": "Birds",
+          "image": "birds_icon.gif"
+        },
+        "ja_JP": {
+          "name": "鳥",
+          "description": "鳥",
+          "image": "birds_icon.gif"
+        },
+        "zh_CN": {
+          "name": "鸟",
+          "description": "鸟",
+          "image": "birds_icon.gif"
+        }
+      }
+    }
+  ],
+  "products": [
+    {
+      "id": "FI-SW-01",
+      "categoryId": "FISH",
+      "details": {
+        "en_US": {
+          "name": "Angelfish",
+          "description": "Salt Water fish from Australia",
+          "image": "fish1.gif"
+        },
+        "ja_JP": {
+          "name": "エンゼルフィッシュ",
+          "description": "オーストラリア産の海水魚",
+          "image": "fish1.gif"
+        },
+        "zh_CN": {
+          "name": "天使鱼",
+          "description": "来自澳大利亚的海水鱼",
+          "image": "fish1.gif"
+        }
+      }
+    },
+    {
+      "id": "FI-SW-02",
+      "categoryId": "FISH",
+      "details": {
+        "en_US": {
+          "name": "Tiger Shark",
+          "description": "Salt Water fish from Australia",
+          "image": "fish4.gif"
+        },
+        "ja_JP": {
+          "name": "イタチザメ",
+          "description": "オーストラリア産の海水魚",
+          "image": "fish4.gif"
+        },
+        "zh_CN": {
+          "name": "鼬鲨",
+          "description": "澳大利亚产的海水鱼",
+          "image": "fish4.gif"
+        }
+      }
+    },
+    {
+      "id": "FI-FW-01",
+      "categoryId": "FISH",
+      "details": {
+        "en_US": {
+          "name": "Koi",
+          "description": "Freshwater fish from Japan",
+          "image": "fish3.gif"
+        },
+        "ja_JP": {
+          "name": "錦鯉",
+          "description": "日本産の淡水魚",
+          "image": "fish3.gif"
+        },
+        "zh_CN": {
+          "name": "锦鲤",
+          "description": "来自日本的淡水鱼",
+          "image": "fish3.gif"
+        }
+      }
+    },
+    {
+      "id": "FI-FW-02",
+      "categoryId": "FISH",
+      "details": {
+        "en_US": {
+          "name": "Goldfish",
+          "description": "Fresh Water fish from China",
+          "image": "fish2.gif"
+        },
+        "ja_JP": {
+          "name": "金魚",
+          "description": "中国産の淡水魚",
+          "image": "fish2.gif"
+        },
+        "zh_CN": {
+          "name": "金鱼",
+          "description": "中国产的淡水鱼",
+          "image": "fish2.gif"
+        }
+      }
+    },
+    {
+      "id": "K9-BD-01",
+      "categoryId": "DOGS",
+      "details": {
+        "en_US": {
+          "name": "Bulldog",
+          "description": "Friendly dog from England",
+          "image": "dog2.gif"
+        },
+        "ja_JP": {
+          "name": "ブルドッグ",
+          "description": "イギリス原産の友好的な犬",
+          "image": "dog2.gif"
+        },
+        "zh_CN": {
+          "name": "斗牛犬",
+          "description": "来自英国的友好犬",
+          "image": "dog2.gif"
+        }
+      }
+    },
+    {
+      "id": "K9-PO-02",
+      "categoryId": "DOGS",
+      "details": {
+        "en_US": {
+          "name": "Poodle",
+          "description": "Cute dog from France",
+          "image": "dog6.gif"
+        },
+        "ja_JP": {
+          "name": "プードル",
+          "description": "フランス原産のかわいい犬",
+          "image": "dog6.gif"
+        },
+        "zh_CN": {
+          "name": "贵宾犬",
+          "description": "来自法国的可爱犬",
+          "image": "dog6.gif"
+        }
+      }
+    },
+    {
+      "id": "K9-DL-01",
+      "categoryId": "DOGS",
+      "details": {
+        "en_US": {
+          "name": "Dalmation",
+          "description": "Great dog for a Fire Station",
+          "image": "dog4.gif"
+        },
+        "ja_JP": {
+          "name": "ダルメシアン",
+          "description": "消防署に最適な犬",
+          "image": "dog4.gif"
+        },
+        "zh_CN": {
+          "name": "斑点狗",
+          "description": "适合消防站的好犬",
+          "image": "dog4.gif"
+        }
+      }
+    },
+    {
+      "id": "K9-RT-01",
+      "categoryId": "DOGS",
+      "details": {
+        "en_US": {
+          "name": "Golden Retriever",
+          "description": "Great family dog",
+          "image": "dog1.gif"
+        },
+        "ja_JP": {
+          "name": "ゴールデン=レトリーバ",
+          "description": "飼い犬に最適",
+          "image": "dog1.gif"
+        },
+        "zh_CN": {
+          "name": "金毛猎狗",
+          "description": "最适合伺养的狗",
+          "image": "dog1.gif"
+        }
+      }
+    },
+    {
+      "id": "K9-RT-02",
+      "categoryId": "DOGS",
+      "details": {
+        "en_US": {
+          "name": "Labrador Retriever",
+          "description": "Great hunting dog",
+          "image": "dog5.gif"
+        },
+        "ja_JP": {
+          "name": "ラブラドル=レトリーバ",
+          "description": "猟犬に最適",
+          "image": "dog5.gif"
+        },
+        "zh_CN": {
+          "name": "拉布拉多猎狗",
+          "description": "最好的猎狗",
+          "image": "dog5.gif"
+        }
+      }
+    },
+    {
+      "id": "K9-CW-01",
+      "categoryId": "DOGS",
+      "details": {
+        "en_US": {
+          "name": "Chihuahua",
+          "description": "Great companion dog",
+          "image": "dog4.gif"
+        },
+        "ja_JP": {
+          "name": "チワワ",
+          "description": "とても人なつこい",
+          "image": "dog4.gif"
+        },
+        "zh_CN": {
+          "name": "吉娃娃狗",
+          "description": "最容易相处的狗",
+          "image": "dog4.gif"
+        }
+      }
+    },
+    {
+      "id": "RP-SN-01",
+      "categoryId": "REPTILES",
+      "details": {
+        "en_US": {
+          "name": "Rattlesnake",
+          "description": "Doubles as a watch dog",
+          "image": "lizard3.gif"
+        },
+        "ja_JP": {
+          "name": "ガラガラ蛇",
+          "description": "番犬代わりにどうぞ",
+          "image": "lizard3.gif"
+        },
+        "zh_CN": {
+          "name": "响尾蛇",
+          "description": "顶两只看家狗",
+          "image": "lizard3.gif"
+        }
+      }
+    },
+    {
+      "id": "RP-LI-02",
+      "categoryId": "REPTILES",
+      "details": {
+        "en_US": {
+          "name": "Iguana",
+          "description": "Friendly green friend",
+          "image": "lizard2.gif"
+        },
+        "ja_JP": {
+          "name": "イグアナ",
+          "description": "人なつこい緑色のお友達",
+          "image": "lizard2.gif"
+        },
+        "zh_CN": {
+          "name": "大蜥蜴",
+          "description": "人类的绿色朋友",
+          "image": "lizard2.gif"
+        }
+      }
+    },
+    {
+      "id": "FL-DSH-01",
+      "categoryId": "CATS",
+      "details": {
+        "en_US": {
+          "name": "Manx",
+          "description": "Great for reducing mouse populations",
+          "image": "cat3.gif"
+        },
+        "ja_JP": {
+          "name": "マンクスネコ",
+          "description": "ねずみ退治に最適",
+          "image": "cat3.gif"
+        },
+        "zh_CN": {
+          "name": "曼岛猫",
+          "description": "捕鼠能手",
+          "image": "cat3.gif"
+        }
+      }
+    },
+    {
+      "id": "FL-DLH-02",
+      "categoryId": "CATS",
+      "details": {
+        "en_US": {
+          "name": "Persian",
+          "description": "Friendly house cat, doubles as a princess",
+          "image": "cat1.gif"
+        },
+        "ja_JP": {
+          "name": "ペルシアネコ",
+          "description": "優しい家ネコ",
+          "image": "cat1.gif"
+        },
+        "zh_CN": {
+          "name": "波斯猫",
+          "description": "友善的家猫",
+          "image": "cat1.gif"
+        }
+      }
+    },
+    {
+      "id": "AV-CB-01",
+      "categoryId": "BIRDS",
+      "details": {
+        "en_US": {
+          "name": "Amazon Parrot",
+          "description": "Great companion for up to 75 years",
+          "image": "bird4.gif"
+        },
+        "ja_JP": {
+          "name": "アマゾンオウム",
+          "description": "最長75年間の素晴らしい仲間",
+          "image": "bird4.gif"
+        },
+        "zh_CN": {
+          "name": "亚马逊鹦鹉",
+          "description": "长达75年的好伙伴",
+          "image": "bird4.gif"
+        }
+      }
+    },
+    {
+      "id": "AV-SB-02",
+      "categoryId": "BIRDS",
+      "details": {
+        "en_US": {
+          "name": "Finch",
+          "description": "Great stress reliever",
+          "image": "bird1.gif"
+        },
+        "ja_JP": {
+          "name": "フィンチ",
+          "description": "癒し系ペット",
+          "image": "bird1.gif"
+        },
+        "zh_CN": {
+          "name": "雀鸣类鸟",
+          "description": "美丽的声音为您解除疲劳",
+          "image": "bird1.gif"
+        }
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "EST-1",
+      "productId": "FI-SW-01",
+      "details": {
+        "en_US": {
+          "description": "Large Angelfish",
+          "image": "fish1.jpg",
+          "listPrice": 1650,
+          "unitCost": 1000,
+          "attributes": ["Spotted"]
+        },
+        "ja_JP": {
+          "description": "大きなエンゼルフィッシュ",
+          "image": "fish1.jpg",
+          "listPrice": 195100,
+          "unitCost": 155100,
+          "attributes": ["斑点あり"]
+        },
+        "zh_CN": {
+          "description": "大天使鱼",
+          "image": "fish1.jpg",
+          "listPrice": 14200,
+          "unitCost": 8600,
+          "attributes": ["有斑点"]
+        }
+      }
+    },
+    {
+      "id": "EST-2",
+      "productId": "FI-SW-01",
+      "details": {
+        "en_US": {
+          "description": "Thin Angelfish",
+          "image": "fish1.jpg",
+          "listPrice": 1650,
+          "unitCost": 1000,
+          "attributes": ["Pale"]
+        },
+        "ja_JP": {
+          "description": "細身のエンゼルフィッシュ",
+          "image": "fish1.jpg",
+          "listPrice": 195100,
+          "unitCost": 155100,
+          "attributes": ["淡色"]
+        },
+        "zh_CN": {
+          "description": "细长天使鱼",
+          "image": "fish1.jpg",
+          "listPrice": 14200,
+          "unitCost": 8600,
+          "attributes": ["浅色"]
+        }
+      }
+    },
+    {
+      "id": "EST-3",
+      "productId": "FI-SW-02",
+      "details": {
+        "en_US": {
+          "description": "Salt Water fish from Australia",
+          "image": "fish4.gif",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Toothless", "Mean"]
+        },
+        "ja_JP": {
+          "description": "オーストラリア産の海水魚",
+          "image": "fish4.gif",
+          "listPrice": 135100,
+          "unitCost": 123100,
+          "attributes": ["歯がない", "Mean"]
+        },
+        "zh_CN": {
+          "description": "澳大利亚产的海水鱼",
+          "image": "fish4.gif",
+          "listPrice": 15800,
+          "unitCost": 10700,
+          "attributes": ["没有牙齿", "Mean"]
+        }
+      }
+    },
+    {
+      "id": "EST-4",
+      "productId": "FI-FW-01",
+      "details": {
+        "en_US": {
+          "description": "Spotless Koi",
+          "image": "fish3.jpg",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Spotless"]
+        },
+        "ja_JP": {
+          "description": "斑点なしの錦鯉",
+          "image": "fish3.jpg",
+          "listPrice": 205000,
+          "unitCost": 140000,
+          "attributes": ["斑点なし"]
+        },
+        "zh_CN": {
+          "description": "无斑锦鲤",
+          "image": "fish3.jpg",
+          "listPrice": 15000,
+          "unitCost": 9000,
+          "attributes": ["无斑"]
+        }
+      }
+    },
+    {
+      "id": "EST-5",
+      "productId": "FI-FW-01",
+      "details": {
+        "en_US": {
+          "description": "Fresh Water fish from Japan",
+          "image": "fish3.gif",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Spotless"]
+        },
+        "ja_JP": {
+          "description": "日本産の淡水魚",
+          "image": "fish3.gif",
+          "listPrice": 125000,
+          "unitCost": 110000,
+          "attributes": ["まだらなし"]
+        },
+        "zh_CN": {
+          "description": "日本产的淡水鱼",
+          "image": "fish3.gif",
+          "listPrice": 15700,
+          "unitCost": 10700,
+          "attributes": ["没有斑点"]
+        }
+      }
+    },
+    {
+      "id": "EST-6",
+      "productId": "K9-BD-01",
+      "details": {
+        "en_US": {
+          "description": "Male Adult Bulldog",
+          "image": "dog2.jpg",
+          "listPrice": 18350,
+          "unitCost": 12000,
+          "attributes": ["Friendly dog from England"]
+        },
+        "ja_JP": {
+          "description": "オスの成犬ブルドッグ",
+          "image": "dog2.jpg",
+          "listPrice": 2100000,
+          "unitCost": 1400000,
+          "attributes": ["イギリス原産の友好的な犬"]
+        },
+        "zh_CN": {
+          "description": "成年雄性斗牛犬",
+          "image": "dog2.jpg",
+          "listPrice": 160000,
+          "unitCost": 100000,
+          "attributes": ["来自英国的友好犬"]
+        }
+      }
+    },
+    {
+      "id": "EST-7",
+      "productId": "K9-BD-01",
+      "details": {
+        "en_US": {
+          "description": "Female Puppy Bulldog",
+          "image": "dog2.jpg",
+          "listPrice": 18350,
+          "unitCost": 12000,
+          "attributes": ["Friendly dog from England"]
+        },
+        "ja_JP": {
+          "description": "メスの子犬ブルドッグ",
+          "image": "dog2.jpg",
+          "listPrice": 2100000,
+          "unitCost": 1400000,
+          "attributes": ["イギリス原産の友好的な犬"]
+        },
+        "zh_CN": {
+          "description": "雌性幼年斗牛犬",
+          "image": "dog2.jpg",
+          "listPrice": 160000,
+          "unitCost": 100000,
+          "attributes": ["来自英国的友好犬"]
+        }
+      }
+    },
+    {
+      "id": "EST-8",
+      "productId": "K9-PO-02",
+      "details": {
+        "en_US": {
+          "description": "Cute dog from France",
+          "image": "dog6.gif",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Male Puppy"]
+        },
+        "ja_JP": {
+          "description": "キュートなフランス産の犬",
+          "image": "dog6.gif",
+          "listPrice": 122000,
+          "unitCost": 111000,
+          "attributes": ["雄 子犬"]
+        },
+        "zh_CN": {
+          "description": "一种机灵的法国狗",
+          "image": "dog6.gif",
+          "listPrice": 15700,
+          "unitCost": 10700,
+          "attributes": ["雄性小"]
+        }
+      }
+    },
+    {
+      "id": "EST-9",
+      "productId": "K9-DL-01",
+      "details": {
+        "en_US": {
+          "description": "Great dog for a Fire Station",
+          "image": "dog5.gif",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Spotless Male Puppy"]
+        },
+        "ja_JP": {
+          "description": "消防署で大活躍",
+          "image": "dog5.gif",
+          "listPrice": 144000,
+          "unitCost": 141000,
+          "attributes": ["まだらなし 雄 子犬"]
+        },
+        "zh_CN": {
+          "description": "经常用于消防部门",
+          "image": "dog5.gif",
+          "listPrice": 15700,
+          "unitCost": 14000,
+          "attributes": ["无斑点雄性小"]
+        }
+      }
+    },
+    {
+      "id": "EST-10",
+      "productId": "K9-DL-01",
+      "details": {
+        "en_US": {
+          "description": "Great dog for a Fire Station",
+          "image": "dog5.gif",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Spotted Adult Female"]
+        },
+        "ja_JP": {
+          "description": "消防署で大活躍",
+          "image": "dog5.gif",
+          "listPrice": 183000,
+          "unitCost": 161000,
+          "attributes": ["まだら おとな 雌"]
+        },
+        "zh_CN": {
+          "description": "经常用于消防部门",
+          "image": "dog5.gif",
+          "listPrice": 15700,
+          "unitCost": 15000,
+          "attributes": ["有斑点成年雌性"]
+        }
+      }
+    },
+    {
+      "id": "EST-11",
+      "productId": "RP-SN-01",
+      "details": {
+        "en_US": {
+          "description": "More Bark than bite",
+          "image": "lizard3.gif",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Venomless"]
+        },
+        "ja_JP": {
+          "description": "番犬代わりにどうぞ",
+          "image": "lizard3.gif",
+          "listPrice": 177000,
+          "unitCost": 133000,
+          "attributes": ["毒なし"]
+        },
+        "zh_CN": {
+          "description": "可代替狗来看家",
+          "image": "lizard3.gif",
+          "listPrice": 15200,
+          "unitCost": 13400,
+          "attributes": ["无毒"]
+        }
+      }
+    },
+    {
+      "id": "EST-12",
+      "productId": "RP-SN-01",
+      "details": {
+        "en_US": {
+          "description": "Doubles as a watch dog",
+          "image": "lizard3.gif",
+          "listPrice": 1850,
+          "unitCost": 1200,
+          "attributes": ["Rattleless"]
+        },
+        "ja_JP": {
+          "description": "番犬代わりにどうぞ",
+          "image": "lizard3.gif",
+          "listPrice": 155000,
+          "unitCost": 133000,
+          "attributes": ["音なし"]
+        },
+        "zh_CN": {
+          "description": "可代替狗来看家",
+          "image": "lizard3.gif",
+          "listPrice": 14000,
+          "unitCost": 12800,
+          "attributes": ["无声音的"]
+        }
+      }
+    },
+    {
+      "id": "EST-13",
+      "productId": "RP-LI-02",
+      "details": {
+        "en_US": {
+          "description": "Friendly green friend",
+          "image": "lizard2.gif",
+          "listPrice": 1250,
+          "unitCost": 1110,
+          "attributes": ["Green Adult"]
+        },
+        "ja_JP": {
+          "description": "人なつこい緑色のお友達",
+          "image": "lizard2.gif",
+          "listPrice": 185000,
+          "unitCost": 120000,
+          "attributes": ["緑", "おとな"]
+        },
+        "zh_CN": {
+          "description": "人类的绿色朋友",
+          "image": "lizard2.gif",
+          "listPrice": 16000,
+          "unitCost": 10500,
+          "attributes": ["绿色", "成年"]
+        }
+      }
+    },
+    {
+      "id": "EST-14",
+      "productId": "FL-DSH-01",
+      "details": {
+        "en_US": {
+          "description": "Great for reducing mouse populations",
+          "image": "cat3.gif",
+          "listPrice": 5850,
+          "unitCost": 1200,
+          "attributes": ["Tailless"]
+        },
+        "ja_JP": {
+          "description": "ねずみ退治に最適",
+          "image": "cat3.gif",
+          "listPrice": 584000,
+          "unitCost": 320000,
+          "attributes": ["しっぽなし"]
+        },
+        "zh_CN": {
+          "description": "捕鼠能手",
+          "image": "cat3.gif",
+          "listPrice": 48000,
+          "unitCost": 34000,
+          "attributes": ["无尾型"]
+        }
+      }
+    },
+    {
+      "id": "EST-15",
+      "productId": "FL-DSH-01",
+      "details": {
+        "en_US": {
+          "description": "Great for reducing mouse populations",
+          "image": "cat3.gif",
+          "listPrice": 2350,
+          "unitCost": 1200,
+          "attributes": ["With tail"]
+        },
+        "ja_JP": {
+          "description": "ねずみ退治に最適",
+          "image": "cat3.gif",
+          "listPrice": 234000,
+          "unitCost": 120000,
+          "attributes": ["しっぽあり"]
+        },
+        "zh_CN": {
+          "description": "捕鼠能手",
+          "image": "cat3.gif",
+          "listPrice": 19000,
+          "unitCost": 15000,
+          "attributes": ["有尾型"]
+        }
+      }
+    },
+    {
+      "id": "EST-16",
+      "productId": "FL-DLH-02",
+      "details": {
+        "en_US": {
+          "description": "Friendly house cat, doubles as a princess",
+          "image": "cat1.gif",
+          "listPrice": 9350,
+          "unitCost": 1200,
+          "attributes": ["Adult Female"]
+        },
+        "ja_JP": {
+          "description": "プリンセスみたいな、優しい家ネコ",
+          "image": "cat1.gif",
+          "listPrice": 935000,
+          "unitCost": 810000,
+          "attributes": ["おとな 雌"]
+        },
+        "zh_CN": {
+          "description": "漂亮友善的伺养型猫",
+          "image": "cat1.gif",
+          "listPrice": 80000,
+          "unitCost": 68000,
+          "attributes": ["成年雄性"]
+        }
+      }
+    },
+    {
+      "id": "EST-17",
+      "productId": "FL-DLH-02",
+      "details": {
+        "en_US": {
+          "description": "Friendly house cat, doubles as a prince",
+          "image": "cat1.gif",
+          "listPrice": 9350,
+          "unitCost": 1200,
+          "attributes": ["Adult Male"]
+        },
+        "ja_JP": {
+          "description": "プリンスみたいな、優しい家ネコ",
+          "image": "cat1.gif",
+          "listPrice": 935000,
+          "unitCost": 610000,
+          "attributes": ["おとな 雄"]
+        },
+        "zh_CN": {
+          "description": "漂亮友善的伺养型猫",
+          "image": "cat1.gif",
+          "listPrice": 80000,
+          "unitCost": 64000,
+          "attributes": ["成年雄性"]
+        }
+      }
+    },
+    {
+      "id": "EST-18",
+      "productId": "AV-CB-01",
+      "details": {
+        "en_US": {
+          "description": "Adult Male Amazon Parrot",
+          "image": "bird4.jpg",
+          "listPrice": 12500,
+          "unitCost": 9000,
+          "attributes": ["Green"]
+        },
+        "ja_JP": {
+          "description": "オスの成鳥アマゾンオウム",
+          "image": "bird4.jpg",
+          "listPrice": 1400000,
+          "unitCost": 1000000,
+          "attributes": ["緑"]
+        },
+        "zh_CN": {
+          "description": "成年雄性亚马逊鹦鹉",
+          "image": "bird4.jpg",
+          "listPrice": 95000,
+          "unitCost": 65000,
+          "attributes": ["绿色"]
+        }
+      }
+    },
+    {
+      "id": "EST-19",
+      "productId": "AV-SB-02",
+      "details": {
+        "en_US": {
+          "description": "Great stress reliever",
+          "image": "bird1.gif",
+          "listPrice": 1550,
+          "unitCost": 200,
+          "attributes": ["Adult Male"]
+        },
+        "ja_JP": {
+          "description": "癒し系ペット",
+          "image": "bird1.gif",
+          "listPrice": 154000,
+          "unitCost": 120000,
+          "attributes": ["おとな 雄"]
+        },
+        "zh_CN": {
+          "description": "美丽的声音给您解除疲劳",
+          "image": "bird1.gif",
+          "listPrice": 15200,
+          "unitCost": 13600,
+          "attributes": ["成年雄性"]
+        }
+      }
+    },
+    {
+      "id": "EST-20",
+      "productId": "FI-FW-02",
+      "details": {
+        "en_US": {
+          "description": "Fresh Water fish from China",
+          "image": "fish2.gif",
+          "listPrice": 550,
+          "unitCost": 200,
+          "attributes": ["Adult Male"]
+        },
+        "ja_JP": {
+          "description": "中国産の淡水魚",
+          "image": "fish2.gif",
+          "listPrice": 55000,
+          "unitCost": 44000,
+          "attributes": ["おとな 雄"]
+        },
+        "zh_CN": {
+          "description": "中国产的淡水鱼",
+          "image": "fish2.gif",
+          "listPrice": 5000,
+          "unitCost": 3900,
+          "attributes": ["成年雄性"]
+        }
+      }
+    },
+    {
+      "id": "EST-21",
+      "productId": "FI-FW-02",
+      "details": {
+        "en_US": {
+          "description": "Fresh Water fish from China",
+          "image": "fish2.gif",
+          "listPrice": 529,
+          "unitCost": 100,
+          "attributes": ["Adult Female"]
+        },
+        "ja_JP": {
+          "description": "中国産の淡水魚",
+          "image": "fish2.gif",
+          "listPrice": 54900,
+          "unitCost": 40000,
+          "attributes": ["おとな 雌"]
+        },
+        "zh_CN": {
+          "description": "中国产的淡水鱼",
+          "image": "fish2.gif",
+          "listPrice": 3000,
+          "unitCost": 2500,
+          "attributes": ["成年雌性"]
+        }
+      }
+    },
+    {
+      "id": "EST-22",
+      "productId": "K9-RT-02",
+      "details": {
+        "en_US": {
+          "description": "Great hunting dog",
+          "image": "dog5.gif",
+          "listPrice": 13550,
+          "unitCost": 10000,
+          "attributes": ["Adult Male"]
+        },
+        "ja_JP": {
+          "description": "猟犬に最適",
+          "image": "dog5.gif",
+          "listPrice": 1355000,
+          "unitCost": 1000000,
+          "attributes": ["おとな 雄"]
+        },
+        "zh_CN": {
+          "description": "最好的猎狗",
+          "image": "dog5.gif",
+          "listPrice": 110000,
+          "unitCost": 88000,
+          "attributes": ["成年雄性"]
+        }
+      }
+    },
+    {
+      "id": "EST-23",
+      "productId": "K9-RT-02",
+      "details": {
+        "en_US": {
+          "description": "Great hunting dog",
+          "image": "dog5.gif",
+          "listPrice": 14549,
+          "unitCost": 10000,
+          "attributes": ["Adult Female"]
+        },
+        "ja_JP": {
+          "description": "猟犬に最適",
+          "image": "dog5.gif",
+          "listPrice": 1454900,
+          "unitCost": 1000000,
+          "attributes": ["おとな 雌"]
+        },
+        "zh_CN": {
+          "description": "最好的猎狗",
+          "image": "dog5.gif",
+          "listPrice": 120000,
+          "unitCost": 98000,
+          "attributes": ["成年雌性"]
+        }
+      }
+    },
+    {
+      "id": "EST-24",
+      "productId": "K9-RT-02",
+      "details": {
+        "en_US": {
+          "description": "Great addition to a family",
+          "image": "dog5.gif",
+          "listPrice": 25550,
+          "unitCost": 9200,
+          "attributes": ["Male Puppy"]
+        },
+        "ja_JP": {
+          "description": "飼い犬に最適",
+          "image": "dog5.gif",
+          "listPrice": 2555000,
+          "unitCost": 1920000,
+          "attributes": ["雄 子犬"]
+        },
+        "zh_CN": {
+          "description": "最适合伺养的狗",
+          "image": "dog5.gif",
+          "listPrice": 210000,
+          "unitCost": 198000,
+          "attributes": ["雄性小"]
+        }
+      }
+    },
+    {
+      "id": "EST-25",
+      "productId": "K9-RT-02",
+      "details": {
+        "en_US": {
+          "description": "Great hunting dog",
+          "image": "dog5.gif",
+          "listPrice": 32529,
+          "unitCost": 9000,
+          "attributes": ["Female Puppy"]
+        },
+        "ja_JP": {
+          "description": "猟犬に最適",
+          "image": "dog5.gif",
+          "listPrice": 3252900,
+          "unitCost": 1210000,
+          "attributes": ["雄 子犬"]
+        },
+        "zh_CN": {
+          "description": "最好的猎狗",
+          "image": "dog5.gif",
+          "listPrice": 3252900,
+          "unitCost": 1210000,
+          "attributes": ["雄性小"]
+        }
+      }
+    },
+    {
+      "id": "EST-26",
+      "productId": "K9-CW-01",
+      "details": {
+        "en_US": {
+          "description": "Little yapper",
+          "image": "dog4.gif",
+          "listPrice": 12550,
+          "unitCost": 9200,
+          "attributes": ["Adult Male"]
+        },
+        "ja_JP": {
+          "description": "よく鳴く犬",
+          "image": "dog4.gif",
+          "listPrice": 1255000,
+          "unitCost": 1920000,
+          "attributes": ["おとな 雄"]
+        },
+        "zh_CN": {
+          "description": "善于叫唤的狗",
+          "image": "dog4.gif",
+          "listPrice": 108000,
+          "unitCost": 98000,
+          "attributes": ["成年雄性"]
+        }
+      }
+    },
+    {
+      "id": "EST-27",
+      "productId": "K9-CW-01",
+      "details": {
+        "en_US": {
+          "description": "Great companion dog",
+          "image": "dog4.gif",
+          "listPrice": 15529,
+          "unitCost": 9000,
+          "attributes": ["Adult Female"]
+        },
+        "ja_JP": {
+          "description": "とても人なつこい",
+          "image": "dog4.gif",
+          "listPrice": 1551900,
+          "unitCost": 1411100,
+          "attributes": ["おとな 雌"]
+        },
+        "zh_CN": {
+          "description": "能成为您的朋友",
+          "image": "dog4.gif",
+          "listPrice": 130000,
+          "unitCost": 122000,
+          "attributes": ["成年雄性"]
+        }
+      }
+    },
+    {
+      "id": "EST-28",
+      "productId": "K9-RT-01",
+      "details": {
+        "en_US": {
+          "description": "Great family dog",
+          "image": "dog1.gif",
+          "listPrice": 15529,
+          "unitCost": 9000,
+          "attributes": ["Adult Female"]
+        },
+        "ja_JP": {
+          "description": "飼い犬に最適",
+          "image": "dog1.gif",
+          "listPrice": 1552900,
+          "unitCost": 1090000,
+          "attributes": ["おとな 雌"]
+        },
+        "zh_CN": {
+          "description": "最适合家养的狗",
+          "image": "dog1.gif",
+          "listPrice": 140000,
+          "unitCost": 128000,
+          "attributes": ["成年雌性"]
+        }
+      }
+    }
+  ],
+  "inventory": [
+    {
+      "itemId": "EST-1",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-2",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-3",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-4",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-5",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-6",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-7",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-8",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-9",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-10",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-11",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-12",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-13",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-14",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-15",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-16",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-17",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-18",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-19",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-20",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-21",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-22",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-23",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-24",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-25",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-26",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-27",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-28",
+      "quantity": 10000
+    },
+    {
+      "itemId": "EST-29",
+      "quantity": 10000
+    }
+  ]
+}

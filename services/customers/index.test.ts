@@ -219,3 +219,18 @@ describe("contact snapshot and address operations", () => {
     expect(city(client)).toBe("San Jose");
   });
 });
+
+describe("listing customers", () => {
+  it("[SWHR2-C-0068] returns both j2ee and shopper", async () => {
+    const { create, svc } = await customers();
+    await create("j2ee");
+    await create("shopper");
+    const got = svc.listCustomers();
+    expect(got.map((c) => c.userId).sort()).toEqual(["j2ee", "shopper"]);
+  });
+
+  it("[SWHR2-C-0069] returns an empty list when no customer is on file", async () => {
+    const { svc } = await customers();
+    expect(svc.listCustomers()).toEqual([]);
+  });
+});

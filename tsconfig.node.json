@@ -24,6 +24,7 @@
     "services",
     "shared",
     "db",
+    "scripts",
     "e2e"
   ]
 }
