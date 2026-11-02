@@ -7,6 +7,9 @@ import { handleInvoice } from "../orders/invoice";
 import { receiveOrderMessage } from "../orders/receive";
 import { receiveSupplierPurchaseOrder, refulfil } from "../supplier/fulfil";
 import type { Executor } from "../ids";
+import { onApproval, onCompleted, onShipment } from "../notifications/handlers";
+import { RejectedRequest } from "../notifications/request";
+import { deliverOutbound } from "../notifications/send";
 
 /** Seconds a failed delivery waits before the next attempt. */
 const RETRY_DELAY_MS = 30_000;
@@ -22,6 +25,19 @@ const handlers: Record<string, Handler> = {
   "supplier.purchase-order": receiveSupplierPurchaseOrder,
   "supplier.inventory-changed": refulfil,
   "supplier.invoice/order-processing.invoice": (tx, payload) => handleInvoice(payload, tx),
+  "notify.approval": onApproval,
+  "supplier.invoice/notify.shipment": onShipment,
+  "notify.completed": onCompleted,
+};
+
+/**
+ * Handlers that do asynchronous work (an SMTP send) cannot run inside the synchronous delivery
+ * transaction. They are awaited first and the row is marked delivered afterwards, so delivery is
+ * at-least-once. A rejection retries like any failure, except a `RejectedRequest`, which can never
+ * succeed and sets the row `failed`.
+ */
+const asyncHandlers: Record<string, (payload: string) => Promise<void>> = {
+  "mail.outbound": deliverOutbound,
 };
 
 /**
@@ -43,15 +59,29 @@ export async function processDue(): Promise<number> {
     .all();
   let delivered = 0;
   for (const { id, channel, subscriber, payload } of due) {
-    const handle = handlers[subscriber ? `${channel}/${subscriber}` : channel];
-    if (!handle) continue;
+    const key = subscriber ? `${channel}/${subscriber}` : channel;
+    const handle = handlers[key];
+    const handleAsync = asyncHandlers[key];
+    if (!handle && !handleAsync) continue;
     try {
-      db.transaction((tx) => {
-        handle(tx, payload);
-        tx.update(messages).set({ status: "delivered" }).where(eq(messages.id, id)).run();
-      });
+      if (handleAsync) {
+        await handleAsync(payload);
+        db.update(messages).set({ status: "delivered" }).where(eq(messages.id, id)).run();
+      } else {
+        db.transaction((tx) => {
+          handle(tx, payload);
+          tx.update(messages).set({ status: "delivered" }).where(eq(messages.id, id)).run();
+        });
+      }
       delivered++;
     } catch (e) {
+      if (e instanceof RejectedRequest) {
+        db.update(messages)
+          .set({ status: "failed", error: e.message, attempts: sql`${messages.attempts} + 1` })
+          .where(eq(messages.id, id))
+          .run();
+        continue;
+      }
       db.update(messages)
         .set({
           error: e instanceof Error ? e.message : String(e),

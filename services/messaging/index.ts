@@ -7,7 +7,7 @@ import type { Executor } from "../ids";
  * point-to-point. A later capability appends its subscriber to a list.
  */
 export const SUBSCRIBERS: Record<string, string[]> = {
-  "supplier.invoice": ["order-processing.invoice"],
+  "supplier.invoice": ["order-processing.invoice", "notify.shipment"],
 };
 
 /**

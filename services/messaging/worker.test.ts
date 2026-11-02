@@ -21,7 +21,7 @@ describe("channels", () => {
         messages(f.client, "supplier.invoice")
           .map((m) => m.subscriber)
           .sort(),
-      ).toEqual(["order-processing.invoice", "test.subscriber"]);
+      ).toEqual(["notify.shipment", "order-processing.invoice", "test.subscriber"]);
     } finally {
       f.messaging.SUBSCRIBERS["supplier.invoice"].pop();
     }
