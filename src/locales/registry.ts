@@ -7,6 +7,8 @@ import en_US_header from "./en_US/header";
 import en_US_catalog from "./en_US/catalog";
 import en_US_signon from "./en_US/signon";
 import en_US_account from "./en_US/account";
+import en_US_checkout from "./en_US/checkout";
+import en_US_order_placed from "./en_US/order-placed";
 import ja_JP_petstore_home from "./ja_JP/petstore-home";
 import ja_JP_petstore_cart from "./ja_JP/petstore-cart";
 import ja_JP_petstore_signin from "./ja_JP/petstore-signin";
@@ -16,6 +18,8 @@ import ja_JP_header from "./ja_JP/header";
 import ja_JP_catalog from "./ja_JP/catalog";
 import ja_JP_signon from "./ja_JP/signon";
 import ja_JP_account from "./ja_JP/account";
+import ja_JP_checkout from "./ja_JP/checkout";
+import ja_JP_order_placed from "./ja_JP/order-placed";
 import zh_CN_petstore_home from "./zh_CN/petstore-home";
 import zh_CN_petstore_cart from "./zh_CN/petstore-cart";
 import zh_CN_petstore_signin from "./zh_CN/petstore-signin";
@@ -25,6 +29,8 @@ import zh_CN_header from "./zh_CN/header";
 import zh_CN_catalog from "./zh_CN/catalog";
 import zh_CN_signon from "./zh_CN/signon";
 import zh_CN_account from "./zh_CN/account";
+import zh_CN_checkout from "./zh_CN/checkout";
+import zh_CN_order_placed from "./zh_CN/order-placed";
 import type { LocaleRegistry } from "./types";
 
 export const registry: LocaleRegistry = {
@@ -38,6 +44,8 @@ export const registry: LocaleRegistry = {
     catalog: en_US_catalog,
     signon: en_US_signon,
     account: en_US_account,
+    checkout: en_US_checkout,
+    "order-placed": en_US_order_placed,
   },
   ja_JP: {
     "petstore-home": ja_JP_petstore_home,
@@ -49,6 +57,8 @@ export const registry: LocaleRegistry = {
     catalog: ja_JP_catalog,
     signon: ja_JP_signon,
     account: ja_JP_account,
+    checkout: ja_JP_checkout,
+    "order-placed": ja_JP_order_placed,
   },
   zh_CN: {
     "petstore-home": zh_CN_petstore_home,
@@ -60,6 +70,8 @@ export const registry: LocaleRegistry = {
     catalog: zh_CN_catalog,
     signon: zh_CN_signon,
     account: zh_CN_account,
+    checkout: zh_CN_checkout,
+    "order-placed": zh_CN_order_placed,
   },
 };
 
