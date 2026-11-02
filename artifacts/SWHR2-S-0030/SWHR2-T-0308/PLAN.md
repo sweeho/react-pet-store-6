@@ -48,6 +48,16 @@ Fixed by the locked suite `tests/acceptance/order-fulfillment/harness.ts` — do
 Create: `services/orders/workflow.ts`, `services/orders/invoice.ts`, `services/orders/transitions.ts`, `services/supplier/orders.ts`, `services/supplier/fulfil.ts`, `services/documents/supplier-order.ts`, `services/documents/invoice.ts`, `services/documents/catalog.ts`, `services/documents/catalog.xml`, `routes/schemas/catalog.xml.get.ts`, `public/schemas/*` (supplier order, invoice, line item DTD/XSD), one `drizzle/0008_*.sql` + `drizzle/meta/*`, and a `*.test.ts` beside each new module.
 Modify: `db/schema.ts`, `services/messaging/index.ts`, `services/messaging/worker.ts`, `plugins/order-worker.ts` (comment only, if needed), `services/orders/receive.ts`, `services/orders/decide.ts`, `services/errors.ts` (a not-found kind, if needed), `package.json`/`bun.lock` only if P7's exception applies.
 
+## Deferred sign-on cases (linked here)
+
+SWHR2-C-0263, SWHR2-C-0264 and SWHR2-C-0268 (`tests/acceptance/sign-on/internal.test.ts`) were deferred to this brief by SWHR2-S-0029 because they load this change's `fulfilment()` harness:
+
+- C-0263: `messaging.enqueue` takes a message from a caller with no session or role, and must not throw.
+- C-0264: no route under `routes/api/` may get the outbox to store a message of the caller's making. The only new route here is `routes/schemas/catalog.xml.get.ts`, which is outside `routes/api/` and never enqueues. Do not add an `/api` route that enqueues.
+- C-0268: `handleInvoice` updates `op_po_line_items.quantity_shipped` with no session.
+
+Known conflict on C-0264. Its locked test also asserts that every message the probe produces is `order.new`. Two approved routes already enqueue other channels from caller input: `POST /api/admin/orders/decisions` enqueues `order.approval` (order-approval), and `POST /api/supplier/inventory` enqueues `supplier.inventory-changed` (supplier-inventory). SWHR2-T-0304 recorded C-0264 as disputed for this reason. If it fails on that assertion alone, do not change those routes. File `a2a_dispute_test_case(target="test", path="tests/acceptance/sign-on/internal.test.ts", case_keys=["SWHR2-C-0264"], ...)` with the run as evidence; a test dispute does not block hand-off.
+
 ## Out of scope
 
 Any screen; `notify.shipment` subscriber, `notify.completed` and every e-mail (SWHR2-I-0012); checkout capture, approval rules and the inventory page (earlier capabilities); order lists and sales charts. Test case SWHR2-C-0136 is deferred to SWHR2-I-0012: build the fan-out (design.md P2) but do not build `services/notifications/*`.
