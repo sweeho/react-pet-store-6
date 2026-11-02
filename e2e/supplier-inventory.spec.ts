@@ -15,11 +15,11 @@ test("supplier updates only the marked row", async ({ page }) => {
 
   await page.getByLabel("New quantity for EST-4").fill("77");
   await page.getByLabel("Mark EST-4 for update").check();
-  await page.getByLabel("New quantity for EST-5").fill("88");
+  await page.getByLabel("New quantity for EST-6").fill("88");
   await page.getByRole("button", { name: "Submit" }).click();
   await expect(page.getByText("Inventory updated")).toBeVisible();
 
   await page.getByRole("button", { name: "Display Inventory" }).click();
   await expect(page.getByRole("row").filter({ hasText: "EST-4" }).getByText(/^77$/)).toBeVisible();
-  await expect(page.getByRole("row").filter({ hasText: "EST-5" }).getByText(/^88$/)).toHaveCount(0);
+  await expect(page.getByRole("row").filter({ hasText: "EST-6" }).getByText(/^88$/)).toHaveCount(0);
 });

@@ -12,6 +12,6 @@ AC coverage: stock record uniqueness/mandatory quantity (C-0044/45), listing (C-
 
 Deviations (per PLAN): confirmation is in-page; the mockup header/rail is the existing shell. Design check: the mockup text, columns, controls and states were followed; no Playwright side-by-side screenshots were produced, so none are claimed.
 
-Verification: `bun run lint` 0, `bun run typecheck` 0, `bun run test` 321 passed.
+Verification: `bun run lint` 0, `bun run typecheck` 0, `bun run test` 321 passed, `bun run test:e2e` 20 passed.
 
 CODE-REVIEW: self-review — sub-agent not run; checked diff for minimality, transaction atomicity and the 400 path.
