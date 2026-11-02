@@ -38,6 +38,13 @@ const sqlite = new Database(
   process.env.VITEST ? ":memory:" : path.join(process.cwd(), "sqlite.db"),
 );
 
+// The order worker polls this file while other processes (e2e helpers, tools) write to it: WAL keeps
+// readers from blocking writers, and a busy timeout makes a competing write wait instead of failing.
+if (!process.env.VITEST) {
+  sqlite.exec("PRAGMA journal_mode = WAL");
+  sqlite.exec("PRAGMA busy_timeout = 5000");
+}
+
 export const db = drizzle(sqlite, {
   schema: {
     users,
