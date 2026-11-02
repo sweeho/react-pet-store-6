@@ -1,4 +1,31 @@
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
 import { expect, test, type Page } from "@playwright/test";
+
+// The dev server's database file (db/client.ts resolves it from the project root), shared by every
+// worker and kept between runs.
+const DB_FILE = path.join(process.cwd(), "sqlite.db");
+
+/**
+ * Removes the sign-on and customer rows of a user, so a name a previous run signed up is free
+ * again. Playwright runs this file under Node, where bun:sqlite does not exist, so the deletes run
+ * in a bun child process against the same file. A table this build does not have is skipped.
+ */
+function forgetUser(userId: string) {
+  const script = `
+    const { Database } = require("bun:sqlite");
+    const [file, userId] = JSON.parse(process.argv[1]);
+    const db = new Database(file);
+    try {
+      db.exec("PRAGMA busy_timeout = 10000");
+      for (const t of ["customer_profiles", "customer_accounts", "customers", "signon_users"]) {
+        const cols = db.query("select name from pragma_table_info(?)").all(t).map((c) => c.name);
+        if (cols.includes("user_id")) db.query("delete from " + t + " where user_id = ?").run(userId);
+      }
+    } finally { db.close(); }`;
+  execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId])]);
+}
 
 type Profile = { favouriteCategory?: string; myListOn?: boolean; bannerOn?: boolean };
 
@@ -86,6 +113,8 @@ test.describe("sign up", () => {
   test("SWHR2-C-0164: signing up as newuser registers the name and continues to account creation", async ({
     page,
   }) => {
+    // precondition: the name newuser is not registered, even by an earlier run
+    forgetUser("newuser");
     await page.goto("/petstore/signin");
     await fillSignUp(page, "newuser", "secret1", "secret1");
     const registered = page.waitForResponse(
@@ -116,6 +145,11 @@ test.describe("sign up", () => {
   test("SWHR2-C-0174: a first-time visitor signs up, enters account information and can then buy", async ({
     page,
   }) => {
+    // sign up, account entry, cart and checkout in one test: more than the suite's 15s budget
+    // on a cold dev server shared by parallel workers
+    test.slow();
+    // precondition: no account exists for "firsttimer", even one an earlier run created
+    forgetUser("firsttimer");
     await page.goto("/petstore/signin");
     await fillSignUp(page, "firsttimer", "secret1", "secret1");
     await submitSignUp(page);
@@ -128,7 +162,7 @@ test.describe("sign up", () => {
       .first()
       .fill("1 Main St");
     await page.getByLabel(/^city:?$/i).fill("Palo Alto");
-    await page.getByLabel(/^state:?$/i).fill("CA");
+    await page.getByLabel(/^state( or province)?:?$/i).fill("CA");
     await page.getByLabel(/^(zip|postal)( code)?:?$/i).fill("94303");
     await page.getByLabel(/^country:?$/i).fill("USA");
     await page.getByLabel(/^card number:?$/i).fill("4111111111111111");
