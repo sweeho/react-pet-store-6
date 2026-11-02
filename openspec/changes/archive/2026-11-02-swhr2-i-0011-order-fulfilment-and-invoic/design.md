@@ -192,3 +192,57 @@ These tables are in `db/schema/order-processing.ts`, `db/schema/supplier.ts` and
   These three XML dependencies are assumed, because the pinned stack names none.
 
 - Tests: unit tests for the document builders (mandatory fields, empty address fields, date format, DTD and XSD modes, catalog precedence); worker tests proving rollback and retry on a failed publish, and pub/sub delivery to both invoice subscribers; an end-to-end service test of a two-shipment order reaching COMPLETED after a restock.
+
+## Sprint planning (SWHR2-S-0030)
+
+Added by the planning ticket SWHR2-T-0306. The sections above are the adopted specification and are unchanged; this section records what the repository already holds, the decisions that refine "Target design" against it, and the order of work. Where a planning decision below differs from "Target design", the planning decision wins and the difference is listed under "Spec discrepancies".
+
+### Codebase findings
+
+- `db/schema.ts` is ONE file holding every table. `messages` exists (`id, channel, payload, status, error, created_at, available_at`, CHECK `status in ('pending','delivered','failed')`) but has no `subscriber` and no `attempts` column. `op_order_workflow (order_id PK, status)` exists with no CHECK on status. `op_purchase_orders` / `op_po_contacts` / `op_po_cards` / `op_po_line_items` exist with cascade delete and `quantity_shipped default 0` (checkout). `sup_inventory` exists (supplier-inventory). There is no `sup_orders`, `sup_order_contacts` or `sup_order_lines`. Migrations `drizzle/0000`–`0007`.
+- `services/messaging/index.ts#enqueue(tx, channel, payload)` writes one pending row. `services/messaging/worker.ts#processDue()` delivers due rows through a `handlers` map (`order.new`, `order.approval`), one transaction per row; a failure records `error` and pushes `available_at` out 30 s, but never counts attempts. `plugins/order-worker.ts` starts it outside Vitest.
+- `services/orders/receive.ts`: `createPurchaseOrder`, `receivePurchaseOrder` (inserts the workflow row PENDING directly, then auto-approves through `applyDecision`), `receiveOrderMessage` (the `order.new` handler).
+- `services/orders/decide.ts#applyDecision` moves PENDING to APPROVED/DENIED only, and sends NOTHING to the supplier. `decideBatch` applies an approval batch in one transaction.
+- `services/supplier/inventory.ts`: `updateInventory` enqueues `supplier.inventory-changed` `{ itemIds }` in the same transaction (nobody consumes it yet); `reduceStock(exec, itemId, qty)` is the only draw-down.
+- `services/documents/purchase-order.ts` builds/reads the storefront `PurchaseOrder` XML with `fast-xml-parser`. No supplier-order, invoice or catalog module exists; no `routes/schemas/`; no `public/schemas/`.
+- `services/errors.ts` has the `AppFailure` hierarchy with an HTTP `status` per kind.
+- The locked acceptance suite `tests/acceptance/order-fulfillment/` (44 cases, SWHR2-C-0102..0145) fixes the module paths and export names through `harness.ts`: `services/orders/workflow` (`startWorkflow`, `getOrderStatus`), `services/orders/invoice` (`readInvoice`, `handleInvoice`), `services/orders/transitions` (`ORDER_TRANSITIONS`, `registerTransition`, `handOff`, `TransitionError`), `services/supplier/orders` (`createSupplierOrder`, `listSupplierOrders`), `services/supplier/fulfil`, `services/documents/supplier-order` (`buildSupplierOrder`, `validateSupplierOrder`), `services/documents/invoice` (`buildInvoice`), `services/documents/catalog` (`resolveFormat`), `routes/schemas/catalog.xml.get.ts`; plus `messages.subscriber`, `messages.attempts` and the subscriber name `order-processing.invoice`.
+- CI (`.github/workflows/ci.yml`) already triggers on `vortex/**` and runs the unit and acceptance suites; no CI change is needed.
+
+### Planning decisions
+
+- **P1 Schema and worker stay where they are.** New tables go into `db/schema.ts`, not `db/schema/*.ts`; the worker stays `services/messaging/worker.ts` started by `plugins/order-worker.ts`. One new drizzle-kit migration adds `sup_orders` (CHECK PENDING/APPROVED/DENIED/COMPLETED, default PENDING; `order_id` PK; `order_date`, `user_id`), `sup_order_contacts` (`order_id` PK, cascade), `sup_order_lines` (`(order_id, line_number)` PK, cascade, `quantity_shipped default 0`), the CHECK over the five statuses on `op_order_workflow`, and `messages.subscriber` (nullable) and `messages.attempts` (default 0) with an index on `(channel, subscriber, status, available_at)`.
+- **P2 Publish/subscribe is one row per registered subscriber.** `services/messaging` keeps a channel registry: point-to-point channels (`order.new`, `order.approval`, `supplier.purchase-order`, `supplier.inventory-changed`) and the publish/subscribe channel `supplier.invoice` with its subscriber list. `enqueue` on a publish/subscribe channel writes one row per subscriber, each consumed independently by the handler registered for `(channel, subscriber)`. This sprint registers `order-processing.invoice` only. `notify.shipment` (a second `supplier.invoice` subscriber) and the `notify.completed` enqueue on completion are added by customer-notifications (SWHR2-I-0012); the registry is the extension point. A failed delivery increments `attempts`.
+- **P3 The supplier purchase order is sent inside the approval transaction.** When `applyDecision` moves an order to APPROVED, it builds the supplier order document from the stored purchase order and hands it off through `transitions.handOff` to `supplier.purchase-order`, in the same transaction. Auto-approval at receipt and administrator decisions both pass through `applyDecision`, so both send. A failed hand-off rolls back the status change and the batch is retried (SWHR2-R-0140). `handOff` and every transition body are synchronous: `bun:sqlite` transactions do not span an `await`.
+- **P4 One workflow module owns status.** `services/orders/workflow.ts` holds `startWorkflow(exec, orderId, status)` (duplicate rejected by the PK), `getOrderStatus(orderId)` (unknown id throws an `AppFailure` kind with status 404 and a not-found name), and the lifecycle guard: only PENDING→APPROVED|DENIED, APPROVED→SHIPPED_PART|COMPLETED, SHIPPED_PART→SHIPPED_PART|COMPLETED. `receive.ts` starts the workflow through it.
+- **P5 Invoice handling.** `services/orders/invoice.ts#readInvoice` accepts only an `Invoice` root and returns the order id and per-item shipped quantities; `handleInvoice` adds them to `op_po_line_items.quantity_shipped` and moves APPROVED/SHIPPED_PART to SHIPPED_PART or COMPLETED. An invoice for an order in any other status changes nothing. A non-invoice document throws, so the worker keeps it pending with `attempts` raised and changes nothing.
+- **P6 Supplier.** `services/supplier/orders.ts` creates a supplier order with its contact and lines in one transaction and lists by status. `services/supplier/fulfil.ts` is the consumer of `supplier.purchase-order` (validate, translate, create, fulfil, invoice — one unit) and of `supplier.inventory-changed` (fulfil every PENDING supplier order). Fulfil ships whole lines only, draws stock through `inventory.reduceStock` (ARCHITECTURE Key Decision), publishes one invoice per shipment, and completes the supplier order when every line has shipped.
+- **P7 Documents without new native or XSLT dependencies.** The TPA supplier order is translated to the internal supplier order by a pure function over `fast-xml-parser` (already a dependency), and the "one or more lines" and mandatory-field rules are checked in code, matching the DTD/XSD files published under `public/schemas/`. `xslt-processor` and `xmllint-wasm` (assumed, not pinned, in "Stack choices") are not added; the implementer may add one only if a locked case cannot pass without it, and records why. Unit prices stay integer hundredths in storage and are written as decimals (1650 → `16.50`) in documents.
+- **P8 Catalog.** `services/documents/catalog.ts#resolveFormat(id)` looks in the `DOC_CATALOG_PATH` catalog first, then the built-in `services/documents/catalog.xml`, and fetches the network location only when neither has the id. `routes/schemas/catalog.xml.get.ts` builds absolute URLs from the request's own origin; it has no guard because it publishes formats only.
+
+### Phases (one FEATURE, worked in this order)
+
+1. Order workflow status — `tasks.md` §1 (P1 migration, P4).
+2. Order lines and purchase orders — §2 (already stored by checkout; verify against the cases, change nothing that passes).
+3. Supplier orders — §3 (P1, P6 storage half).
+4. Supplier documents — §4 (P7, P8).
+5. Messaging and stage hand-off — §5 (P2, P3).
+6. Supplier fulfilment — §6 (P6).
+7. Invoice receipt — §7 (P5).
+8. **Test harness.** Unit tests next to each new module (document builders, catalog precedence, workflow guard, transitions, worker fan-out and retry), following `services/orders/decide.test.ts` and `routes/api/hello.test.ts`. The locked acceptance suite `tests/acceptance/order-fulfillment/` is not edited; the order-approval, checkout and supplier-inventory acceptance suites stay green after the migration.
+9. **CI.** No workflow change: the existing CI job runs the unit and acceptance suites on `vortex/**`. The phase is done when that job is green on the FEATURE's branch.
+
+### Test cases not owned by this sprint
+
+- SWHR2-C-0136 ("One published invoice reaches both invoice channel subscribers") drives `services/notifications/send` and `services/notifications/config` and asserts the `notify.shipment` e-mail. Those are built by customer-notifications (SWHR2-I-0012), so the case is deferred to that brief. This sprint builds the fan-out it relies on (P2).
+
+### Spec discrepancies
+
+- **SD1 File layout.** "Target design → Data" names `db/schema/order-processing.ts`, `db/schema/supplier.ts`, `db/schema/messaging.ts`; the repository keeps every table in `db/schema.ts`. Resolved by P1.
+- **SD2 Worker plugin name.** "Target design → Worker" names `plugins/message-worker.ts`; the existing plugin is `plugins/order-worker.ts`. Resolved by P1.
+- **SD3 Outbox columns.** The existing `messages` table lacks `subscriber` and `attempts`, which "Target design → Data" and the locked suite require, and allows a `failed` status the design does not list. Resolved by P1 (the `failed` value is kept for compatibility).
+- **SD4 Approval does not dispatch.** SWHR2-R-0098.02 / SWHR2-R-0140 require an approved order to be sent to the supplier in the approval unit; today `applyDecision` only updates status. Resolved by P3.
+- **SD5 Invoice subscribers.** "Target design → Message channels" lists `notify.shipment` as an invoice subscriber and "Order processing → Invoice handling" enqueues `notify.completed`; both belong to customer-notifications (SWHR2-I-0012), whose design claims them. Resolved by P2 and the deferral of SWHR2-C-0136.
+- **SD6 XML dependencies.** "Stack choices" assumes `xslt-processor` and `xmllint-wasm`; no locked case observes the engine. Resolved by P7.
+- **SD7 Restock notification (C2).** SWHR2-R-0099.01 says order processing "is notified" of an inventory change; the target design meets it with the invoices re-fulfilment publishes, not a separate inventory message to order processing. Built as the target design says.
+- **SD8 Unit price representation.** Scenarios state unit price 16.50; storage is integer hundredths (1650) per the ARCHITECTURE "Money is integer hundredths" decision. Documents write the decimal form (P7).

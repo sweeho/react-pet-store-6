@@ -1,0 +1,8 @@
+<!ELEMENT LineItem EMPTY>
+<!ATTLIST LineItem
+  lineNumber CDATA #REQUIRED
+  categoryId CDATA #REQUIRED
+  productId CDATA #REQUIRED
+  itemId CDATA #REQUIRED
+  quantity CDATA #REQUIRED
+  unitPrice CDATA #REQUIRED>
