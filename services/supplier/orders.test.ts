@@ -67,6 +67,7 @@ describe("supplier orders", () => {
 
   it("[SWHR2-C-0128] a failing third line stores nothing", async () => {
     const f = await fulfilment();
+    f.supplier.createSupplierOrder(f.db, supplierOrder("10010"));
     const input = supplierOrder("10011", [
       ["EST-1", 1],
       ["EST-2", 1],
@@ -75,7 +76,7 @@ describe("supplier orders", () => {
     (input.lines[2] as Record<string, unknown>).itemId = null;
     expect(() => f.supplier.createSupplierOrder(f.db, input)).toThrow();
     for (const t of ["sup_orders", "sup_order_contacts", "sup_order_lines"])
-      expect(count(f.client, t)).toBe(0);
+      expect(count(f.client, t, "order_id = '10011'")).toBe(0);
   });
 
   it("[SWHR2-C-0144] lists pending orders once each", async () => {
