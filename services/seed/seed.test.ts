@@ -115,7 +115,7 @@ describe("seed loader", () => {
         "select c.email e from customer_accounts a join contact_info c on c.id=a.contact_id where a.user_id='j2ee'",
       )
       .get() as { e: string };
-    expect(email.e).toBe("aaa@bbb.ccc");
+    expect(email.e).toBe("abc@xyz.com");
     expect(n("customers", "user_id='alice'")).toBe(1);
     expect(n("customers")).toBe(5);
   });

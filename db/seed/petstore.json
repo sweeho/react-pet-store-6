@@ -53,13 +53,13 @@
       "userId": "j2ee",
       "account": {
         "contact": {
-          "givenName": "XYZ",
-          "familyName": "ABC",
+          "givenName": "ABC",
+          "familyName": "XYZ",
           "telephone": "555-555-5555",
-          "email": "aaa@bbb.ccc",
+          "email": "abc@xyz.com",
           "address": {
-            "street1": "1234 Anywhere Street",
-            "street2": "Unit 555",
+            "street1": "1 Main St",
+            "street2": "",
             "city": "Palo Alto",
             "state": "CA",
             "zip": "94303",
@@ -67,17 +67,17 @@
           }
         },
         "card": {
-          "cardNumber": "123456789",
-          "cardType": "Meow Card",
-          "expiryMonth": 4,
-          "expiryYear": 2004
+          "cardNumber": "4111111111111111",
+          "cardType": "Java(TM) Card",
+          "expiryMonth": 12,
+          "expiryYear": 2030
         }
       },
       "profile": {
         "preferredLanguage": "en_US",
-        "favouriteCategory": "REPTILES",
+        "favouriteCategory": null,
         "myListOn": true,
-        "bannerOn": false
+        "bannerOn": true
       }
     },
     {
@@ -198,8 +198,8 @@
           "image": "reptiles_icon.gif"
         },
         "zh_CN": {
-          "name": "爬虫类",
-          "description": "爬虫类",
+          "name": "爬行动物",
+          "description": "爬行动物",
           "image": "reptiles_icon.gif"
         }
       }
@@ -253,17 +253,17 @@
         "en_US": {
           "name": "Angelfish",
           "description": "Salt Water fish from Australia",
-          "image": "fish1.jpg"
+          "image": "fish1.gif"
         },
         "ja_JP": {
           "name": "エンゼルフィッシュ",
           "description": "オーストラリア産の海水魚",
-          "image": "fish1.jpg"
+          "image": "fish1.gif"
         },
         "zh_CN": {
           "name": "天使鱼",
-          "description": "澳大利亚产的海水鱼",
-          "image": "fish1.jpg"
+          "description": "来自澳大利亚的海水鱼",
+          "image": "fish1.gif"
         }
       }
     },
@@ -294,17 +294,17 @@
       "details": {
         "en_US": {
           "name": "Koi",
-          "description": "Fresh Water fish from Japan",
+          "description": "Freshwater fish from Japan",
           "image": "fish3.gif"
         },
         "ja_JP": {
-          "name": "鯉",
+          "name": "錦鯉",
           "description": "日本産の淡水魚",
           "image": "fish3.gif"
         },
         "zh_CN": {
-          "name": "鲤鱼",
-          "description": "日本产的淡水鱼",
+          "name": "锦鲤",
+          "description": "来自日本的淡水鱼",
           "image": "fish3.gif"
         }
       }
@@ -341,12 +341,12 @@
         },
         "ja_JP": {
           "name": "ブルドッグ",
-          "description": "人なつっこい性質、イギリス産",
+          "description": "イギリス原産の友好的な犬",
           "image": "dog2.gif"
         },
         "zh_CN": {
-          "name": "牛头狗",
-          "description": "一种来自英国的性格温和的狗",
+          "name": "斗牛犬",
+          "description": "来自英国的友好犬",
           "image": "dog2.gif"
         }
       }
@@ -362,12 +362,12 @@
         },
         "ja_JP": {
           "name": "プードル",
-          "description": "キュートなフランス産の犬",
+          "description": "フランス原産のかわいい犬",
           "image": "dog6.gif"
         },
         "zh_CN": {
-          "name": "狮子狗",
-          "description": "一种来自法国的机灵的小狗",
+          "name": "贵宾犬",
+          "description": "来自法国的可爱犬",
           "image": "dog6.gif"
         }
       }
@@ -379,17 +379,17 @@
         "en_US": {
           "name": "Dalmation",
           "description": "Great dog for a Fire Station",
-          "image": "dog5.gif"
+          "image": "dog4.gif"
         },
         "ja_JP": {
-          "name": "ダルマシアン",
-          "description": "消防署で大活躍",
-          "image": "dog5.gif"
+          "name": "ダルメシアン",
+          "description": "消防署に最適な犬",
+          "image": "dog4.gif"
         },
         "zh_CN": {
-          "name": "达尔马希亚狗",
-          "description": "经常在消防部门出现",
-          "image": "dog5.gif"
+          "name": "斑点狗",
+          "description": "适合消防站的好犬",
+          "image": "dog4.gif"
         }
       }
     },
@@ -550,13 +550,13 @@
           "image": "bird4.gif"
         },
         "ja_JP": {
-          "name": "ボウシインコ",
-          "description": "最高で 75 年も長生き",
+          "name": "アマゾンオウム",
+          "description": "最長75年間の素晴らしい仲間",
           "image": "bird4.gif"
         },
         "zh_CN": {
           "name": "亚马逊鹦鹉",
-          "description": "最长可以活75年",
+          "description": "长达75年的好伙伴",
           "image": "bird4.gif"
         }
       }
@@ -589,25 +589,25 @@
       "productId": "FI-SW-01",
       "details": {
         "en_US": {
-          "description": "Fresh Water fish from Japan",
-          "image": "fish3.gif",
+          "description": "Large Angelfish",
+          "image": "fish1.jpg",
           "listPrice": 1650,
           "unitCost": 1000,
-          "attributes": ["Large", "Cuddly"]
+          "attributes": ["Spotted"]
         },
         "ja_JP": {
-          "description": "日本産の淡水魚",
-          "image": "fish3.gif",
+          "description": "大きなエンゼルフィッシュ",
+          "image": "fish1.jpg",
           "listPrice": 195100,
           "unitCost": 155100,
-          "attributes": ["大", "優しい"]
+          "attributes": ["斑点あり"]
         },
         "zh_CN": {
-          "description": "日本产的淡水鱼",
-          "image": "fish3.gif",
+          "description": "大天使鱼",
+          "image": "fish1.jpg",
           "listPrice": 14200,
           "unitCost": 8600,
-          "attributes": ["大", "喜欢群居"]
+          "attributes": ["有斑点"]
         }
       }
     },
@@ -616,25 +616,25 @@
       "productId": "FI-SW-01",
       "details": {
         "en_US": {
-          "description": "Fresh Water fish from Japan",
-          "image": "fish3.gif",
+          "description": "Thin Angelfish",
+          "image": "fish1.jpg",
           "listPrice": 1650,
           "unitCost": 1000,
-          "attributes": ["Small"]
+          "attributes": ["Pale"]
         },
         "ja_JP": {
-          "description": "日本産の淡水魚",
-          "image": "fish3.gif",
-          "listPrice": 111400,
-          "unitCost": 100300,
-          "attributes": ["小"]
+          "description": "細身のエンゼルフィッシュ",
+          "image": "fish1.jpg",
+          "listPrice": 195100,
+          "unitCost": 155100,
+          "attributes": ["淡色"]
         },
         "zh_CN": {
-          "description": "日本产的淡水鱼",
-          "image": "fish3.gif",
+          "description": "细长天使鱼",
+          "image": "fish1.jpg",
           "listPrice": 14200,
           "unitCost": 8600,
-          "attributes": ["小"]
+          "attributes": ["浅色"]
         }
       }
     },
@@ -670,25 +670,25 @@
       "productId": "FI-FW-01",
       "details": {
         "en_US": {
-          "description": "Fresh Water fish from Japan",
-          "image": "fish3.gif",
+          "description": "Spotless Koi",
+          "image": "fish3.jpg",
           "listPrice": 1850,
           "unitCost": 1200,
-          "attributes": ["Spotted"]
+          "attributes": ["Spotless"]
         },
         "ja_JP": {
-          "description": "日本産の淡水魚",
-          "image": "fish3.gif",
-          "listPrice": 132300,
-          "unitCost": 125100,
-          "attributes": ["まだら"]
+          "description": "斑点なしの錦鯉",
+          "image": "fish3.jpg",
+          "listPrice": 205000,
+          "unitCost": 140000,
+          "attributes": ["斑点なし"]
         },
         "zh_CN": {
-          "description": "日本产的淡水鱼",
-          "image": "fish3.gif",
-          "listPrice": 15700,
-          "unitCost": 10700,
-          "attributes": ["有斑点"]
+          "description": "无斑锦鲤",
+          "image": "fish3.jpg",
+          "listPrice": 15000,
+          "unitCost": 9000,
+          "attributes": ["无斑"]
         }
       }
     },
@@ -724,25 +724,25 @@
       "productId": "K9-BD-01",
       "details": {
         "en_US": {
-          "description": "Friendly dog from England",
-          "image": "dog2.gif",
-          "listPrice": 1850,
-          "unitCost": 1200,
-          "attributes": ["Male Adult"]
+          "description": "Male Adult Bulldog",
+          "image": "dog2.jpg",
+          "listPrice": 18350,
+          "unitCost": 12000,
+          "attributes": ["Friendly dog from England"]
         },
         "ja_JP": {
-          "description": "人なつっこい性質、イギリス産",
-          "image": "dog2.gif",
-          "listPrice": 145000,
-          "unitCost": 120000,
-          "attributes": ["雄 おとな"]
+          "description": "オスの成犬ブルドッグ",
+          "image": "dog2.jpg",
+          "listPrice": 2100000,
+          "unitCost": 1400000,
+          "attributes": ["イギリス原産の友好的な犬"]
         },
         "zh_CN": {
-          "description": "性格温和的英国狗",
-          "image": "dog2.gif",
-          "listPrice": 15700,
-          "unitCost": 10700,
-          "attributes": ["成年雄性"]
+          "description": "成年雄性斗牛犬",
+          "image": "dog2.jpg",
+          "listPrice": 160000,
+          "unitCost": 100000,
+          "attributes": ["来自英国的友好犬"]
         }
       }
     },
@@ -751,25 +751,25 @@
       "productId": "K9-BD-01",
       "details": {
         "en_US": {
-          "description": "Friendly dog from England",
-          "image": "dog2.gif",
-          "listPrice": 1850,
-          "unitCost": 1200,
-          "attributes": ["Female Puppy"]
+          "description": "Female Puppy Bulldog",
+          "image": "dog2.jpg",
+          "listPrice": 18350,
+          "unitCost": 12000,
+          "attributes": ["Friendly dog from England"]
         },
         "ja_JP": {
-          "description": "人なつっこい性質、イギリス産",
-          "image": "dog2.gif",
-          "listPrice": 115000,
-          "unitCost": 101100,
-          "attributes": ["雌 子犬"]
+          "description": "メスの子犬ブルドッグ",
+          "image": "dog2.jpg",
+          "listPrice": 2100000,
+          "unitCost": 1400000,
+          "attributes": ["イギリス原産の友好的な犬"]
         },
         "zh_CN": {
-          "description": "性格温和的英国狗",
-          "image": "dog2.gif",
-          "listPrice": 15700,
-          "unitCost": 10700,
-          "attributes": ["雌性小"]
+          "description": "雌性幼年斗牛犬",
+          "image": "dog2.jpg",
+          "listPrice": 160000,
+          "unitCost": 100000,
+          "attributes": ["来自英国的友好犬"]
         }
       }
     },
@@ -1048,25 +1048,25 @@
       "productId": "AV-CB-01",
       "details": {
         "en_US": {
-          "description": "Great companion for up to 75 years",
-          "image": "bird4.gif",
-          "listPrice": 19350,
-          "unitCost": 9200,
-          "attributes": ["Adult Male"]
+          "description": "Adult Male Amazon Parrot",
+          "image": "bird4.jpg",
+          "listPrice": 12500,
+          "unitCost": 9000,
+          "attributes": ["Green"]
         },
         "ja_JP": {
-          "description": "最高で 75 年も長生きする友達",
-          "image": "bird4.gif",
-          "listPrice": 1935000,
-          "unitCost": 1200000,
-          "attributes": ["おとな 雄"]
+          "description": "オスの成鳥アマゾンオウム",
+          "image": "bird4.jpg",
+          "listPrice": 1400000,
+          "unitCost": 1000000,
+          "attributes": ["緑"]
         },
         "zh_CN": {
-          "description": "最长可活75年",
-          "image": "bird4.gif",
-          "listPrice": 160000,
-          "unitCost": 130000,
-          "attributes": ["成年雄性"]
+          "description": "成年雄性亚马逊鹦鹉",
+          "image": "bird4.jpg",
+          "listPrice": 95000,
+          "unitCost": 65000,
+          "attributes": ["绿色"]
         }
       }
     },
