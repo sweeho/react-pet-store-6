@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { fulfilment } from "../../tests/acceptance/order-fulfillment/harness";
+import { fulfilment } from "./fulfilmentHarness";
 
 describe("transitions", () => {
   it("[SWHR2-C-0129] a batch transition gets all messages in one hand-off", async () => {

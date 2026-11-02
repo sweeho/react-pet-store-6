@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://petstore.example/schemas/SupplierOrder" xmlns="http://petstore.example/schemas/SupplierOrder" elementFormDefault="qualified">
+  <xsd:element name="SupplierOrder">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="OrderId" type="xsd:string"/>
+        <xsd:element name="OrderDate" type="xsd:date"/>
+        <xsd:element name="ShippingAddress">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="FirstName" type="xsd:string"/>
+              <xsd:element name="LastName" type="xsd:string"/>
+              <xsd:element name="Street" type="xsd:string"/>
+              <xsd:element name="City" type="xsd:string"/>
+              <xsd:element name="State" type="xsd:string"/>
+              <xsd:element name="Country" type="xsd:string"/>
+              <xsd:element name="ZipCode" type="xsd:string"/>
+              <xsd:element name="Email" type="xsd:string"/>
+              <xsd:element name="Phone" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+        <xsd:element name="LineItem" maxOccurs="unbounded">
+        <xsd:complexType>
+          <xsd:attribute name="lineNumber" type="xsd:nonNegativeInteger" use="required"/>
+          <xsd:attribute name="categoryId" type="xsd:string" use="required"/>
+          <xsd:attribute name="productId" type="xsd:string" use="required"/>
+          <xsd:attribute name="itemId" type="xsd:string" use="required"/>
+          <xsd:attribute name="quantity" type="xsd:positiveInteger" use="required"/>
+          <xsd:attribute name="unitPrice" type="xsd:decimal" use="required"/>
+        </xsd:complexType>
+      </xsd:element>
+      </xsd:sequence>
+      <xsd:attribute name="userId" type="xsd:string" use="required"/>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

@@ -11,7 +11,7 @@ import {
   supplierOrder,
   purchaseOrder,
   approvalXml,
-} from "../../tests/acceptance/order-fulfillment/harness";
+} from "../orders/fulfilmentHarness";
 
 const po = (f: Awaited<ReturnType<typeof fulfilment>>, id: string, lines: [string, number][]) =>
   f.messaging.enqueue(

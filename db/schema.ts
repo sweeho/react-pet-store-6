@@ -165,15 +165,19 @@ export const messages = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     channel: text("channel").notNull(),
+    // The subscriber a publish/subscribe row is for; null on a point-to-point channel.
+    subscriber: text("subscriber"),
     payload: text("payload").notNull(),
     status: text("status").notNull().default("pending"),
     error: text("error"),
+    // Failed deliveries so far.
+    attempts: integer("attempts").notNull().default(0),
     createdAt: integer("created_at").notNull(),
     // Epoch milliseconds from which the worker may deliver the row; a failed attempt pushes it out.
     availableAt: integer("available_at").notNull().default(0),
   },
   (t) => [
-    index("messages_channel_status_idx").on(t.channel, t.status),
+    index("messages_channel_status_idx").on(t.channel, t.subscriber, t.status, t.availableAt),
     check("messages_status", sql`${t.status} in ('pending', 'delivered', 'failed')`),
   ],
 );
@@ -241,10 +245,66 @@ export const opPoLineItems = sqliteTable(
 );
 
 // Minimal workflow row: receipt starts it PENDING; order-approval extends it (design.md SD2).
-export const opOrderWorkflow = sqliteTable("op_order_workflow", {
-  orderId: text("order_id").primaryKey(),
-  status: text("status").notNull(),
+export const opOrderWorkflow = sqliteTable(
+  "op_order_workflow",
+  {
+    orderId: text("order_id").primaryKey(),
+    status: text("status").notNull(),
+  },
+  (t) => [
+    check(
+      "op_order_workflow_status",
+      sql`${t.status} in ('PENDING', 'APPROVED', 'DENIED', 'SHIPPED_PART', 'COMPLETED')`,
+    ),
+  ],
+);
+
+// Supplier orders (order-fulfilment design P6). Money is in hundredths; the contact and the lines
+// are deleted with their order.
+export const supOrders = sqliteTable(
+  "sup_orders",
+  {
+    orderId: text("order_id").primaryKey(),
+    status: text("status").notNull().default("PENDING"),
+    orderDate: text("order_date").notNull(),
+    userId: text("user_id").notNull(),
+  },
+  (t) => [
+    check("sup_orders_status", sql`${t.status} in ('PENDING', 'APPROVED', 'DENIED', 'COMPLETED')`),
+  ],
+);
+
+export const supOrderContacts = sqliteTable("sup_order_contacts", {
+  orderId: text("order_id")
+    .primaryKey()
+    .references(() => supOrders.orderId, { onDelete: "cascade" }),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  street: text("street").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  country: text("country").notNull(),
+  zip: text("zip").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
 });
+
+export const supOrderLines = sqliteTable(
+  "sup_order_lines",
+  {
+    orderId: text("order_id")
+      .notNull()
+      .references(() => supOrders.orderId, { onDelete: "cascade" }),
+    lineNumber: integer("line_number").notNull(),
+    categoryId: text("category_id").notNull(),
+    productId: text("product_id").notNull(),
+    itemId: text("item_id").notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPrice: integer("unit_price").notNull(),
+    quantityShipped: integer("quantity_shipped").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.orderId, t.lineNumber] })],
+);
 
 // Supplier stock, one record per item; no foreign key into the catalog (supplier-inventory design P1).
 export const supInventory = sqliteTable(

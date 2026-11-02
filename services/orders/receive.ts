@@ -1,18 +1,13 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import {
-  opOrderWorkflow,
-  opPoCards,
-  opPoContacts,
-  opPoLineItems,
-  opPurchaseOrders,
-} from "../../db/schema";
+import { opPoCards, opPoContacts, opPoLineItems, opPurchaseOrders } from "../../db/schema";
 import { fromXml } from "../documents/purchase-order";
 import type { Party, PurchaseOrder } from "../documents/purchase-order";
 import type { Executor } from "../ids";
 import { autoApproves } from "./approval";
 import { applyDecision } from "./decide";
+import { startWorkflow } from "./workflow";
 
 function insertOrder(tx: Executor, po: PurchaseOrder): void {
   tx.insert(opPurchaseOrders)
@@ -50,15 +45,20 @@ export async function createPurchaseOrder(exec: Executor, po: PurchaseOrder): Pr
 
 /** The stored purchase order with this id, or undefined. */
 export async function getPurchaseOrder(orderId: string): Promise<PurchaseOrder | undefined> {
-  const header = db
+  return readPurchaseOrder(db, orderId);
+}
+
+/** `getPurchaseOrder` for a caller that is inside a transaction and cannot await. */
+export function readPurchaseOrder(exec: Executor, orderId: string): PurchaseOrder | undefined {
+  const header = exec
     .select()
     .from(opPurchaseOrders)
     .where(eq(opPurchaseOrders.orderId, orderId))
     .get();
   if (!header) return undefined;
-  const contact = db.select().from(opPoContacts).where(eq(opPoContacts.orderId, orderId)).get();
-  const card = db.select().from(opPoCards).where(eq(opPoCards.orderId, orderId)).get();
-  const lines = db
+  const contact = exec.select().from(opPoContacts).where(eq(opPoContacts.orderId, orderId)).get();
+  const card = exec.select().from(opPoCards).where(eq(opPoCards.orderId, orderId)).get();
+  const lines = exec
     .select()
     .from(opPoLineItems)
     .where(eq(opPoLineItems.orderId, orderId))
@@ -139,7 +139,7 @@ const hundredths = (amount: number): number => Math.round(amount * 100);
  */
 export function receivePurchaseOrder(tx: Executor, po: PurchaseOrder): void {
   insertOrder(tx, po);
-  tx.insert(opOrderWorkflow).values({ orderId: po.orderId, status: "PENDING" }).run();
+  startWorkflow(tx, po.orderId, "PENDING");
   if (autoApproves(po.locale, po.total)) applyDecision(tx, po.orderId, "APPROVED");
 }
 

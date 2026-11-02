@@ -8,7 +8,7 @@ import {
   messages,
   purchaseOrder,
   statusOf,
-} from "../../tests/acceptance/order-fulfillment/harness";
+} from "./fulfilmentHarness";
 
 const pending = (f: Awaited<ReturnType<typeof fulfilment>>, id: string) =>
   f.client.exec(`insert into op_order_workflow (order_id, status) values ('${id}', 'PENDING')`);

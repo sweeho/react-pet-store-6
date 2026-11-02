@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { H3Event } from "nitro/h3";
 
-import { fulfilment, supplierOrder } from "../../tests/acceptance/order-fulfillment/harness";
+import { fulfilment, supplierOrder } from "../orders/fulfilmentHarness";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -101,7 +101,7 @@ describe("supplier order document", () => {
 
   it("[SWHR2-C-0110] the catalog route maps formats to absolute locations", async () => {
     await fulfilment();
-    const route = (await import("../../routes/schemas/catalog.xml.get")).default as (
+    const route = (await import("../../routes/schemas/catalog.xml.get")).default as unknown as (
       e: H3Event,
     ) => Promise<unknown>;
     const out = await route(new H3Event(new Request("http://localhost:5178/schemas/catalog.xml")));
