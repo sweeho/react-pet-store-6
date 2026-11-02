@@ -141,7 +141,9 @@ export default function SupplierInventory() {
               return (
                 <tr key={r.itemId} className={on ? "bg-muted/50 border-t" : "border-t"}>
                   <td className="px-4 py-2 font-mono">{r.itemId}</td>
-                  <td className="px-4 py-2 text-right font-mono">{r.quantity}</td>
+                  <td className="px-4 py-2 text-right font-mono">
+                    {r.quantity.toLocaleString("en-US")}
+                  </td>
                   <td className="px-4 py-2">
                     <input
                       type="text"
