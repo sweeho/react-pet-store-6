@@ -192,3 +192,131 @@ These tables are in `db/schema/order-processing.ts`, `db/schema/supplier.ts` and
   These three XML dependencies are assumed, because the pinned stack names none.
 
 - Tests: unit tests for the document builders (mandatory fields, empty address fields, date format, DTD and XSD modes, catalog precedence); worker tests proving rollback and retry on a failed publish, and pub/sub delivery to both invoice subscribers; an end-to-end service test of a two-shipment order reaching COMPLETED after a restock.
+
+## Planning (SWHR2-S-0029)
+
+Ticket: SWHR2-T-0304 (FEATURE) owns every task group. The locked acceptance suite `tests/acceptance/order-fulfillment/` (harness `harness.ts`) fixes module paths, function names, table and column names and input shapes that the Target design above does not state. Where the two differ, the locked suite wins, and each difference is listed under Spec discrepancies. Case SWHR2-C-0136 is deferred to customer-notifications (SD4).
+
+### Codebase findings
+
+- F1. **Order-processing tables exist** (`db/schema.ts`, from checkout and order approval):
+  - `op_purchase_orders` holds the header and billing address. It cascades to `op_po_contacts` (shipping), `op_po_cards` and `op_po_line_items`.
+  - `op_po_line_items` already carries category, product, item, line number, quantity, unit price (hundredths) and `quantity_shipped` default 0.
+  - `op_order_workflow (order_id PK, status)` has **no** status CHECK.
+  - The schema is a single `db/schema.ts`. The latest migration is `0007_nebulous_boomerang.sql`, so this change adds `0008`.
+- F2. **Outbox:**
+  - The `messages` table has `id, channel, payload, status (pending|delivered|failed), error, created_at, available_at`, and no `subscriber` or `attempts` column.
+  - `services/messaging/index.ts#enqueue(exec, channel, payload)` writes one row.
+  - `services/messaging/worker.ts` holds the handler table (`order.new`, `order.approval`) and `processDue()`. It runs handler plus `delivered` in one transaction; on failure it records `error` and pushes `available_at` 30 s out. It skips channels with no handler.
+  - `plugins/order-worker.ts` starts it outside Vitest.
+- F3. **Receipt and decision:**
+  - `services/orders/receive.ts#receivePurchaseOrder(tx, po)` inserts the order, inserts the workflow PENDING directly, then auto-approves through `services/orders/decide.ts#applyDecision(tx, orderId, status)`.
+  - `applyDecision` changes PENDING to APPROVED/DENIED only and enqueues nothing.
+  - `createPurchaseOrder(exec, po)` and `getPurchaseOrder(orderId)` exist.
+- F4. **Supplier side:** `services/supplier/inventory.ts` exports `reduceStock(exec, itemId, quantity): boolean`, `updateInventory` and `INVENTORY_CHANGED_CHANNEL`, and every stock update enqueues `supplier.inventory-changed` `{ itemIds }`. These are not consumed yet. No `sup_orders*` table exists.
+- F5. **Documents:** `services/documents/purchase-order.ts` (`toXml`/`fromXml`, `fast-xml-parser`) is the only document module. No `public/schemas/` or `routes/schemas/` exist.
+- F6. **Locked contracts** (`harness.ts`, the four test files):
+  - `services/orders/workflow`: `startWorkflow(exec, orderId, status)`, `getOrderStatus(orderId)`.
+  - `services/orders/invoice`: `readInvoice(xml)` → `{ orderId, shipped | lines }`, `handleInvoice(xml)`.
+  - `services/orders/transitions`: `ORDER_TRANSITIONS`, `registerTransition(name, { batch?, single? })`, `handOff(step, messages)`, `TransitionError` with `cause`.
+  - `services/supplier/orders`: `createSupplierOrder(exec, input)`, `listSupplierOrders(status)`.
+  - `services/supplier/fulfil`.
+  - `services/documents/supplier-order`: `buildSupplierOrder(input)`, `validateSupplierOrder(xml)` → `{ valid }`.
+  - `services/documents/invoice`: `buildInvoice({ orderId, userId, shippingDate, lines })`.
+  - `services/documents/catalog#resolveFormat(id)`.
+  - `routes/schemas/catalog.xml.get`.
+  - `messages.subscriber` and `messages.attempts`.
+  - Tables `sup_orders (order_id, status, order_date, user_id)`, `sup_order_contacts`, `sup_order_lines (… item_id, quantity, unit_price, quantity_shipped)`.
+  - Invoice subscriber name `order-processing.invoice`.
+  - The input shape is the harness's `supplierOrder()`: `orderDate` ISO date-time, `shipping` nine fields, `lines` with `unitPrice` in hundredths.
+- F7. **Baseline:** in the locked suite 1 of 44 passes (C-0118, already met by checkout). The other 43 fail at harness import because the modules in F6 do not exist.
+
+### Spec discrepancies
+
+- SD1. **Schema files.** The Target design splits tables over `db/schema/order-processing.ts`, `supplier.ts` and `messaging.ts`, and describes `messages` without `error`. The repository has one `db/schema.ts` and an `error` column (F1, F2). Built: new tables and the two new `messages` columns go into `db/schema.ts`, and `error` stays.
+- SD2. **Worker plugin.** The Target design names `plugins/message-worker.ts`; `plugins/order-worker.ts` already starts the worker. Built: the existing plugin is kept, and only its comment changes.
+- SD3. **XML stack.** The Target design assumes `xslt-processor` (TPA → supplier order stylesheet) and `xmllint-wasm` (DTD/XSD validation). The locked cases need neither:
+  - C-0140 needs a document with no line item to fail the format check.
+  - C-0141 needs a `DOCTYPE … PUBLIC`.
+  - C-0142 needs local catalog resolution.
+
+  Built: no new dependency. The supplier order document is built and read with `fast-xml-parser`, as checkout's is. `validateSupplierOrder` is a structural check of the DTD's content model: required elements in order, and one or more `LineItem`. The DTD and XSD files are still published under `public/schemas/` for the catalog (R-0093).
+
+- SD4. **Second invoice subscriber.** R-0109.02 and C-0136 need the `notify.shipment` subscriber, and C-0136 builds its app with customer-notifications' harness (`services/notifications/*`), which change `swhr2-i-0012-customer-notifications` builds. C-0136 is deferred to SWHR2-I-0012.
+  - The publish/subscribe mechanism is built here: a channel's subscriber list, one row per subscriber.
+  - `supplier.invoice` lists only `order-processing.invoice` in this change, and customer-notifications appends `notify.shipment`.
+  - The FEATURE's own worker test proves fan-out with a test subscriber.
+- SD5. **Completion e-mail.** The Target design enqueues `notify.completed` at COMPLETED. That channel is customer-notifications'; this change enqueues nothing for it.
+- SD6. **Supplier order vocabulary (C1).** The four values are enforced by CHECK (R-0023). As in the legacy code, a supplier order goes PENDING → COMPLETED when its last line ships. This change never sets APPROVED or DENIED.
+- SD7. **Restock notification (C2).** R-0099 says order processing is notified of an inventory change. Built: the invoices that re-fulfilment publishes are that notification. There is no separate inventory message to order processing.
+- SD8. **Lifecycle enforcement.** The legacy status store accepts any transition. Built, in `services/orders/workflow.ts`:
+  - `op_order_workflow.status` gets a CHECK over the five values (a table rebuild in `0008`; stored values are already within them).
+  - Every status write goes through one transition guard: PENDING → APPROVED | DENIED, APPROVED → SHIPPED_PART | COMPLETED, SHIPPED_PART → COMPLETED. Any other write is ignored.
+  - An invoice for an order that is not APPROVED or SHIPPED_PART changes nothing and is consumed (C-0105). A document on the invoice channel that is not an `Invoice` throws, so its row stays pending with `attempts` raised (C-0109). There is no dead-letter state; see Risks.
+- SD9. **Over-shipment and duplicate item lines** (legacy defect). An invoice's quantity for an item is applied to that item's lines in line-number order, and each line is capped at its ordered quantity. An order completes when every line's `quantity_shipped` equals its `quantity`.
+- SD10. **Money in documents.** Stored unit prices are hundredths (C-0126: 1650). Documents carry the decimal (`16.50`), and readers convert back.
+
+### Decisions
+
+- P1. **Outbox** (`services/messaging/`, migration `0008`).
+  - `messages` gains `subscriber text` (nullable) and `attempts integer not null default 0`.
+  - `index.ts` keeps `enqueue(exec, channel, payload)`. It adds `SUBSCRIBERS: Record<string, string[]>` (`supplier.invoice` → `["order-processing.invoice"]`), and for a channel listed there it writes one row per subscriber; any other channel gets one row with `subscriber` null.
+  - `worker.ts` resolves a row's handler by `channel` or by `channel` + `subscriber`. It registers `order.new`, `order.approval`, `supplier.purchase-order`, `supplier.inventory-changed` and `supplier.invoice`/`order-processing.invoice` in its own table, so a freshly imported worker can deliver (C-0137).
+  - A failed delivery increments `attempts`, records `error`, and leaves the row `pending` 30 s later.
+- P2. **Workflow** `services/orders/workflow.ts`:
+  - `ORDER_STATUSES`.
+  - `startWorkflow(exec, orderId, status)`: an insert, so a second start for the same id throws and changes nothing.
+  - `getOrderStatus(orderId)`: throws a not-found error carrying `status: 404` for an unknown id.
+  - `setStatus(exec, orderId, to): boolean`: the transition guard of SD8.
+
+  `receivePurchaseOrder` uses `startWorkflow`; `applyDecision` and invoice handling use `setStatus`.
+
+- P3. **Approval to supplier.** When `applyDecision` moves an order to APPROVED, it reads the stored purchase order, builds the supplier order document from the shipping contact and lines, and hands it off through `handOff("approval", [xml], tx)`. The default transition enqueues it on `supplier.purchase-order` in the same transaction, so a failed enqueue rolls back the approval and the batch is retried (R-0140, C-0143). This applies to auto-approval at receipt as well, and a PENDING or DENIED order is never sent (C-0123).
+- P4. **Transitions** `services/orders/transitions.ts`:
+  - `ORDER_TRANSITIONS` (step → transition name; the default `approval` maps to `outbox:supplier.purchase-order`).
+  - `registerTransition(name, { single?, batch? })`.
+  - `handOff(step, messages, exec?)` is synchronous. It calls `batch(messages)` when the transition has one, otherwise `single` per message.
+  - An unknown or failing name throws `TransitionError` (`name` = "TransitionError", `message` naming the transition, `cause` the underlying error).
+- P5. **Documents** `services/documents/`:
+  - `supplier-order.ts`: `buildSupplierOrder(input)` writes a UTF-8 declaration and `<!DOCTYPE SupplierOrder PUBLIC "…" "…">`, or the namespace form when `DOC_FORMAT_MODE=xsd`. The elements are OrderId, OrderDate (`YYYY-MM-DD`), ShippingAddress (FirstName, LastName, Street, City, State, Country, ZipCode, Email, Phone; missing fields empty) and one `LineItem` per line. A missing order id, user id or date throws. It also exports `readSupplierOrder(xml)` and `validateSupplierOrder(xml)` → `{ valid, errors }` (SD3).
+  - `invoice.ts`: `buildInvoice` and `readInvoiceDocument`, which rejects a non-`Invoice` root.
+  - `catalog.ts`: `resolveFormat(id)` looks in `DOC_CATALOG_PATH` first, then the built-in `services/documents/catalog.xml`, and fetches only when neither has the id.
+  - The route `routes/schemas/catalog.xml.get.ts` maps SupplierOrder, Invoice and LineItem to `<request origin>/schemas/<file>` and serves XML, with no guard. `public/schemas/` holds the DTD and XSD files.
+- P6. **Supplier orders** (`services/supplier/orders.ts`, migration `0008`).
+  - Tables:
+    - `sup_orders (order_id PK, status CHECK 4 values default 'PENDING', order_date text YYYY-MM-DD, user_id)`.
+    - `sup_order_contacts`, with `order_id` as PK and a cascading FK, plus the nine address fields.
+    - `sup_order_lines`, with PK `(order_id, line_number)` and a cascading FK. `category_id`, `product_id`, `item_id`, `quantity` and `unit_price` are NOT NULL, and `quantity_shipped` defaults to 0.
+  - `createSupplierOrder(exec, input)` writes all three in one transaction (C-0128).
+  - `listSupplierOrders(status)` returns `{ orderId, … }` once per order.
+- P7. **Fulfilment** `services/supplier/fulfil.ts`:
+  - `receiveSupplierPurchaseOrder(tx, xml)` is the `supplier.purchase-order` handler. It reads the document, creates the supplier order and fulfils it in the delivery transaction.
+  - `fulfilOrder(tx, orderId)` ships each unshipped line for which `reduceStock` succeeds, sets that line's `quantity_shipped`, and when any line shipped enqueues one invoice of the shipped lines on `supplier.invoice`. When every line is shipped, it sets the supplier order COMPLETED.
+  - `refulfil(tx, payload)` is the `supplier.inventory-changed` handler and runs `fulfilOrder` for every PENDING supplier order.
+  - A failed invoice enqueue rolls the whole delivery back (C-0113).
+- P8. **Invoice receipt** `services/orders/invoice.ts`:
+  - `readInvoice(xml)` returns `{ orderId, lines: [{ itemId, quantity }], shipped: { [itemId]: quantity } }` and throws on a non-invoice.
+  - `handleInvoice(xml, exec?)` applies an invoice in one transaction per SD8/SD9: SHIPPED_PART while any line is short, COMPLETED when none is.
+  - It is registered as the `order-processing.invoice` subscriber.
+
+### Risks
+
+- A malformed document on a channel is retried every 30 s for ever, because the outbox has no dead-letter state. This is acceptable for one process and an internal producer; a later change can add a `failed` cutoff using `attempts`.
+- `notify.shipment` rows do not exist until customer-notifications registers the subscriber, so invoices published before that change ships never produce a shipment e-mail.
+
+### Phases
+
+1. Schema and migration `0008` (P1 columns, workflow CHECK rebuild, `sup_*` tables); the outbox subscriber fan-out and attempts (P1). Groups 1, 3, 5.1.
+2. Workflow module and transition guard (P2); receipt and decision rewired (P3); transitions (P4). Groups 1, 2, 5.2–5.4.
+3. Documents and catalog route (P5). Group 4.
+4. Supplier orders, fulfilment and re-fulfilment (P6, P7); invoice receipt (P8). Groups 3, 6, 7.
+5. **Test harness.** Colocated tests per the AGENTS.md table:
+   - `services/orders/workflow.test.ts`, `services/orders/invoice.test.ts`, `services/orders/transitions.test.ts`.
+   - `services/messaging/worker.test.ts`: fan-out to two subscribers, attempts and retry, restart.
+   - `services/documents/supplier-order.test.ts`, `services/documents/invoice.test.ts`, `services/documents/catalog.test.ts`.
+   - `services/supplier/orders.test.ts`, `services/supplier/fulfil.test.ts`: the two-shipment order completing after a restock.
+   - `routes/schemas/catalog.xml.test.ts`.
+   - Existing tests updated where `applyDecision` now enqueues: `services/orders/decide.test.ts`, `approval.test.ts`, `receive.test.ts`.
+   - The locked suite under `tests/acceptance/**` is not edited.
+6. **E2E.** There is no screen. `e2e/order-approval.spec.ts` keeps passing, now with fulfilment running behind it in the Playwright server's worker. No new Playwright spec, because the fulfilment flow is covered end to end by the service tests in phase 5.
+7. **CI.** No workflow change. The existing CI runs lint, typecheck, unit, Playwright and the locked acceptance tiers on `vortex/**` pushes and pull requests, and picks up the new tests by path.
