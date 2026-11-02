@@ -44,4 +44,5 @@ None: the brief has no approved mockup, and fulfilment has no screen.
 
 - AC-1 to AC-44 on the ticket, one per scenario.
 - Linked cases SWHR2-C-0102 to SWHR2-C-0145, except C-0136 (deferred to SWHR2-I-0012, SD4), pass in the locked suite. AC-6 is met by the FEATURE's own fan-out test.
+- The deferred sign-on cases SWHR2-C-0263, SWHR2-C-0264 and SWHR2-C-0268 pass (design.md P9).
 - The checkout, order-approval and supplier-inventory acceptance tests and `e2e/order-approval.spec.ts` keep passing.

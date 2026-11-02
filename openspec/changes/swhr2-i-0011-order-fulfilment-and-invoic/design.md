@@ -298,6 +298,10 @@ Ticket: SWHR2-T-0304 (FEATURE) owns every task group. The locked acceptance suit
   - `readInvoice(xml)` returns `{ orderId, lines: [{ itemId, quantity }], shipped: { [itemId]: quantity } }` and throws on a non-invoice.
   - `handleInvoice(xml, exec?)` applies an invoice in one transaction per SD8/SD9: SHIPPED_PART while any line is short, COMPLETED when none is.
   - It is registered as the `order-processing.invoice` subscriber.
+- P9. **Deferred sign-on cases.** SWHR2-C-0263, SWHR2-C-0264 and SWHR2-C-0268 (`tests/acceptance/sign-on/internal.test.ts`) land here because they load this change's `fulfilment()` harness:
+  - C-0263 requires the internal hand-off `enqueue` to take a message with no role check.
+  - C-0264 requires that no route under `routes/api/` reaches the outbox, so the only new route is `routes/schemas/catalog.xml.get.ts`, which never enqueues.
+  - C-0268 requires `handleInvoice` to update order lines with no session.
 
 ### Risks
 
