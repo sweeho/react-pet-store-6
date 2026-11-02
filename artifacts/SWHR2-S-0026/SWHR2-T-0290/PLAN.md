@@ -13,8 +13,8 @@ Work through `tasks.md` groups 1 to 7 in order. The design.md "Phases" list maps
 1. Data model: add tables to `db/schema.ts` (SD1) and generate one migration (tasks 1.x, plus `messages` and `op_order_workflow` per SD2).
 2. `services/ids.ts` (P3) and `services/documents/purchase-order.ts` (P4) (tasks 2.x, 5.1–5.3, 6.2).
 3. `services/messages/` and the Nitro plugin (P1, P2); `services/orders/receive.ts` (tasks 5.4–5.7, 6.1).
-4. Routes: `GET /api/checkout`, `POST /api/orders` (tasks 4.x). Lines are numbered from 1 (SD3). The card follows SD7.
-5. Screens: checkout form, Order Placed (SD6), and the Server Error rebuild (SD5), with per-locale screen text under `src/locales/` (tasks 3.x, 4.7, 4.8).
+4. Routes: `GET /api/checkout`, `POST /api/orders` (tasks 4.x). Check for an empty cart BEFORE validating fields (SD9). Lines are numbered from 1 (SD3). The card follows SD7.
+5. Screens: checkout form, Order Placed at `/petstore/order-placed` (SD6), which also carries a "Your order is complete" heading (SD8), and the Server Error rebuild (SD5), with per-locale screen text under `src/locales/` (tasks 3.x, 4.7, 4.8).
 6. Seed alignment in `db/client.ts` (SD4).
 7. Tests per tasks 7.x, then the locked `tests/acceptance/checkout/` suite.
 
@@ -43,4 +43,4 @@ Approved mockups in `artifacts/SWHR2-S-0026/design/` (index `MANIFEST.md`), all 
 
 ## Definition of Done
 
-AC-1 to AC-16 on the ticket. Each is 1:1 with a scenario, and each is proven by locked cases SWHR2-C-0212 to SWHR2-C-0227. The existing locked shopping-cart, sign-on and customer-account suites stay green.
+AC-1 to AC-16 on the ticket. Each is 1:1 with a scenario, and each is proven by locked cases SWHR2-C-0212 to SWHR2-C-0227. The six deferred cases linked to this ticket (SD10: C-0089, C-0090, C-0101, C-0174, C-0252, C-0254, cited in tests/acceptance/{shopping-cart,customer-account,sign-on}/) also pass. The existing locked shopping-cart, sign-on and customer-account suites stay green.
