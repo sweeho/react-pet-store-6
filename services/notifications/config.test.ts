@@ -15,18 +15,18 @@ const KEYS = [
 afterEach(() => KEYS.forEach((k) => delete process.env[k]));
 
 describe("notification switches", () => {
-  it("[SWHR2-C-0046] are all off by default", () => {
+  it("are all off by default", () => {
     expect(notificationSwitches()).toEqual({ approval: false, shipment: false, completed: false });
   });
 
-  it("[SWHR2-C-0047] switch independently, case-insensitively, read on every call", () => {
+  it("switch independently, case-insensitively, read on every call", () => {
     process.env.NOTIFY_SHIPMENT_ENABLED = "TRUE";
     expect(notificationSwitches()).toEqual({ approval: false, shipment: true, completed: false });
     process.env.NOTIFY_SHIPMENT_ENABLED = "false";
     expect(notificationSwitches().shipment).toBe(false);
   });
 
-  it("[SWHR2-C-0067] throw on a value that is not a boolean", () => {
+  it("throw on a value that is not a boolean", () => {
     process.env.NOTIFY_COMPLETED_ENABLED = "maybe";
     expect(() => notificationSwitches()).toThrow(/NOTIFY_COMPLETED_ENABLED/);
   });

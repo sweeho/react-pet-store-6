@@ -187,6 +187,7 @@ describe("switches and sequence", () => {
     a.approved("1004");
     await a.fulfilLines("1004", [["EST-1", 1]]);
     expect(statusOf(a.client, "1004")).toBe("COMPLETED");
+    expect(a.outbox.length).toBeGreaterThanOrEqual(1);
     expect(subjects(a.outbox).join()).not.toMatch(/COMPLETED/);
   });
 
@@ -312,12 +313,12 @@ describe("queues and channels", () => {
     await a.pendingOrder("1001", TWO);
     a.approved("1001");
     await a.fulfilLines("1001", TWO);
-    const mail = a.outbox[0];
-    expect(mail.subject).toBe("Java Pet Store Order COMPLETED: 1001");
-    expect(mail.to).toEqual(["c@example.com"]);
-    expect(mail.html).toMatch(/entire order has shipped/i);
+    const mail = a.outbox[0] as Sent | undefined;
+    expect(mail?.subject).toBe("Java Pet Store Order COMPLETED: 1001");
+    expect(mail?.to).toEqual(["c@example.com"]);
+    expect(mail?.html).toMatch(/entire order has shipped/i);
     for (const part of ["FISH", "Angelfish", "16.50", "DOGS", "Bulldog", "18.50"])
-      expect(mail.html).toContain(part);
+      expect(mail?.html).toContain(part);
   });
 
   it("rejects a malformed mail.outbound request: sends nothing and marks it failed", async () => {
