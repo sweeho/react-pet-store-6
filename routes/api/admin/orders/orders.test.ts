@@ -69,7 +69,7 @@ describe("admin order routes", () => {
       url: "/api/admin/orders?status=PENDING",
       cookies,
     });
-    expect((r.body as { id: string }[]).map((o) => o.id)).toEqual(["2001", "2002", "2003"]);
+    expect(r.body).toEqual(["2001", "2002", "2003"].map((id) => expect.objectContaining({ id })));
   });
 
   it("rejects an empty decision list and enqueues nothing", async () => {
