@@ -16,6 +16,7 @@ CODE-REVIEW: self-review — the sub-agent route was not used; I read my full di
 - **Address line 2** is joined to the street on the order (`"1 Main St, Apt 5"`), because the locked `PurchaseOrder` shape has no second line.
 - **`receiveOrder(messageId)`** takes the message id, not the XML (design.md P2 says XML), so it can mark the message done in the same transaction.
 - **Order Placed heading** is "Your order is complete" (SD8); see `design-check.md` for every visual difference.
+- **`db/client.ts` enables WAL and a 5 s busy timeout** for the file database (not under Vitest): the order worker polls the file, and a locked e2e spec that creates a trigger from another process failed intermittently without it.
 - Error pages `error/server` and `error/empty-cart` keep hard-coded English like the pages they replace; only checkout and order-placed are localized.
 
 ## AC coverage
