@@ -23,6 +23,7 @@ ID: SWHR2-R-0087.02
 - **THEN** the order appears in the non-pending view with status APPROVED
 
 #### Scenario: Approved order fulfilled before the refresh
+ID: SWHR2-R-0087.03
 
 - **GIVEN** an order approved since the non-pending view was last loaded, which order processing has since completely fulfilled
 - **WHEN** the administrator requests a refresh
