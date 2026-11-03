@@ -1,4 +1,25 @@
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
 import { expect, test } from "@playwright/test";
+
+// The dev server's database file (db/client.ts resolves it from the project root).
+const DB_FILE = path.join(process.cwd(), "sqlite.db");
+
+// Playwright runs this file under Node, where bun:sqlite does not exist, so each statement runs
+// in a bun child process against the same file. Returns every row of a query.
+function sql(statement: string, ...params: string[]): Record<string, unknown>[] {
+  const script = `
+    const { Database } = require("bun:sqlite");
+    const [file, statement, params] = JSON.parse(process.argv[1]);
+    const db = new Database(file);
+    try { console.log(JSON.stringify(db.query(statement).all(...params))); }
+    finally { db.close(); }`;
+  const out = execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, statement, params])], {
+    encoding: "utf8",
+  });
+  return JSON.parse(out.trim() || "[]") as Record<string, unknown>[];
+}
 
 test.describe("installed application areas", () => {
   // case: SWHR2-C-0079@v1
@@ -49,6 +70,16 @@ test.describe("installed application areas", () => {
       data: { billing: contact, shipping: contact },
     });
     expect(placed.status()).toBe(200);
-    expect(await placed.json()).toHaveProperty("orderId");
+    const { orderId } = (await placed.json()) as { orderId: string };
+    expect(orderId).toBeTruthy();
+    // The order-processing area receives and processes it: it stores the purchase order
+    // (op_purchase_orders) and starts its workflow record (op_order_workflow) in a lifecycle
+    // status (design.md: PENDING on receipt, then APPROVED/DENIED/SHIPPED_PART/COMPLETED).
+    const one = (table: string) =>
+      sql(`select * from ${table} where order_id = ?`, String(orderId))[0];
+    await expect.poll(() => one("op_purchase_orders"), { timeout: 10_000 }).toBeTruthy();
+    await expect
+      .poll(() => one("op_order_workflow")?.status, { timeout: 10_000 })
+      .toMatch(/^(PENDING|APPROVED|DENIED|SHIPPED_PART|COMPLETED)$/);
   });
 });
