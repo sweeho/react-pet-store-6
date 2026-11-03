@@ -9,23 +9,30 @@ const addToCart = (p: Page | Locator) =>
 
 test.describe("catalog browsing", () => {
   // case: SWHR2-C-0197@v1
-  test("SWHR2-C-0197: the first page of DOGS shows Bulldog and Dalmation, with Next and no Previous", async ({
+  test("SWHR2-C-0197: the first page of DOGS shows Bulldog and Chihuahua, with Next and no Previous", async ({
     page,
   }) => {
+    // Seed (SWHR2-C-0075): DOGS has 6 products, alphabetical, 2 per page.
     await page.goto("/petstore/category/DOGS");
-    await expect(page.getByText("Bulldog")).toBeVisible();
-    await expect(page.getByText("Dalmation")).toBeVisible();
+    await expect(page.getByText("Bulldog", { exact: true })).toBeVisible();
+    await expect(page.getByText("Chihuahua", { exact: true })).toBeVisible();
+    await expect(page.getByText("Dalmation", { exact: true })).toHaveCount(0);
     await expect(next(page)).toBeVisible();
     await expect(previous(page)).toHaveCount(0);
   });
 
   // case: SWHR2-C-0198@v1
-  test("SWHR2-C-0198: selecting Next on DOGS shows Poodle, with Previous and no Next", async ({
+  test("SWHR2-C-0198: selecting Next on DOGS to the last page shows Labrador Retriever and Poodle, with Previous and no Next", async ({
     page,
   }) => {
+    // Seed (SWHR2-C-0075): pages are Bulldog/Chihuahua, Dalmation/Golden Retriever, Labrador Retriever/Poodle.
     await page.goto("/petstore/category/DOGS");
     await next(page).click();
-    await expect(page.getByText("Poodle")).toBeVisible();
+    await expect(page.getByText("Dalmation", { exact: true })).toBeVisible();
+    await expect(page.getByText("Golden Retriever", { exact: true })).toBeVisible();
+    await next(page).click();
+    await expect(page.getByText("Labrador Retriever", { exact: true })).toBeVisible();
+    await expect(page.getByText("Poodle", { exact: true })).toBeVisible();
     await expect(previous(page)).toBeVisible();
     await expect(next(page)).toHaveCount(0);
   });
