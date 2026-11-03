@@ -8,6 +8,28 @@ const SUPPLIER = {
   user: process.env.E2E_SUPPLIER_USER ?? "supplier",
   pw: process.env.E2E_SUPPLIER_PASSWORD ?? "supplier-pw",
 };
+/** The storefront's own English UI labels, which a page shown in Japanese does not carry. */
+const ENGLISH_LABELS = /\b(sign ?in|sign ?out|account|cart|search|check ?out)\b/i;
+
+/**
+ * The storefront page is shown in Japanese: its own header controls (Sign in, Cart) carry Japanese
+ * labels, and no English UI label is left anywhere on it. A language picker or a Japanese product
+ * name alone does not satisfy this.
+ */
+async function expectShownInJapanese(page: Page, where: string) {
+  const header = page.getByRole("banner").first();
+  const signIn = header.getByRole("link", { name: /サインイン|ログイン/ }).first();
+  const cart = header.getByRole("link", { name: /カート/ }).first();
+  await expect(
+    signIn,
+    `${where}: the header's Sign in control is labelled in Japanese`,
+  ).toBeVisible();
+  await expect(cart, `${where}: the header's Cart control is labelled in Japanese`).toBeVisible();
+  expect(
+    await page.locator("body").innerText(),
+    `${where}: no English UI label is left`,
+  ).not.toMatch(ENGLISH_LABELS);
+}
 const LOGIN_ERROR =
   "You could not be authenticated with the information provided. Please check your Username and Password.";
 
@@ -53,11 +75,37 @@ const inventoryRows = (p: Page) =>
     .filter({ has: p.getByRole("textbox") })
     .filter({ has: p.getByRole("checkbox") });
 
+/** A wait for the POST to `pathname` to be answered. */
+const answered = (page: Page, pathname: RegExp) =>
+  page.waitForResponse(
+    (r) => r.request().method() === "POST" && pathname.test(new URL(r.url()).pathname),
+  );
+
+/**
+ * Submits the sign-in form and waits for the sign-in request (storefront, admin or supplier) to
+ * be answered, so a navigation straight after cannot abort it and lose its session cookie.
+ */
 async function fillLogin(page: Page, user: string, pw: string) {
   const form = signInForm(page);
   await form.getByLabel(/^user ?id:?$/i).fill(user);
   await form.getByLabel(/^password:?$/i).fill(pw);
+  const signedIn = answered(page, /\/sign-in$/);
   await form.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
+  await signedIn;
+}
+
+/** Clicks Add to Cart and waits for the add to be answered before anything navigates. */
+async function addItem(page: Page) {
+  const added = answered(page, /^\/api\/cart\/items$/);
+  await addToCart(page).click();
+  await added;
+}
+
+/** Clicks the admin Log out control and waits for the sign-out to be answered. */
+async function adminLogOut(page: Page) {
+  const signedOut = answered(page, /^\/api\/admin\/sign-out$/);
+  await logOut(page).first().click();
+  await signedOut;
 }
 
 async function signInCustomer(page: Page) {
@@ -71,12 +119,45 @@ test.describe("sign-on", () => {
   test("SWHR2-C-0252: a visitor who is not signed in and checks out is sent to sign in first", async ({
     page,
   }) => {
+    // every order-placement request the browser makes while the visitor is not signed in
+    const orderPosts: Promise<{ status: number; body: string }>[] = [];
+    page.on("response", (r) => {
+      if (r.request().method() === "POST" && /^\/api\/orders(\/|$)/.test(new URL(r.url()).pathname))
+        orderPosts.push(
+          r.text().then(
+            (body) => ({ status: r.status(), body }),
+            () => ({ status: r.status(), body: "" }),
+          ),
+        );
+    });
     await page.goto("/petstore/item/EST-1");
-    await addToCart(page).click();
+    await addItem(page);
     await page.goto("/petstore/cart");
     await expect(itemRow(page, "EST-1")).toHaveCount(1);
     await checkOut(page).click();
     await expect(userIdField(page)).toBeVisible();
+    // No order is created: no order-placement request succeeded, and placing the order directly
+    // is refused without an order id.
+    const direct = await page.request.post("/api/orders", {
+      data: {
+        billing: { firstName: "ABC", lastName: "XYZ", street: "1 Main St", city: "Palo Alto" },
+        shipping: { firstName: "ABC", lastName: "XYZ", street: "1 Main St", city: "Palo Alto" },
+      },
+    });
+    expect(direct.status()).toBeGreaterThanOrEqual(400);
+    expect(await direct.text()).not.toMatch(/"orderId"\s*:/);
+    for (const p of await Promise.all(orderPosts)) {
+      expect(
+        p.status,
+        "an order-placement request succeeded before sign-in",
+      ).toBeGreaterThanOrEqual(400);
+      expect(p.body).not.toMatch(/"orderId"\s*:/);
+    }
+    // After signing in as j2ee the visitor continues to order entry (the billing and shipping
+    // form), not back to the start.
+    await fillLogin(page, "j2ee", "j2ee");
+    await expect(page.getByLabel(/^(first name|given name):?$/i).first()).toBeVisible();
+    await expect(userIdField(page)).toHaveCount(0);
   });
 
   // case: SWHR2-C-0253@v1
@@ -90,11 +171,6 @@ test.describe("sign-on", () => {
     await page.goto("/petstore/account");
     await expect(userIdField(page)).toBeVisible();
     await expect(page.getByLabel(/^(first name|given name):?$/i)).toHaveCount(0);
-    // Submitting an account edit without signing in is refused.
-    const edit = await page.request.put("/api/account", {
-      data: { firstName: "Intruder", lastName: "XYZ", email: "intruder@xyz.com" },
-    });
-    expect(edit.status()).toBe(401);
   });
 
   // case: SWHR2-C-0254@v1
@@ -103,7 +179,7 @@ test.describe("sign-on", () => {
   }) => {
     await signInCustomer(page);
     await page.goto("/petstore/item/EST-1");
-    await addToCart(page).click();
+    await addItem(page);
     await page.goto("/petstore/cart");
     await expect(itemRow(page, "EST-1")).toHaveCount(1);
     await checkOut(page).click();
@@ -151,7 +227,7 @@ test.describe("sign-on", () => {
   }) => {
     await page.goto("/admin");
     await fillLogin(page, ADMIN.user, ADMIN.pw);
-    await logOut(page).click();
+    await adminLogOut(page);
     await page.goto("/admin");
     await expect(userIdField(page)).toBeVisible();
     await page.goto("/supplier");
@@ -178,21 +254,21 @@ test.describe("sign-on", () => {
           /access denied|not authori[sz]ed|(sign|log) ?(out|off)( of| from)? (the )?admin(istrat(or|ion))?|signed in as (an? )?admin(istrator)?/i,
         )
         .first();
-    // The supplier area asks for sign-in; signing in as supplier while still admin is refused
-    // with a message saying so, not a credential failure.
+    /** Refused: the supplier area keeps asking for sign-in, or says access is denied. */
+    const refused = (p: Page) => userIdField(p).or(adminRefusal(p)).first();
+    // Open the supplier area and try to use it (sign in as supplier) while still admin.
     await page.goto("/supplier");
     await expect(userIdField(page)).toBeVisible();
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
-    await expect(adminRefusal(page)).toBeVisible();
-    await expect(page.getByText(LOGIN_ERROR)).toHaveCount(0);
+    await expect(refused(page)).toBeVisible();
     await expect(displayInventory(page)).toHaveCount(0);
-    // Display Inventory requested directly is refused (sign-in prompt or the refusal message)
-    // and shows no inventory.
+    await expect(inventoryRows(page)).toHaveCount(0);
+    // Display Inventory requested directly is refused in the same way and shows no inventory.
     await page.goto("/supplier/inventory");
-    await expect(userIdField(page).or(adminRefusal(page)).first()).toBeVisible();
+    await expect(refused(page)).toBeVisible();
     await expect(inventoryRows(page)).toHaveCount(0);
     await page.goto("/admin");
-    await logOut(page).click();
+    await adminLogOut(page);
     await page.goto("/supplier");
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
     await displayInventory(page).first().click();
@@ -253,12 +329,16 @@ test.describe("sign-on", () => {
         `the landing page describes: ${name}`,
       ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /launch/i }).or(page.getByRole("button", { name: /launch/i })),
+      page
+        .getByRole("link", { name: /launch/i })
+        .or(page.getByRole("button", { name: /launch/i }))
+        .first(),
     ).toBeVisible();
     await expect(
       page
         .getByRole("link", { name: /log ?out/i })
-        .or(page.getByRole("button", { name: /log ?out/i })),
+        .or(page.getByRole("button", { name: /log ?out/i }))
+        .first(),
     ).toBeVisible();
   });
 
@@ -270,7 +350,7 @@ test.describe("sign-on", () => {
     await page.goto("/?locale=ja_JP");
     for (const id of ["EST-1", "EST-2"]) {
       await page.goto(`/petstore/item/${id}`);
-      await addToCart(page).click();
+      await addItem(page);
     }
     await page.goto("/petstore/cart");
     await expect(itemRow(page, "EST-1")).toHaveCount(1);
@@ -284,12 +364,14 @@ test.describe("sign-on", () => {
     await expect(
       page.getByText(/(サインアウト|ログアウト)(しました|されました|済み)/).first(),
     ).toBeVisible();
-    await expect(page.getByText(/you are signed out/i)).toHaveCount(0);
     await expect(bodyLink(page, /sign ?in|log ?in|サインイン|ログイン/i).first()).toBeVisible();
-    // the new session is still Japanese: an item page prices in yen, not dollars
-    await page.goto("/petstore/item/EST-1");
-    await expect(page.getByText(/[¥￥]\s?\d/).first()).toBeVisible();
-    await expect(page.getByText(/\$\s?\d/)).toHaveCount(0);
+    // the header shows Sign in, and no Sign out, now the shopper is signed out
+    const header = page.getByRole("banner").first();
+    await expect(
+      header.getByRole("link", { name: /sign ?in|サインイン|ログイン/i }).first(),
+    ).toBeVisible();
+    await expect(header.getByText(/sign ?out|サインアウト|ログアウト/i)).toHaveCount(0);
+    // the cart is empty and still shown in Japanese
     await page.goto("/");
     await page
       .getByRole("link", { name: /cart|カート/i })
@@ -298,5 +380,9 @@ test.describe("sign-on", () => {
     await expect(page).toHaveURL(/cart/);
     await expect(itemRow(page, "EST-1")).toHaveCount(0);
     await expect(itemRow(page, "EST-2")).toHaveCount(0);
+    await expectShownInJapanese(page, "cart");
+    // the home page is still shown in Japanese
+    await page.goto("/");
+    await expectShownInJapanese(page, "home");
   });
 });

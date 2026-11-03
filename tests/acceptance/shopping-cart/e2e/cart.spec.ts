@@ -125,7 +125,7 @@ test.describe("shopping cart", () => {
   });
 
   // case: SWHR2-C-0089@v1
-  test("SWHR2-C-0089: Check Out from a non-empty cart opens order information entry", async ({
+  test("[SWHR2-C-0089] Check Out from a non-empty cart opens order information entry", async ({
     page,
   }) => {
     await signIn(page);
@@ -205,7 +205,7 @@ test.describe("shopping cart", () => {
   });
 
   // case: SWHR2-C-0101@v1
-  test("SWHR2-C-0101: placing an order empties the customer's cart", async ({ page }) => {
+  test("[SWHR2-C-0101] placing an order empties the customer's cart", async ({ page }) => {
     await signIn(page);
     await addItem(page, "EST-1");
     await addItem(page, "EST-2");
