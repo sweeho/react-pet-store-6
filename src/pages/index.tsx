@@ -3,7 +3,6 @@ import { Link } from "react-router";
 
 import { areas } from "@/components/shell/areas";
 import CategoryPanel from "@/components/storefront/CategoryPanel";
-import { LocaleProvider } from "@/components/storefront/LocaleProvider";
 import MyListPanel from "@/components/storefront/MyListPanel";
 import PetMap from "@/components/storefront/PetMap";
 import PetTipsBanner from "@/components/storefront/PetTipsBanner";
@@ -19,16 +18,7 @@ const routes = [...new Set(areas.map((area) => area.to))].map((to) => ({
   staff: STAFF_ROUTES.includes(to),
 }));
 
-// The home page sits outside the /petstore layout, so it brings its own locale for CategoryPanel.
 export default function Home() {
-  return (
-    <LocaleProvider>
-      <HomeContent />
-    </LocaleProvider>
-  );
-}
-
-function HomeContent() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row">
       <CategoryPanel />

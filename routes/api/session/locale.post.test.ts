@@ -40,6 +40,18 @@ describe("session locale API", () => {
     expect(await getSession(next)).toMatchObject({ locale: "ja_JP" });
   });
 
+  it("[SWHR2-C-0294] sets a readable ps_locale=ja_JP cookie on the response", async () => {
+    const first = await start();
+    const { id } = first.context.session as { id: string };
+    const event = post(`ps_sid=${id}`, { locale: "ja_JP" });
+    await session(event);
+    await postLocale(event);
+    const cookie = event.res.headers.getSetCookie().find((c) => c.startsWith("ps_locale="));
+    expect(cookie).toBeDefined();
+    expect(cookie).toContain("ps_locale=ja_JP");
+    expect(cookie).not.toMatch(/httponly/i);
+  });
+
   it("rejects a code without an underscore with 400", async () => {
     const event = post("ps_sid=none", { locale: "en" });
     await session(event);
