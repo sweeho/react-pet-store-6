@@ -170,7 +170,8 @@ describe("in-process hand-off", () => {
 describe("order line data layer", () => {
   // case: SWHR2-C-0268@v1
   it("SWHR2-C-0268: an order process creates, reads and updates order lines without a role error", async () => {
-    // order processes act with no session or role: receipt creates the lines, the invoice step updates them
+    // order processes act with no session or role: receipt creates the lines, the receipt
+    // module's own lookup reads them back, and the invoice step updates them
     const f = await fulfilment();
     await f.approvedOrder("10011", [["EST-1", 2]]);
     const line = () =>
@@ -180,6 +181,10 @@ describe("order line data layer", () => {
         )
         .all();
     expect(line()).toEqual([{ item_id: "EST-1", quantity: 2, quantity_shipped: 0 }]);
+    // the read goes through the order line data layer, called with no session or role
+    const read = JSON.stringify(await f.receive.getPurchaseOrder("10011"));
+    expect(read).toContain("10011");
+    expect(read).toContain("EST-1");
     await f.invoices.handleInvoice(f.invoiceFor("10011", [["EST-1", 2]]));
     expect(line()).toEqual([{ item_id: "EST-1", quantity: 2, quantity_shipped: 2 }]);
   });
