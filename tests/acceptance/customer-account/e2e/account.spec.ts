@@ -11,20 +11,25 @@ const DB_FILE = path.join(process.cwd(), "sqlite.db");
  * Removes the sign-on and customer rows of a user, so a name a previous run signed up is free
  * again. Playwright runs this file under Node, where bun:sqlite does not exist, so the deletes run
  * in a bun child process against the same file. A table this build does not have is skipped.
+ * With everyTable, every table with a user_id column is cleared for the user (orders, cart lines),
+ * so nothing an earlier run left under the name is read back.
  */
-function forgetUser(userId: string) {
+function forgetUser(userId: string, everyTable = false) {
   const script = `
     const { Database } = require("bun:sqlite");
-    const [file, userId] = JSON.parse(process.argv[1]);
+    const [file, userId, everyTable] = JSON.parse(process.argv[1]);
     const db = new Database(file);
     try {
       db.exec("PRAGMA busy_timeout = 10000");
-      for (const t of ["customer_profiles", "customer_accounts", "customers", "signon_users"]) {
+      const tables = everyTable
+        ? db.query("select name from sqlite_master where type = 'table'").all().map((r) => r.name)
+        : ["customer_profiles", "customer_accounts", "customers", "signon_users"];
+      for (const t of tables) {
         const cols = db.query("select name from pragma_table_info(?)").all(t).map((c) => c.name);
         if (cols.includes("user_id")) db.query("delete from " + t + " where user_id = ?").run(userId);
       }
     } finally { db.close(); }`;
-  execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId])]);
+  execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId, everyTable])]);
 }
 
 /** Reads the sign-on accounts (signon_users rows) stored for a user name, in a bun child process. */
@@ -186,15 +191,19 @@ test.describe("sign up", () => {
     page,
   }) => {
     // sign up, account entry, cart and checkout in one test: each step's page may be a cold Vite
-    // compile, so the test gets 60s instead of the suite's 15s and each new screen 15s instead of 3s
-    test.setTimeout(60_000);
-    const slowExpect = expect.configure({ timeout: 15_000 });
-    // precondition: no account exists for firsttimer, even one an earlier run signed up
+    // compile while other workers load the same dev server, so the test gets 120s instead of the
+    // suite's 15s and each new screen 20s instead of 3s
+    test.setTimeout(120_000);
+    const slowExpect = expect.configure({ timeout: 20_000 });
+    // precondition: no account exists for firsttimer. sqlite.db is shared by every worker and
+    // kept between runs; firsttimer is used by this test only, and every row an earlier run left
+    // under the name (sign-on, account, profile, orders, cart) is removed first
     const user = "firsttimer";
-    forgetUser(user);
+    forgetUser(user, true);
     await page.goto("/petstore/signin");
     await fillSignUp(page, user, "secret1", "secret1");
     await submitSignUp(page);
+    await slowExpect(page.getByLabel(/^card number:?$/i)).toBeVisible();
     await page.getByLabel(/^(first|given) name:?$/i).fill("First");
     await page.getByLabel(/^(last|family) name:?$/i).fill("Timer");
     await page.getByLabel(/^(tele)?phone( number)?:?$/i).fill("555-0101");
@@ -227,13 +236,19 @@ test.describe("sign up", () => {
     for (const v of [user, "First", "Timer", "1 Main St", "Palo Alto", "first@example.com"])
       expect(stored).toContain(v);
     await page.goto("/petstore/item/EST-1");
+    await slowExpect(
+      page
+        .getByRole("button", { name: /add to cart/i })
+        .or(page.getByRole("link", { name: /add to cart/i }))
+        .first(),
+    ).toBeVisible();
     await page
       .getByRole("button", { name: /add to cart/i })
       .or(page.getByRole("link", { name: /add to cart/i }))
       .first()
       .click();
     await openCart(page);
-    await expect(cartCheckOut(page)).toHaveCount(1);
+    await slowExpect(cartCheckOut(page)).toHaveCount(1);
     await cartCheckOut(page).click();
     const placed = page.waitForResponse(
       (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
