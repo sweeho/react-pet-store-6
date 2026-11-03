@@ -19,10 +19,18 @@ test.describe("installed application areas", () => {
       await expect(page.getByLabel(/^password:?$/i), area).toBeVisible();
     }
     // order processing is the in-process worker: it accepts an order from a signed-in shopper
+    // /petstore/signin also carries the registration form, which has its own "Password"
+    // field; scope the lookups to the sign-in form (the one without a repeat-password field).
     await page.goto("/petstore/signin");
-    await page.getByLabel(/^user id:?$/i).fill("j2ee");
-    await page.getByLabel(/^password:?$/i).fill("j2ee");
-    await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
+    const signIn = page
+      .locator("form")
+      .filter({ has: page.getByLabel(/^password:?$/i) })
+      .filter({
+        hasNot: page.getByLabel(/^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i),
+      });
+    await signIn.getByLabel(/^user ?id:?$/i).fill("j2ee");
+    await signIn.getByLabel(/^password:?$/i).fill("j2ee");
+    await signIn.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
     await expect(page.getByText(/^sign out$/i)).toBeVisible();
     const added = await page.request.post("/api/cart/items", { data: { itemId: "EST-1" } });
     expect(added.ok()).toBe(true);
