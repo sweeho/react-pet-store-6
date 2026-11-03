@@ -88,6 +88,8 @@ describe("in-process hand-off", () => {
     const MARK = "outside-probe-7f3a";
     const methods = ["get", "post", "put", "patch", "delete"];
     const before = new Set(messages().map((m) => String(m.id)));
+    // the orders the public order-placement route itself reported placing for the shopper
+    const placedIds = new Set<string>();
     for (const who of Object.keys(callers)) {
       for (const f of files) {
         const parts = f.replace(/\.ts$/, "").split(path.sep);
@@ -112,7 +114,7 @@ describe("in-process hand-off", () => {
             cookies,
             json: { itemId: "EST-1" },
           });
-        await call(app, `../../../routes/api/${f.replace(/\.ts$/, "")}`, {
+        const r = await call(app, `../../../routes/api/${f.replace(/\.ts$/, "")}`, {
           method: method.toUpperCase(),
           url: `/api/${url}?q=${MARK}`,
           params,
@@ -132,23 +134,37 @@ describe("in-process hand-off", () => {
                   shipping: SHIPPING,
                 },
         });
+        if (who === "shopper" && r.status === 200) {
+          let body: unknown = r.body;
+          if (typeof body === "string") {
+            try {
+              body = JSON.parse(body);
+            } catch {
+              body = undefined;
+            }
+          }
+          const orderId = (body as { orderId?: unknown } | undefined)?.orderId;
+          if (typeof orderId === "string") placedIds.add(orderId);
+        }
       }
     }
     const added = messages().filter((m) => !before.has(String(m.id)));
     // no caller, signed in or not, got the hand-off to store a message of its own making
     expect(added.filter((m) => `${m.channel} ${m.payload}`.includes(MARK))).toEqual([]);
-    // the only messages the probe produced are the checkout component's own in-process hand-off of
-    // an order it stored for the signed-in shopper, not a message the caller handed over
+    // every new-order message the probe produced is the checkout component's own in-process
+    // hand-off of an order it placed for the signed-in shopper, not a message the caller handed
+    // over (other channels, e.g. order.approval or supplier.inventory-changed, come from approved
+    // routes and are covered by the marker check above)
     const { fromXml } = await import("../../../services/documents/purchase-order");
-    const stored = (id: string) =>
-      app.client.query("select order_id from op_purchase_orders where order_id = ?").get(id);
-    for (const m of added) {
-      expect(m.channel).toBe("order.new");
+    for (const m of added.filter((x) => x.channel === "order.new")) {
       const order = fromXml(m.payload);
       expect(order.userId).toBe("j2ee");
-      expect(stored(order.orderId)).toBeTruthy();
+      expect(order.orderId).not.toContain(MARK);
+      expect(placedIds.has(order.orderId)).toBe(true);
+      expect(order.lines.map((l: { itemId: string }) => l.itemId)).toContain("EST-1");
     }
-  });
+    // signs in afresh for every caller and route, so it runs well past the 5s default
+  }, 120_000);
 });
 
 describe("order line data layer", () => {
