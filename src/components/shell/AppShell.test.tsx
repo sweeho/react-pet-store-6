@@ -74,4 +74,25 @@ describe("AppShell footer locale", () => {
     expect(footer).toMatch(/[぀-ヿ]/);
     expect(footer).not.toMatch(/Home|Pet Store/);
   });
+
+  it("[SWHR2-C-0298] with session locale ja_JP the shell shows no English Sign in", () => {
+    document.cookie = "ps_locale=ja_JP; path=/";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => undefined)),
+    );
+    render(
+      <LocaleProvider>
+        <MemoryRouter>
+          <AppShell>
+            <p>page</p>
+          </AppShell>
+        </MemoryRouter>
+      </LocaleProvider>,
+    );
+    const nav = screen.getByRole("navigation").textContent ?? "";
+    const footer = screen.getByRole("contentinfo").textContent ?? "";
+    expect(nav + footer).toMatch(/[぀-ヿ]/);
+    expect(document.body.textContent).not.toMatch(/Sign in/);
+  });
 });

@@ -110,3 +110,20 @@ describe("localized storefront screens", () => {
     },
   );
 });
+
+describe("first render locale", () => {
+  afterEach(() => {
+    document.cookie = "ps_locale=; path=/; max-age=0";
+  });
+
+  it("[SWHR2-C-0295] the main page is Japanese at first render, before the session request returns", () => {
+    document.cookie = "ps_locale=ja_JP; path=/";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => undefined)),
+    );
+    renderAt("/petstore");
+    expect(bodyText()).toMatch(KANA);
+    expect(bodyText()).not.toMatch(/Sign in/);
+  });
+});
