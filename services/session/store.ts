@@ -29,6 +29,8 @@ export const COOKIE: Record<Area, string> = {
   supplier: "supplier_sid",
 };
 
+export const LOCALE_COOKIE = "ps_locale";
+
 // In-memory and server-owned: sessions are never persisted to SQLite (design.md, Data).
 const sessions = new Map<string, Session>();
 
@@ -53,10 +55,20 @@ function setSessionCookie(event: H3Event, area: Area, value: string | null) {
   });
 }
 
+/** Keeps a readable `ps_locale` cookie equal to the storefront session locale, so the client knows it at first render. */
+export function setLocaleCookie(event: H3Event, locale: string) {
+  setCookie(event, LOCALE_COOKIE, locale, {
+    sameSite: "lax",
+    path: "/",
+    secure: event.url.protocol === "https:",
+  });
+}
+
 function start(event: H3Event, area: Area, locale: string, userId?: string): Session {
   const session: Session = { id: crypto.randomUUID(), area, locale, userId, lastSeen: Date.now() };
   sessions.set(session.id, session);
   setSessionCookie(event, area, session.id);
+  if (area === "storefront") setLocaleCookie(event, locale);
   event.context.session = session;
   return session;
 }

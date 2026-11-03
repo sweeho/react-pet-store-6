@@ -1,5 +1,6 @@
 import { HTTPError, defineHandler, readBody } from "nitro/h3";
 
+import { setLocaleCookie } from "../../../services/session/store";
 import { parseLocale } from "../../../shared/i18n/locale";
 
 export default defineHandler(async (event) => {
@@ -8,5 +9,6 @@ export default defineHandler(async (event) => {
   if (!parsed) throw new HTTPError({ status: 400, message: "Invalid locale code" });
   const session = event.context.session as { locale: string };
   session.locale = parsed.code;
+  setLocaleCookie(event, parsed.code);
   return { locale: parsed.code };
 });

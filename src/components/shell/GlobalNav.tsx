@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router";
 
+import { useLocale } from "@/components/storefront/LocaleProvider";
+import { useScreen } from "@/locales/useScreen";
 import { cn } from "@/utils";
 
 import { type AreaIcon, areaGroups, areas } from "./areas";
@@ -35,18 +37,22 @@ const itemClass = ({ isActive }: { isActive: boolean }) =>
 
 export default function GlobalNav() {
   const { pathname } = useLocation();
+  const { locale } = useLocale();
+  const screen = useScreen("shell", locale);
+  if ("error" in screen) return screen.error;
+  const t = screen.definition;
   // Staff areas sign in on their own screens; the customer sign-in entry would be a second, wrong one.
   const staffArea = /^\/(admin|supplier)(\/|$)/.test(pathname);
   return (
-    <nav aria-label="Global" className="flex flex-col gap-4 p-3">
+    <nav aria-label={t.title} className="flex flex-col gap-4 p-3">
       <NavLink to="/" end className={itemClass}>
         <Home className="size-4" aria-hidden="true" />
-        Home
+        {t.home}
       </NavLink>
       {areaGroups.map((group) => (
         <div key={group}>
           <h2 className="text-muted-foreground px-2 pb-1 text-xs font-semibold tracking-wide">
-            {group}
+            {t[`group${group}`]}
           </h2>
           <ul className="flex flex-col">
             {areas
@@ -59,7 +65,7 @@ export default function GlobalNav() {
                   <li key={area.label}>
                     <NavLink to={area.to} end className={itemClass}>
                       <Icon className="size-4" aria-hidden="true" />
-                      {area.label}
+                      {t[area.to]}
                     </NavLink>
                   </li>
                 );

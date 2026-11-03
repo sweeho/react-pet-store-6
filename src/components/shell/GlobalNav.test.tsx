@@ -1,7 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { LocaleProvider } from "@/components/storefront/LocaleProvider";
 
 import GlobalNav from "./GlobalNav";
 
@@ -131,5 +133,42 @@ describe("GlobalNav", () => {
       .getAllByRole("link")
       .filter((l) => l.getAttribute("aria-current") === "page");
     expect(current.map((l) => l.textContent)).toEqual(["Shopping cart"]);
+  });
+});
+
+describe("GlobalNav locale", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.cookie = "ps_locale=; path=/; max-age=0";
+  });
+
+  function renderIn(locale: string) {
+    document.cookie = `ps_locale=${locale}; path=/`;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ locale })),
+    );
+    return render(
+      <LocaleProvider>
+        <MemoryRouter>
+          <GlobalNav />
+        </MemoryRouter>
+      </LocaleProvider>,
+    );
+  }
+
+  it("[SWHR2-C-0296] in ja_JP the navigation renders Japanese labels and no English Sign in", () => {
+    renderIn("ja_JP");
+    const text = screen.getByRole("navigation").textContent ?? "";
+    expect(text).toMatch(/[぀-ヿ]/);
+    expect(text).not.toMatch(/Sign in|Home|Shop|Account|Language/);
+  });
+
+  it("[SWHR2-C-0297] in en_US the navigation keeps its English labels", () => {
+    renderIn("en_US");
+    for (const { label, to } of areas) {
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", to);
+    }
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
   });
 });

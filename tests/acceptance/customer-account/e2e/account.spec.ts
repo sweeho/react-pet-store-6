@@ -11,38 +11,61 @@ const DB_FILE = path.join(process.cwd(), "sqlite.db");
  * Removes the sign-on and customer rows of a user, so a name a previous run signed up is free
  * again. Playwright runs this file under Node, where bun:sqlite does not exist, so the deletes run
  * in a bun child process against the same file. A table this build does not have is skipped.
+ * With everyTable, every table with a user_id column is cleared for the user (orders, cart lines),
+ * so nothing an earlier run left under the name is read back.
  */
-function forgetUser(userId: string) {
+function forgetUser(userId: string, everyTable = false) {
   const script = `
     const { Database } = require("bun:sqlite");
-    const [file, userId] = JSON.parse(process.argv[1]);
+    const [file, userId, everyTable] = JSON.parse(process.argv[1]);
     const db = new Database(file);
     try {
       db.exec("PRAGMA busy_timeout = 10000");
-      for (const t of ["customer_profiles", "customer_accounts", "customers", "signon_users"]) {
+      const tables = everyTable
+        ? db.query("select name from sqlite_master where type = 'table'").all().map((r) => r.name)
+        : ["customer_profiles", "customer_accounts", "customers", "signon_users"];
+      for (const t of tables) {
         const cols = db.query("select name from pragma_table_info(?)").all(t).map((c) => c.name);
         if (cols.includes("user_id")) db.query("delete from " + t + " where user_id = ?").run(userId);
       }
     } finally { db.close(); }`;
-  execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId])]);
+  execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId, everyTable])]);
+}
+
+/** Reads the sign-on accounts (signon_users rows) stored for a user name, in a bun child process. */
+function signOnAccounts(userId: string): { password_hash: string }[] {
+  const script = `
+    const { Database } = require("bun:sqlite");
+    const [file, userId] = JSON.parse(process.argv[1]);
+    const db = new Database(file, { readonly: true });
+    try {
+      const rows = db.query("select password_hash from signon_users where user_id = ?").all(userId);
+      process.stdout.write(JSON.stringify(rows));
+    } finally { db.close(); }`;
+  return JSON.parse(
+    execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId])], { encoding: "utf8" }),
+  ) as { password_hash: string }[];
 }
 
 type Profile = { favouriteCategory?: string; myListOn?: boolean; bannerOn?: boolean };
 
+const repeatPassword = /^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i;
+/**
+ * The sign-in form of /petstore/signin: the form with a Sign In button and no repeated-password
+ * field, so its fields are never confused with the registration form's User Name and Password.
+ */
+const signInForm = (page: Page) =>
+  page
+    .locator("form")
+    .filter({ has: page.getByRole("button", { name: /^(sign ?in|log ?in)/i }) })
+    .filter({ hasNot: page.getByLabel(repeatPassword) });
 async function signIn(page: Page, user = "j2ee", pw = "j2ee") {
   await page.goto("/petstore/signin");
-  await page
-    .getByLabel(/^user id:?$/i)
-    .first()
-    .fill(user);
-  await page
-    .getByLabel(/^password:?$/i)
-    .first()
-    .fill(pw);
-  await page
-    .getByRole("button", { name: /^(sign ?in|log ?in)/i })
-    .first()
-    .click();
+  const f = signInForm(page);
+  await expect(f).toHaveCount(1);
+  await f.getByLabel(/^user (id|name):?$/i).fill(user);
+  await f.getByLabel(/^password:?$/i).fill(pw);
+  await f.getByRole("button", { name: /^(sign ?in|log ?in)/i }).click();
   await expect(page.getByText(/^sign out$/i)).toBeVisible();
 }
 /** Signs in as j2ee and stores the given profile preferences through the account API. */
@@ -67,14 +90,29 @@ async function fillSignUp(page: Page, user: string, pw: string, repeat: string) 
 }
 const submitSignUp = (page: Page) => signUpForm(page).getByRole("button").first().click();
 const banner = (page: Page) => page.getByTestId("pet-tips-banner");
+// The cart's own Check Out link, not a Checkout link in the header or navigation (as cart.spec.ts).
+const cartCheckOut = (p: Page) =>
+  p
+    .locator("a:not(nav a):not(header a):not([role=navigation] a)")
+    .filter({ hasText: /^\s*(proceed to )?check ?out\s*$/i });
+/** Opens the cart through a link to /petstore/cart that is not an Add to Cart link. */
+async function openCart(page: Page): Promise<void> {
+  await page
+    .locator('a[href$="/petstore/cart"]')
+    .filter({ hasNotText: /add to cart/i })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/petstore\/cart$/);
+}
 
 test.describe("sign up", () => {
   // case: SWHR2-C-0156@v1
   test("SWHR2-C-0156: signing up as an existing j2ee is redirected to the user-creation error page", async ({
     page,
   }) => {
-    await signIn(page);
-    await page.getByText(/^sign out$/i).click();
+    // precondition: the j2ee sign-on account exists
+    const before = signOnAccounts("j2ee");
+    expect(before).toHaveLength(1);
     await page.goto("/petstore/signin");
     await fillSignUp(page, "j2ee", "other1", "other1");
     await submitSignUp(page);
@@ -83,11 +121,10 @@ test.describe("sign up", () => {
       page.getByText(/user name.*(in use|taken|exists)|already (exists|in use)/i).first(),
     ).toBeVisible();
     await expect(page.getByLabel(/^card type:?$/i)).toHaveCount(0);
-    // nothing was created or changed: the existing account keeps its old password
-    const res = await page.request.post("/api/session/sign-in", {
-      data: { userId: "j2ee", password: "other1", remember: false },
-    });
-    expect(res.status()).toBe(401);
+    // nothing was created or changed: still exactly one j2ee account, its password unchanged
+    const after = signOnAccounts("j2ee");
+    expect(after).toHaveLength(1);
+    expect(after[0].password_hash).toBe(before[0].password_hash);
   });
 
   // case: SWHR2-C-0147@v1
@@ -139,20 +176,34 @@ test.describe("sign up", () => {
     await submitSignUp(page);
     await expect(page.getByText(/user creation error/i).first()).toBeVisible();
     await expect(page.getByText(/in use/i).first()).toBeVisible();
+    // and asks for a different user name
+    await expect(
+      page
+        .getByText(
+          /(different|another|other|new) (user ?name|user id|name|one)|(choose|pick|enter|try) (a |another )?(different|other|new)/i,
+        )
+        .first(),
+    ).toBeVisible();
   });
 
   // case: SWHR2-C-0174@v1
   test("SWHR2-C-0174: a first-time visitor signs up, enters account information and can then buy", async ({
     page,
   }) => {
-    // sign up, account entry, cart and checkout in one test: more than the suite's 15s budget
-    // on a cold dev server shared by parallel workers
-    test.slow();
-    // precondition: no account exists for "firsttimer", even one an earlier run created
-    forgetUser("firsttimer");
+    // sign up, account entry, cart and checkout in one test: each step's page may be a cold Vite
+    // compile while other workers load the same dev server, so the test gets 120s instead of the
+    // suite's 15s and each new screen 20s instead of 3s
+    test.setTimeout(120_000);
+    const slowExpect = expect.configure({ timeout: 20_000 });
+    // precondition: no account exists for firsttimer. sqlite.db is shared by every worker and
+    // kept between runs; firsttimer is used by this test only, and every row an earlier run left
+    // under the name (sign-on, account, profile, orders, cart) is removed first
+    const user = "firsttimer";
+    forgetUser(user, true);
     await page.goto("/petstore/signin");
-    await fillSignUp(page, "firsttimer", "secret1", "secret1");
+    await fillSignUp(page, user, "secret1", "secret1");
     await submitSignUp(page);
+    await slowExpect(page.getByLabel(/^card number:?$/i)).toBeVisible();
     await page.getByLabel(/^(first|given) name:?$/i).fill("First");
     await page.getByLabel(/^(last|family) name:?$/i).fill("Timer");
     await page.getByLabel(/^(tele)?phone( number)?:?$/i).fill("555-0101");
@@ -170,25 +221,35 @@ test.describe("sign up", () => {
     const saved = page.waitForResponse(
       (r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/account",
     );
-    await page.getByRole("button", { name: /save|submit|create/i }).click();
+    // the account form's own save button, not a button elsewhere on the page (a header Search)
+    const save = page
+      .locator("form")
+      .filter({ has: page.getByLabel(/^card number:?$/i) })
+      .getByRole("button", { name: /save|submit|create/i });
+    await expect(save).toHaveCount(1);
+    await save.click();
     expect((await saved).status()).toBeLessThan(300);
-    // the account is created: it reads back for the signed-on firsttimer with the entered details
+    // the account is created: it reads back for the signed-on new user with the entered details
     const account = await page.request.get("/api/account");
     expect(account.status()).toBe(200);
     const stored = JSON.stringify(await account.json());
-    for (const v of ["firsttimer", "First", "Timer", "1 Main St", "Palo Alto", "first@example.com"])
+    for (const v of [user, "First", "Timer", "1 Main St", "Palo Alto", "first@example.com"])
       expect(stored).toContain(v);
     await page.goto("/petstore/item/EST-1");
+    await slowExpect(
+      page
+        .getByRole("button", { name: /add to cart/i })
+        .or(page.getByRole("link", { name: /add to cart/i }))
+        .first(),
+    ).toBeVisible();
     await page
       .getByRole("button", { name: /add to cart/i })
       .or(page.getByRole("link", { name: /add to cart/i }))
       .first()
       .click();
-    await page.getByRole("link", { name: /cart/i }).first().click();
-    await page
-      .getByRole("link", { name: /check ?out/i })
-      .first()
-      .click();
+    await openCart(page);
+    await slowExpect(cartCheckOut(page)).toHaveCount(1);
+    await cartCheckOut(page).click();
     const placed = page.waitForResponse(
       (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
     );
@@ -204,14 +265,14 @@ test.describe("sign up", () => {
     if (!confirmsOrder) {
       const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
       const done = page.getByRole("heading", { name: /your order is complete|order placed/i });
-      await expect(done.or(confirm).first()).toBeVisible();
+      await slowExpect(done.or(confirm).first()).toBeVisible();
       if (!(await done.isVisible())) await confirm.click();
     }
     const response = await placed;
     expect(response.status()).toBe(200);
     const { orderId } = (await response.json()) as { orderId: string };
     // the order-confirmation screen names the placed order
-    await expect(page.getByRole("heading", { name: /your order is complete/i })).toBeVisible();
+    await slowExpect(page.getByRole("heading", { name: /your order is complete/i })).toBeVisible();
     await expect(page.getByText(orderId).first()).toBeVisible();
   });
 });
@@ -246,6 +307,11 @@ test.describe("My List panel and pet-tips banner", () => {
     const entries = await links.evaluateAll((els) =>
       els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
     );
+    // every BIRDS product is listed (the panel shows at most the first 10, as C-0158), once each
+    const names = entries.map(([name]) => name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toHaveLength(Math.min(birds.size, 10));
+    if (birds.size <= 10) expect(new Set(names)).toEqual(new Set(birds.keys()));
     for (const [name, href] of entries) {
       // only BIRDS products, each linked to the page the BIRDS listing gives that product
       expect([...birds.keys()]).toContain(name);

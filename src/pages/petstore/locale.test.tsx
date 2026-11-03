@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LocaleProvider } from "@/components/storefront/LocaleProvider";
+import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 import Petstore from "../petstore";
 import Cart from "./cart";
 import ChangeLanguage from "./change-language";
@@ -31,16 +33,19 @@ afterEach(() => vi.unstubAllGlobals());
 
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/petstore" element={<Petstore />}>
-          <Route index element={<Home />} />
-          <Route path="cart" element={<Cart />} />
-          <Route path="signin" element={<Signin />} />
-          <Route path="change-language" element={<ChangeLanguage />} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <LocaleProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <StorefrontHeader />
+        <Routes>
+          <Route path="/petstore" element={<Petstore />}>
+            <Route index element={<Home />} />
+            <Route path="cart" element={<Cart />} />
+            <Route path="signin" element={<Signin />} />
+            <Route path="change-language" element={<ChangeLanguage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </LocaleProvider>,
   );
 }
 
@@ -104,4 +109,21 @@ describe("localized storefront screens", () => {
       expect(bodyText()).not.toMatch(HAN);
     },
   );
+});
+
+describe("first render locale", () => {
+  afterEach(() => {
+    document.cookie = "ps_locale=; path=/; max-age=0";
+  });
+
+  it("[SWHR2-C-0295] the main page is Japanese at first render, before the session request returns", () => {
+    document.cookie = "ps_locale=ja_JP; path=/";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => undefined)),
+    );
+    renderAt("/petstore");
+    expect(bodyText()).toMatch(KANA);
+    expect(bodyText()).not.toMatch(/Sign in/);
+  });
 });

@@ -6,14 +6,17 @@ import { BrowserRouter, useRoutes } from "react-router";
 import routes from "~react-pages";
 
 import AppShell from "./components/shell/AppShell";
+import { LocaleProvider } from "./components/storefront/LocaleProvider";
 
 // eslint-disable-next-line react-refresh/only-export-components
 function App() {
   const element = useRoutes(routes);
   return (
-    <AppShell>
-      <Suspense fallback={<p>...</p>}>{element}</Suspense>
-    </AppShell>
+    <LocaleProvider>
+      <AppShell>
+        <Suspense fallback={<p>...</p>}>{element}</Suspense>
+      </AppShell>
+    </LocaleProvider>
   );
 }
 
