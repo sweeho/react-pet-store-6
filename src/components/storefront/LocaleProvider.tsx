@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext } from "react";
 
-import { DEFAULT_LOCALE } from "../../../shared/i18n/locale";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "../../../shared/i18n/locale";
 
 interface LocaleState {
   locale: string;
@@ -13,9 +13,15 @@ const LocaleContext = createContext<LocaleState>({
   setLocale: async () => DEFAULT_LOCALE,
 });
 
+/** The locale the server mirrors into the readable ps_locale cookie, when it is a supported code. */
+function cookieLocale(): string {
+  const found = document.cookie.match(/(?:^|;\s*)ps_locale=([^;]*)/)?.[1];
+  return found && (SUPPORTED_LOCALES as readonly string[]).includes(found) ? found : DEFAULT_LOCALE;
+}
+
 /** Holds the server session locale for the storefront and changes it through the session API. */
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<string>(DEFAULT_LOCALE);
+  const [locale, setLocaleState] = useState<string>(cookieLocale);
 
   useEffect(() => {
     let live = true;

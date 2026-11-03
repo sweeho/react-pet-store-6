@@ -1,7 +1,7 @@
 import { defineHandler } from "nitro/h3";
 
 import { SUPPORTED_LOCALES, type SupportedLocale } from "../shared/i18n/locale";
-import { attachSession } from "../services/session/store";
+import { attachSession, setLocaleCookie } from "../services/session/store";
 
 export type { Session } from "../services/session/store";
 
@@ -14,5 +14,6 @@ export default defineHandler((event) => {
     SUPPORTED_LOCALES.includes(requested as SupportedLocale)
   ) {
     session.locale = requested as string;
+    setLocaleCookie(event, session.locale);
   }
 });
