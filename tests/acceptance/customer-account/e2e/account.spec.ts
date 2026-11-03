@@ -67,6 +67,20 @@ async function fillSignUp(page: Page, user: string, pw: string, repeat: string) 
 }
 const submitSignUp = (page: Page) => signUpForm(page).getByRole("button").first().click();
 const banner = (page: Page) => page.getByTestId("pet-tips-banner");
+// The cart's own Check Out link, not a Checkout link in the header or navigation (as cart.spec.ts).
+const cartCheckOut = (p: Page) =>
+  p
+    .locator("a:not(nav a):not(header a):not([role=navigation] a)")
+    .filter({ hasText: /^\s*(proceed to )?check ?out\s*$/i });
+/** Opens the cart through a link to /petstore/cart that is not an Add to Cart link. */
+async function openCart(page: Page): Promise<void> {
+  await page
+    .locator('a[href$="/petstore/cart"]')
+    .filter({ hasNotText: /add to cart/i })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/petstore\/cart$/);
+}
 
 test.describe("sign up", () => {
   // case: SWHR2-C-0156@v1
@@ -172,7 +186,13 @@ test.describe("sign up", () => {
     const saved = page.waitForResponse(
       (r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/account",
     );
-    await page.getByRole("button", { name: /save|submit|create/i }).click();
+    // the account form's own save button, not a button elsewhere on the page (a header Search)
+    const save = page
+      .locator("form")
+      .filter({ has: page.getByLabel(/^card number:?$/i) })
+      .getByRole("button", { name: /save|submit|create/i });
+    await expect(save).toHaveCount(1);
+    await save.click();
     expect((await saved).status()).toBeLessThan(300);
     // the account is created: it reads back for the signed-on new user with the entered details
     const account = await page.request.get("/api/account");
@@ -186,11 +206,9 @@ test.describe("sign up", () => {
       .or(page.getByRole("link", { name: /add to cart/i }))
       .first()
       .click();
-    await page.getByRole("link", { name: /cart/i }).first().click();
-    await page
-      .getByRole("link", { name: /check ?out/i })
-      .first()
-      .click();
+    await openCart(page);
+    await expect(cartCheckOut(page)).toHaveCount(1);
+    await cartCheckOut(page).click();
     const placed = page.waitForResponse(
       (r) => r.url().endsWith("/api/orders") && r.request().method() === "POST",
     );
@@ -248,6 +266,11 @@ test.describe("My List panel and pet-tips banner", () => {
     const entries = await links.evaluateAll((els) =>
       els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
     );
+    // every BIRDS product is listed, and nothing else
+    const birdNames = [...birds.keys()].filter((n) => n !== "").sort();
+    expect(birdNames.length).toBeGreaterThan(0);
+    const listedNames = new Set(entries.map(([name]) => name).filter((n) => n !== ""));
+    expect([...listedNames].sort()).toEqual(birdNames);
     for (const [name, href] of entries) {
       // only BIRDS products, each linked to the page the BIRDS listing gives that product
       expect([...birds.keys()]).toContain(name);
