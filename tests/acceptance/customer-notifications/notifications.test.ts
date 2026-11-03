@@ -146,8 +146,23 @@ describe("queues and channels", () => {
       a.client.query("select status from op_order_workflow where order_id = '1011'").get(),
     ).toEqual({ status: "APPROVED" });
     expect(a.outbox).toEqual([]);
-    expect(messages(a.client, "notify.approval", "%1011%").length).toBeGreaterThan(0);
+    // Run the queue (not awaited: the send it reaches stays blocked) until the e-mail request
+    // for 1011 is on the mail queue.
+    const mailQueued = () =>
+      messages(a.client, "mail.outbound", "%1011%").map(
+        (m) => JSON.parse(m.payload) as [string, string, string],
+      );
+    const running = a.drain();
+    for (let i = 0; i < 100 && mailQueued().length === 0; i++)
+      await new Promise((r) => setTimeout(r, 20));
+    const queued = mailQueued();
+    expect(queued).toHaveLength(1);
+    expect(queued[0][0]).toContain("c@example.com");
+    expect(queued[0][1]).toBe("Order Status: 1011");
+    // the send is still blocked, so nothing has been delivered yet
+    expect(a.outbox).toEqual([]);
     a.release();
+    await running;
     await a.drain();
     expect(subjects(a.outbox)).toEqual(["Order Status: 1011"]);
   });
@@ -235,8 +250,25 @@ describe("queues and channels", () => {
     expect(mail.subject).toBe("Java Pet Store Order COMPLETED: 1001");
     const body = mail.html || mail.text;
     expect(body).toMatch(/entire order has shipped/i);
-    for (const part of ["FISH", "Angelfish", "16.50", "DOGS", "Bulldog", "18.50"])
-      expect(body).toContain(part);
+    const text = body
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ");
+    // each line lists category, product, quantity and unit price
+    const lines = [
+      { category: "FISH", product: "Angelfish", quantity: "2", price: "16.50", next: "DOGS" },
+      { category: "DOGS", product: "Bulldog", quantity: "1", price: "18.50", next: "FISH" },
+    ];
+    for (const l of lines) {
+      const p = text.indexOf(l.product);
+      expect(p).toBeGreaterThanOrEqual(0);
+      const start = Math.max(0, text.lastIndexOf(l.category, p));
+      const nextRow = text.indexOf(l.next, p);
+      const row = text.slice(start, nextRow > p ? nextRow : p + 200);
+      expect(row).toContain(l.category);
+      expect(row).toContain(l.price);
+      expect(row.replace(l.price, " ")).toMatch(new RegExp(`(^|[^\\d.])${l.quantity}([^\\d.]|$)`));
+    }
   });
 
   // case: SWHR2-C-0067@v1
