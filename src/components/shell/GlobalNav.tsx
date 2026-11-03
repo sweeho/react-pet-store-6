@@ -1,7 +1,6 @@
 import {
   BarChart3,
   CheckSquare,
-  CreditCard,
   Globe,
   Home,
   LayoutGrid,
@@ -20,7 +19,6 @@ import { type AreaIcon, areaGroups, areas } from "./areas";
 const icons: Record<AreaIcon, LucideIcon> = {
   "layout-grid": LayoutGrid,
   "shopping-cart": ShoppingCart,
-  "credit-card": CreditCard,
   globe: Globe,
   "log-in": LogIn,
   user: User,

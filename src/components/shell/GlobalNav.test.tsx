@@ -8,7 +8,6 @@ import GlobalNav from "./GlobalNav";
 const areas = [
   { label: "Catalog & search", to: "/petstore" },
   { label: "Shopping cart", to: "/petstore/cart" },
-  { label: "Place order", to: "/petstore/cart" },
   { label: "Language", to: "/petstore/change-language" },
   { label: "Sign in", to: "/petstore/signin" },
   { label: "Account & profile", to: "/petstore/account" },
@@ -64,5 +63,73 @@ describe("GlobalNav", () => {
       </MemoryRouter>,
     );
     expect(screen.queryAllByRole("link", { name: /check ?out/i })).toEqual([]);
+  });
+
+  it("[SWHR2-C-0283] the Shop group lists exactly Catalog & search, Shopping cart and Language", () => {
+    render(
+      <MemoryRouter>
+        <GlobalNav />
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole("navigation", { name: "Global" });
+    const group = within(nav).getByRole("heading", { name: "Shop" }).parentElement as HTMLElement;
+    expect(
+      within(group)
+        .getAllByRole("link")
+        .map((l) => l.textContent),
+    ).toEqual(["Catalog & search", "Shopping cart", "Language"]);
+    expect(within(nav).queryByRole("link", { name: "Place order" })).toBeNull();
+  });
+
+  it("[SWHR2-C-0285] every area link has a different destination", () => {
+    render(
+      <MemoryRouter>
+        <GlobalNav />
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole("navigation", { name: "Global" });
+    const hrefs = within(nav)
+      .getAllByRole("link")
+      .filter((l) => l.textContent !== "Home")
+      .map((l) => l.getAttribute("href"));
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
+  it("[SWHR2-C-0286] on /petstore/cart only Shopping cart is the current page", () => {
+    render(
+      <MemoryRouter initialEntries={["/petstore/cart"]}>
+        <GlobalNav />
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole("navigation", { name: "Global" });
+    const current = within(nav)
+      .getAllByRole("link")
+      .filter((l) => l.getAttribute("aria-current") === "page");
+    expect(current.map((l) => l.textContent)).toEqual(["Shopping cart"]);
+  });
+
+  it("[SWHR2-C-0284] the storefront menu shows no Place order entry under Shop", () => {
+    render(
+      <MemoryRouter initialEntries={["/petstore"]}>
+        <GlobalNav />
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole("navigation", { name: "Global" });
+    expect(within(nav).getByRole("link", { name: "Shopping cart" })).toBeInTheDocument();
+    expect(within(nav).queryAllByRole("link", { name: /place order/i })).toEqual([]);
+  });
+
+  it("[SWHR2-C-0287] clicking Shopping cart highlights only the Shopping cart entry", async () => {
+    render(
+      <MemoryRouter initialEntries={["/petstore"]}>
+        <GlobalNav />
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole("navigation", { name: "Global" });
+    await userEvent.click(within(nav).getByRole("link", { name: "Shopping cart" }));
+    const current = within(nav)
+      .getAllByRole("link")
+      .filter((l) => l.getAttribute("aria-current") === "page");
+    expect(current.map((l) => l.textContent)).toEqual(["Shopping cart"]);
   });
 });
