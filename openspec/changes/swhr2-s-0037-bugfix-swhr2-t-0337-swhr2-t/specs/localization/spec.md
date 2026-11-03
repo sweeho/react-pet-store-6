@@ -31,12 +31,14 @@ ID: SWHR2-R-0078.03
 - **THEN** the session locale becomes ja_JP and the storefront is shown in Japanese
 
 #### Scenario: Site navigation and footer follow the session locale
+ID: SWHR2-R-0078.04
 
 - **GIVEN** a shopper whose session locale is ja_JP
 - **WHEN** the shopper opens the storefront main page
 - **THEN** the global navigation and the footer show their Japanese labels, and the page shows no English "Sign in" text
 
 #### Scenario: Header follows a flag change without navigating
+ID: SWHR2-R-0078.05
 
 - **GIVEN** a shopper viewing the FISH category page in US English
 - **WHEN** the shopper activates the Japanese flag control in the header
@@ -66,6 +68,7 @@ ID: SWHR2-R-0020.02
 - **AND** a confirmation is displayed stating that the locale is ja_JP
 
 #### Scenario: Next page opens in the new locale
+ID: SWHR2-R-0020.03
 
 - **GIVEN** a shopper who has just changed the locale to ja_JP on the change-language screen
 - **WHEN** the shopper opens the storefront main page
