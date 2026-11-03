@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { LocaleProvider } from "@/components/storefront/LocaleProvider";
 
 import AppShell from "./AppShell";
 
@@ -45,4 +47,31 @@ describe("AppShell", () => {
       expect(within(screen.getByRole("main")).getByRole("heading")).toBeInTheDocument();
     },
   );
+});
+
+describe("AppShell footer locale", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.cookie = "ps_locale=; path=/; max-age=0";
+  });
+
+  it("[SWHR2-C-0296] in ja_JP the footer renders Japanese and no English Home", () => {
+    document.cookie = "ps_locale=ja_JP; path=/";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ locale: "ja_JP", signedOn: false })),
+    );
+    render(
+      <LocaleProvider>
+        <MemoryRouter>
+          <AppShell header={<span>h</span>}>
+            <p>page</p>
+          </AppShell>
+        </MemoryRouter>
+      </LocaleProvider>,
+    );
+    const footer = screen.getByRole("contentinfo").textContent ?? "";
+    expect(footer).toMatch(/[぀-ヿ]/);
+    expect(footer).not.toMatch(/Home|Pet Store/);
+  });
 });
