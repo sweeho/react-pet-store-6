@@ -6,9 +6,25 @@ const previous = (p: Page) =>
   p.getByRole("link", { name: /previous/i }).or(p.getByRole("button", { name: /previous/i }));
 const addToCart = (p: Page | Locator) =>
   p.getByRole("button", { name: /add to cart/i }).or(p.getByRole("link", { name: /add to cart/i }));
-/** Product links on a category page that carry a name (an image-only link is skipped). */
+/**
+ * Product links on a category page that carry text (an image-only link is skipped). A product may
+ * be one card link holding its name with other text (id, description), so a link is matched by the
+ * name element it contains, never by its whole text.
+ */
 const productLinks = (p: Page) =>
   p.locator('a[href*="/petstore/product/"]').filter({ hasText: /\S/ });
+/** The product link that contains an element whose whole text is `name`. */
+const productLink = (p: Page, name: string) =>
+  productLinks(p).filter({ has: p.getByText(name, { exact: true }) });
+/** The category page lists exactly the products `names`, in that order, one link each. */
+async function expectProducts(page: Page, names: string[]): Promise<void> {
+  const links = productLinks(page);
+  await expect(links).toHaveCount(names.length);
+  for (const [i, name] of names.entries()) {
+    await expect(links.nth(i).getByText(name, { exact: true }).first()).toBeVisible();
+    await expect(productLink(page, name)).toHaveCount(1);
+  }
+}
 /** A row that links to item `id`'s detail page (exact id, so EST-1 never picks EST-10). */
 const itemRow = (p: Page, id: string) =>
   p.getByRole("row").filter({ has: p.locator(`a[href$="/item/${id}"]`) });
@@ -38,9 +54,9 @@ async function openCart(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/petstore\/cart$/);
 }
 
-/** Bulldog's named product link on a category page (its image link, alt "Bulldog", is skipped). */
+/** Bulldog's product link on a category page: the one link holding the name Bulldog. */
 async function bulldogLink(page: Page): Promise<Locator> {
-  const link = productLinks(page).filter({ hasText: /^\s*Bulldog\s*$/ });
+  const link = productLink(page, "Bulldog");
   await expect(link).toHaveCount(1);
   return link;
 }
@@ -88,7 +104,7 @@ test.describe("catalog browsing", () => {
   }) => {
     await caseDogs(page);
     await page.goto("/petstore/category/DOGS");
-    await expect(productLinks(page)).toHaveText(["Bulldog", "Dalmation"]);
+    await expectProducts(page, ["Bulldog", "Dalmation"]);
     await expect(next(page)).toBeVisible();
     await expect(previous(page)).toHaveCount(0);
   });
@@ -100,9 +116,9 @@ test.describe("catalog browsing", () => {
     await caseDogs(page);
     await page.goto("/petstore/category/DOGS");
     // Precondition: on the first page of DOGS (3 products).
-    await expect(productLinks(page)).toHaveText(["Bulldog", "Dalmation"]);
+    await expectProducts(page, ["Bulldog", "Dalmation"]);
     await next(page).click();
-    await expect(productLinks(page)).toHaveText(["Poodle"]);
+    await expectProducts(page, ["Poodle"]);
     await expect(previous(page)).toBeVisible();
     await expect(next(page)).toHaveCount(0);
   });

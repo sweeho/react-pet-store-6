@@ -10,9 +10,12 @@ const addBtn = (p: Page) =>
 
 async function signIn(page: Page) {
   await page.goto("/petstore/signin");
-  await page.getByLabel(/^user id:?$/i).fill("j2ee");
-  await page.getByLabel(/^password:?$/i).fill("j2ee");
-  await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
+  // the sign-in form only: the page also has the New customer form with its own Password field
+  const form = page.locator("form").filter({ has: page.locator("#signin-password") });
+  await expect(form).toHaveCount(1);
+  await form.getByLabel(/^user id:?$/i).fill("j2ee");
+  await form.locator("#signin-password").fill("j2ee");
+  await form.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
   await expect(page.getByText(/^sign out$/i)).toBeVisible();
 }
 async function changeLocale(page: Page, label: string) {

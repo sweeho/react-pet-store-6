@@ -7,6 +7,10 @@ import { expect, test, type Page } from "@playwright/test";
 // worker and kept between runs.
 const DB_FILE = path.join(process.cwd(), "sqlite.db");
 
+// The tests share the j2ee customer and its profile (favourite category, MyList, banner), so they
+// run one after another rather than overwriting each other's preferences in parallel.
+test.describe.configure({ mode: "default" });
+
 /**
  * Removes the sign-on and customer rows of a user, so a name a previous run signed up is free
  * again. Playwright runs this file under Node, where bun:sqlite does not exist, so the deletes run
@@ -283,16 +287,19 @@ test.describe("My List panel and pet-tips banner", () => {
     page,
   }) => {
     await signedInWith(page, { favouriteCategory: "BIRDS", myListOn: true });
-    // the BIRDS products, and the page each links to, as the store's own BIRDS listing shows them
+    // the BIRDS products as the store's own BIRDS listing shows them: each product's page, and the
+    // text of its listing link (a card that holds the product's name with its id and description)
     await page.goto("/petstore/category/BIRDS");
     const birds = new Map<string, string>();
     for (;;) {
       const listed = page.locator('a[href*="/petstore/product/"]:not([data-testid="my-list"] a)');
       await expect(listed.first()).toBeVisible();
-      for (const [name, href] of await listed.evaluateAll((els) =>
-        els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
-      ))
-        birds.set(name, href);
+      for (const [href, text] of await listed.evaluateAll((els) =>
+        els.map((e) => [e.getAttribute("href") ?? "", e.textContent ?? ""]),
+      )) {
+        const at = new URL(href, page.url()).pathname;
+        birds.set(at, (birds.get(at) ?? "") + text);
+      }
       const next = page
         .getByRole("link", { name: /next/i })
         .or(page.getByRole("button", { name: /next/i }));
@@ -309,15 +316,16 @@ test.describe("My List panel and pet-tips banner", () => {
     );
     // every BIRDS product is listed (the panel shows at most the first 10, as C-0158), once each
     const names = entries.map(([name]) => name);
+    const pages = entries.map(([, href]) => new URL(href, page.url()).pathname);
     expect(new Set(names).size).toBe(names.length);
+    expect(new Set(pages).size).toBe(pages.length);
     expect(names).toHaveLength(Math.min(birds.size, 10));
-    if (birds.size <= 10) expect(new Set(names)).toEqual(new Set(birds.keys()));
-    for (const [name, href] of entries) {
-      // only BIRDS products, each linked to the page the BIRDS listing gives that product
-      expect([...birds.keys()]).toContain(name);
-      expect(new URL(href, page.url()).pathname).toBe(
-        new URL(birds.get(name) ?? "", page.url()).pathname,
-      );
+    if (birds.size <= 10) expect(new Set(pages)).toEqual(new Set(birds.keys()));
+    for (const [i, [name]] of entries.entries()) {
+      // only BIRDS products, each linked to the page the BIRDS listing gives the product it names
+      expect(name).not.toBe("");
+      expect([...birds.keys()]).toContain(pages[i]);
+      expect(birds.get(pages[i])).toContain(name);
     }
     for (const [name, href] of entries) {
       // following the link opens that product's page

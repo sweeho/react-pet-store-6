@@ -11,6 +11,12 @@ async function supplierWith(page: Page, stock: Record<string, number>) {
   await page.getByLabel(/^user ?id:?$/i).fill(SUPPLIER.user);
   await page.getByLabel(/^password:?$/i).fill(SUPPLIER.pw);
   await page.getByRole("button", { name: /sign ?in|log ?in|submit/i }).click();
+  // wait for the signed-in supplier screen, so the inventory request carries the session
+  await expect(
+    page
+      .getByRole("link", { name: /display inventory/i })
+      .or(page.getByRole("button", { name: /display inventory/i })),
+  ).toBeVisible();
   const res = await page.request.post("/api/supplier/inventory", {
     data: {
       rows: Object.entries(stock).map(([itemId, quantity]) => ({ itemId, quantity, marked: true })),
@@ -27,6 +33,8 @@ const display = (page: Page) =>
 const row = (page: Page, id: string) => page.getByRole("row").filter({ hasText: id });
 
 test.describe("supplier inventory", () => {
+  // the tests set stock for the same items (EST-1, EST-2), so they run one after another
+  test.describe.configure({ mode: "default" });
   // case: SWHR2-C-0041@v1
   test("SWHR2-C-0041: Display Inventory lists each stock record with existing quantity, empty new-quantity entry and unmarked update marker", async ({
     page,
