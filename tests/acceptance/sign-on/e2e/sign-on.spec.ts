@@ -8,8 +8,28 @@ const SUPPLIER = {
   user: process.env.E2E_SUPPLIER_USER ?? "supplier",
   pw: process.env.E2E_SUPPLIER_PASSWORD ?? "supplier-pw",
 };
-/** Japanese script: hiragana, katakana or kanji. */
-const JAPANESE = /[\u3040-\u30ff\u4e00-\u9fff]/;
+/** The storefront's own English UI labels, which a page shown in Japanese does not carry. */
+const ENGLISH_LABELS = /\b(sign ?in|sign ?out|account|cart|search|check ?out)\b/i;
+
+/**
+ * The storefront page is shown in Japanese: its own header controls (Sign in, Cart) carry Japanese
+ * labels, and no English UI label is left anywhere on it. A language picker or a Japanese product
+ * name alone does not satisfy this.
+ */
+async function expectShownInJapanese(page: Page, where: string) {
+  const header = page.getByRole("banner").first();
+  const signIn = header.getByRole("link", { name: /サインイン|ログイン/ }).first();
+  const cart = header.getByRole("link", { name: /カート/ }).first();
+  await expect(
+    signIn,
+    `${where}: the header's Sign in control is labelled in Japanese`,
+  ).toBeVisible();
+  await expect(cart, `${where}: the header's Cart control is labelled in Japanese`).toBeVisible();
+  expect(
+    await page.locator("body").innerText(),
+    `${where}: no English UI label is left`,
+  ).not.toMatch(ENGLISH_LABELS);
+}
 const LOGIN_ERROR =
   "You could not be authenticated with the information provided. Please check your Username and Password.";
 
@@ -360,9 +380,9 @@ test.describe("sign-on", () => {
     await expect(page).toHaveURL(/cart/);
     await expect(itemRow(page, "EST-1")).toHaveCount(0);
     await expect(itemRow(page, "EST-2")).toHaveCount(0);
-    await expect(page.locator("body")).toContainText(JAPANESE);
+    await expectShownInJapanese(page, "cart");
     // the home page is still shown in Japanese
     await page.goto("/");
-    await expect(page.locator("body")).toContainText(JAPANESE);
+    await expectShownInJapanese(page, "home");
   });
 });
