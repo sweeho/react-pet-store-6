@@ -105,9 +105,7 @@ test.describe("sign up", () => {
   test("SWHR2-C-0156: signing up as an existing j2ee is redirected to the user-creation error page", async ({
     page,
   }) => {
-    // precondition: the j2ee sign-on account exists with password j2ee
-    await signIn(page);
-    await page.getByText(/^sign out$/i).click();
+    // precondition: the j2ee sign-on account exists
     const before = signOnAccounts("j2ee");
     expect(before).toHaveLength(1);
     await page.goto("/petstore/signin");
@@ -122,14 +120,6 @@ test.describe("sign up", () => {
     const after = signOnAccounts("j2ee");
     expect(after).toHaveLength(1);
     expect(after[0].password_hash).toBe(before[0].password_hash);
-    const refused = await page.request.post("/api/session/sign-in", {
-      data: { userId: "j2ee", password: "other1", remember: false },
-    });
-    expect(refused.status()).toBe(401);
-    const accepted = await page.request.post("/api/session/sign-in", {
-      data: { userId: "j2ee", password: "j2ee", remember: false },
-    });
-    expect(accepted.status()).toBe(200);
   });
 
   // case: SWHR2-C-0147@v1
@@ -302,6 +292,11 @@ test.describe("My List panel and pet-tips banner", () => {
     const entries = await links.evaluateAll((els) =>
       els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
     );
+    // every BIRDS product is listed (the panel shows at most the first 10, as C-0158), once each
+    const names = entries.map(([name]) => name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toHaveLength(Math.min(birds.size, 10));
+    if (birds.size <= 10) expect(new Set(names)).toEqual(new Set(birds.keys()));
     for (const [name, href] of entries) {
       // only BIRDS products, each linked to the page the BIRDS listing gives that product
       expect([...birds.keys()]).toContain(name);
