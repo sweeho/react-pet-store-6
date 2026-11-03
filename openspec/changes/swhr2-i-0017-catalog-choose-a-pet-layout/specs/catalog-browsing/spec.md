@@ -23,18 +23,21 @@ ID: SWHR2-R-0041.02
 - **THEN** the category page for "FISH" opens
 
 #### Scenario: Picture aligned with the names on a wide screen
+ID: SWHR2-R-0041.03
 
 - **GIVEN** the shopper views the main page with the picture's panel wider than 1000 px
 - **WHEN** the page is displayed
 - **THEN** the picture spans the panel's full width with no blank space either side, and each pet's region starts and ends within 2 px of the name cell below it
 
 #### Scenario: Pet region selected on a wide screen
+ID: SWHR2-R-0041.04
 
 - **GIVEN** the shopper views the main page with the picture's panel about 1400 px wide
 - **WHEN** the shopper selects the centre of the Cats picture cell
 - **THEN** the category page for "CATS" opens
 
 #### Scenario: Pet region selected on a narrow screen
+ID: SWHR2-R-0041.05
 
 - **GIVEN** the shopper views the main page with the picture's panel about 600 px wide
 - **WHEN** the shopper selects the centre of the Dogs picture cell
