@@ -246,4 +246,58 @@ describe("administration tool", () => {
     expect(f.calls.some((c) => /sales\/order-counts/.test(c.url))).toBe(true);
     DONE.pop();
   });
+
+  describe("fulfilled orders", () => {
+    // Order 1007 is stored PENDING, then the stored status becomes COMPLETED (approved and fulfilled).
+    function stubStore() {
+      let stored = "PENDING";
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url =
+            typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+          if (init?.method === "POST") return new Response(null, { status: 202 });
+          if (url.includes("/sales/"))
+            return Response.json([{ key: "FISH", label: "Fish", value: 3 }]);
+          const status = new URL(url, "http://x").searchParams.get("status");
+          const orders =
+            status === stored
+              ? [{ orderId: "1007", status: stored, locale: "en_US", totalPrice: 600 }]
+              : [];
+          return Response.json({ items: orders, orders });
+        }),
+      );
+      return { fulfil: () => (stored = "COMPLETED") };
+    }
+    async function refreshToCompleted(commit: boolean) {
+      const store = stubStore();
+      render(
+        <MemoryRouter>
+          <Tool />
+        </MemoryRouter>,
+      );
+      await screen.findByText("1007");
+      if (commit) mark("1007", /approve/i);
+      if (commit) fireEvent.click(btn(/commit/i));
+      store.fulfil();
+      if (commit) await waitFor(() => expect(btn(/refresh/i)).toBeEnabled());
+      fireEvent.click(btn(/refresh/i));
+      if (commit) {
+        const confirm = screen.queryByRole("button", { name: /^(ok|yes|confirm|continue)/i });
+        if (confirm) fireEvent.click(confirm);
+      }
+      fireEvent.click(screen.getByRole("tab", { name: /non-?pending/i }));
+      await waitFor(() => expect(within(rowOf("1007")).getByText("COMPLETED")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("tab", { name: /^pending/i }));
+      expect(screen.queryByText("1007")).toBeNull();
+    }
+
+    it("[SWHR2-C-0288] Refresh after fulfilment lists the order as COMPLETED in non-pending and not in pending", async () => {
+      await refreshToCompleted(false);
+    });
+
+    it("[SWHR2-C-0289] an order committed and then fulfilled shows COMPLETED in non-pending after refresh", async () => {
+      await refreshToCompleted(true);
+    });
+  });
 });
