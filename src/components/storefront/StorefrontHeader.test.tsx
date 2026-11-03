@@ -70,7 +70,7 @@ describe("StorefrontHeader language flags", () => {
     await screen.findByText(/^sign in$/i);
   }
 
-  it("[SWHR2-C-0299] [SWHR2-C-0300] [SWHR2-C-0028] activating the Japanese flag relabels the header in place", async () => {
+  it("[SWHR2-C-0299] [SWHR2-C-0300] activating the Japanese flag relabels the header in place", async () => {
     const user = userEvent.setup();
     await withProvider("/petstore/category/FISH");
     await user.click(screen.getByRole("button", { name: "Japanese" }));
