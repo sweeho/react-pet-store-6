@@ -12,7 +12,10 @@ describe("PetMap", () => {
       </MemoryRouter>,
     );
     const picture = screen.getByRole("img", { name: /pet/i });
-    expect(picture.getAttribute("usemap")).toBe("#petmap");
+    // Regions are overlay links, not a fixed-coordinate image map (which never rescales).
+    expect(picture.getAttribute("usemap")).toBeNull();
+    expect(document.querySelector("map, area")).toBeNull();
+    expect(picture.className).not.toContain("h-[300px]");
     const hrefs = ["Birds", "Fish", "Dogs", "Reptiles", "Cats"].map((n) => [
       ...new Set(screen.getAllByRole("link", { name: n }).map((a) => a.getAttribute("href"))),
     ]);
