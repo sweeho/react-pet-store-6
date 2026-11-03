@@ -12,7 +12,7 @@ const PARTY = {
   phone: "555-555-5555",
 };
 
-test("[SWHR2-C-0243] a large US order stays pending until approved; after commit and refresh it shows APPROVED", async ({
+test("[SWHR2-C-0243] a large US order stays pending until approved; after commit and refresh it is listed as approved or completed", async ({
   page,
 }) => {
   // A customer places an en_US order well above 500.00 through the API.
@@ -47,9 +47,15 @@ test("[SWHR2-C-0243] a large US order stays pending until approved; after commit
   await page.getByRole("button", { name: /commit/i }).click();
 
   // The decision travels on the order.approval channel, so the view catches up after a refresh.
+  // Order processing fulfils an in-stock order to COMPLETED within seconds, so APPROVED is
+  // transient: assert the stable outcome (approved or later, and gone from the pending view).
   await page.getByRole("tab", { name: /non-?pending/i }).click();
   await expect(async () => {
     await refresh.click();
-    await expect(row).toContainText("APPROVED", { timeout: 1000 });
+    await expect(row).toContainText(/APPROVED|COMPLETED/, { timeout: 1000 });
   }).toPass();
+  await expect(row).not.toContainText(/PENDING|DENIED/);
+
+  await page.getByRole("tab", { name: /^pending/i }).click();
+  await expect(row).toHaveCount(0);
 });
