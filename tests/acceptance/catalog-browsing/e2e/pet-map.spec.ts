@@ -21,7 +21,11 @@ test.describe("choose a pet picture, wide screen", () => {
   }) => {
     await page.goto("/petstore");
     const img = picture(page);
-    const panel = page.locator("section", { has: img });
+    // The picture's own panel: the innermost section holding it, not an outer page section.
+    const panel = page
+      .locator("section", { has: img })
+      .filter({ hasNot: page.locator("section", { has: img }) });
+    await expect(panel).toHaveCount(1);
     const panelBox = (await panel.boundingBox())!;
     const imgBox = (await img.boundingBox())!;
     expect(panelBox.width).toBeGreaterThan(1000);
