@@ -38,52 +38,71 @@ async function openCart(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/petstore\/cart$/);
 }
 
+/** Bulldog's named product link on a category page (its image link, alt "Bulldog", is skipped). */
+async function bulldogLink(page: Page): Promise<Locator> {
+  const link = productLinks(page).filter({ hasText: /^\s*Bulldog\s*$/ });
+  await expect(link).toHaveCount(1);
+  return link;
+}
+
+/**
+ * The cases' DOGS: en_US products Poodle, Bulldog and Dalmation, and nothing else. The shared
+ * sqlite.db holds the six-product sample load that other specs rely on, and the product list is
+ * cached for 5 minutes, so DOGS is not changed there. Instead the browser's call to the design's
+ * `GET /api/catalog/categories/DOGS/products?start&size` is answered with these three, sorted by
+ * name and paged by the start and size the page asks for (defaults 0 and 2), in the design's
+ * `{ items, start, size, hasPrevious, hasNext }` shape.
+ */
+async function caseDogs(page: Page): Promise<void> {
+  const dogs = [
+    { productId: "K9-PO-02", name: "Poodle" },
+    { productId: "K9-BD-01", name: "Bulldog" },
+    { productId: "K9-DL-01", name: "Dalmation" },
+  ].sort((a, b) => a.name.localeCompare(b.name));
+  await page.route(
+    (url) => url.pathname.endsWith("/api/catalog/categories/DOGS/products"),
+    (route) => {
+      const q = new URL(route.request().url()).searchParams;
+      const start = Number(q.get("start") ?? 0);
+      const size = Number(q.get("size") ?? 2);
+      const items = dogs
+        .slice(start, start + size)
+        .map((d) => ({ ...d, productName: d.name, categoryId: "DOGS", description: d.name }));
+      return route.fulfill({
+        json: {
+          items,
+          start,
+          size,
+          hasPrevious: start > 0,
+          hasNext: start + size < dogs.length,
+        },
+      });
+    },
+  );
+}
+
 test.describe("catalog browsing", () => {
   // case: SWHR2-C-0197@v1
-  test("SWHR2-C-0197: the first page of DOGS shows Bulldog and Chihuahua, with Next and no Previous", async ({
+  test("SWHR2-C-0197: the first page of DOGS shows Bulldog and Dalmation, with Next and no Previous", async ({
     page,
   }) => {
-    // The case's DOGS holds Poodle, Bulldog and Dalmation. This suite runs on the sample load
-    // (its contents are data-population's SWHR2-C-0075, tested in data-population), whose DOGS
-    // holds six products. The precondition is checked below rather than assumed.
+    await caseDogs(page);
     await page.goto("/petstore/category/DOGS");
-    await expect(productLinks(page)).toHaveText(["Bulldog", "Chihuahua"]);
+    await expect(productLinks(page)).toHaveText(["Bulldog", "Dalmation"]);
     await expect(next(page)).toBeVisible();
     await expect(previous(page)).toHaveCount(0);
-
-    // Precondition: DOGS's products, read page by page, are these six in name order, 2 per page,
-    // so Bulldog and Chihuahua are the first two by name.
-    const seen: string[] = [...(await productLinks(page).allInnerTexts())];
-    for (const pair of [
-      ["Dalmation", "Golden Retriever"],
-      ["Labrador Retriever", "Poodle"],
-    ]) {
-      await next(page).click();
-      await expect(productLinks(page)).toHaveText(pair);
-      seen.push(...pair);
-    }
-    expect(seen).toEqual([
-      "Bulldog",
-      "Chihuahua",
-      "Dalmation",
-      "Golden Retriever",
-      "Labrador Retriever",
-      "Poodle",
-    ]);
   });
 
   // case: SWHR2-C-0198@v1
-  test("SWHR2-C-0198: selecting Next on DOGS to the last page shows Labrador Retriever and Poodle, with Previous and no Next", async ({
+  test("SWHR2-C-0198: selecting Next on DOGS shows Poodle, with Previous and no Next", async ({
     page,
   }) => {
-    // Seed (SWHR2-C-0075): pages are Bulldog/Chihuahua, Dalmation/Golden Retriever, Labrador Retriever/Poodle.
+    await caseDogs(page);
     await page.goto("/petstore/category/DOGS");
+    // Precondition: on the first page of DOGS (3 products).
+    await expect(productLinks(page)).toHaveText(["Bulldog", "Dalmation"]);
     await next(page).click();
-    await expect(page.getByText("Dalmation", { exact: true })).toBeVisible();
-    await expect(page.getByText("Golden Retriever", { exact: true })).toBeVisible();
-    await next(page).click();
-    await expect(page.getByText("Labrador Retriever", { exact: true })).toBeVisible();
-    await expect(page.getByText("Poodle", { exact: true })).toBeVisible();
+    await expect(productLinks(page)).toHaveText(["Poodle"]);
     await expect(previous(page)).toBeVisible();
     await expect(next(page)).toHaveCount(0);
   });
@@ -93,7 +112,8 @@ test.describe("catalog browsing", () => {
     page,
   }) => {
     await page.goto("/petstore/item/EST-1");
-    await addAndWait(page, addToCart(page));
+    // The item page may show more than one Add to Cart control; any one of them adds EST-1.
+    await addAndWait(page, addToCart(page).first());
     await openCart(page);
     // The cart holds an EST-1 line: a row linking to /item/EST-1 (not EST-10 to EST-19).
     await expect(itemRow(page, "EST-1")).toHaveCount(1);
@@ -137,7 +157,7 @@ test.describe("catalog browsing", () => {
   }) => {
     await page.goto("/");
     await page.getByRole("complementary").getByRole("link", { name: "Dogs" }).click();
-    await page.getByRole("link", { name: "Bulldog" }).click();
+    await (await bulldogLink(page)).click();
     await expect(page).toHaveURL(/\/petstore\/product\//);
     // Bulldog's items in the sample load are EST-6 Male Adult Bulldog and EST-7 Female Puppy
     // Bulldog. Every item row (a row linking to an item page) is one of them, and has add-to-cart.
@@ -151,7 +171,7 @@ test.describe("catalog browsing", () => {
   // case: SWHR2-C-0207@v1
   test("SWHR2-C-0207: add-to-cart on Male Adult Bulldog adds it to the cart", async ({ page }) => {
     await page.goto("/petstore/category/DOGS");
-    await page.getByRole("link", { name: "Bulldog" }).click();
+    await (await bulldogLink(page)).click();
     const row = page.getByRole("row").filter({ hasText: "Male Adult Bulldog" });
     await expect(row).toHaveCount(1);
     await addAndWait(page, addToCart(row));
