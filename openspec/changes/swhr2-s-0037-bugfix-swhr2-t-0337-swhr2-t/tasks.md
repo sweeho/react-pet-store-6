@@ -1,9 +1,9 @@
 ## 1. Locale known at first render (SWHR2-T-0339)
 
-- [ ] 1.1 Keep a readable ps_locale cookie equal to the storefront session locale whenever a session starts or its locale changes (SWHR2-T-0339; SWHR2-R-0020)
-- [ ] 1.2 Initialise the client locale from that cookie before the session fetch returns (SWHR2-T-0339; SWHR2-R-0020)
-- [ ] 1.3 Mount one LocaleProvider around the app shell and remove the per-route providers (SWHR2-T-0339; SWHR2-R-0020)
-- [ ] 1.4 Unit tests for the cookie on session start and locale change and for the provider's initial locale (SWHR2-T-0339; SWHR2-R-0020)
+- [x] 1.1 Keep a readable ps_locale cookie equal to the storefront session locale whenever a session starts or its locale changes (SWHR2-T-0339; SWHR2-R-0020)
+- [x] 1.2 Initialise the client locale from that cookie before the session fetch returns (SWHR2-T-0339; SWHR2-R-0020)
+- [x] 1.3 Mount one LocaleProvider around the app shell and remove the per-route providers (SWHR2-T-0339; SWHR2-R-0020)
+- [x] 1.4 Unit tests for the cookie on session start and locale change and for the provider's initial locale (SWHR2-T-0339; SWHR2-R-0020)
 
 ## 2. Header and flags (SWHR2-T-0337)
 
