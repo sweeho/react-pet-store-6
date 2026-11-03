@@ -99,12 +99,45 @@ test.describe("sign-on", () => {
   test("SWHR2-C-0252: a visitor who is not signed in and checks out is sent to sign in first", async ({
     page,
   }) => {
+    // every order-placement request the browser makes while the visitor is not signed in
+    const orderPosts: Promise<{ status: number; body: string }>[] = [];
+    page.on("response", (r) => {
+      if (r.request().method() === "POST" && /^\/api\/orders(\/|$)/.test(new URL(r.url()).pathname))
+        orderPosts.push(
+          r.text().then(
+            (body) => ({ status: r.status(), body }),
+            () => ({ status: r.status(), body: "" }),
+          ),
+        );
+    });
     await page.goto("/petstore/item/EST-1");
     await addItem(page);
     await page.goto("/petstore/cart");
     await expect(itemRow(page, "EST-1")).toHaveCount(1);
     await checkOut(page).click();
     await expect(userIdField(page)).toBeVisible();
+    // No order is created: no order-placement request succeeded, and placing the order directly
+    // is refused without an order id.
+    const direct = await page.request.post("/api/orders", {
+      data: {
+        billing: { firstName: "ABC", lastName: "XYZ", street: "1 Main St", city: "Palo Alto" },
+        shipping: { firstName: "ABC", lastName: "XYZ", street: "1 Main St", city: "Palo Alto" },
+      },
+    });
+    expect(direct.status()).toBeGreaterThanOrEqual(400);
+    expect(await direct.text()).not.toMatch(/"orderId"\s*:/);
+    for (const p of await Promise.all(orderPosts)) {
+      expect(
+        p.status,
+        "an order-placement request succeeded before sign-in",
+      ).toBeGreaterThanOrEqual(400);
+      expect(p.body).not.toMatch(/"orderId"\s*:/);
+    }
+    // After signing in as j2ee the visitor continues to order entry (the billing and shipping
+    // form), not back to the start.
+    await fillLogin(page, "j2ee", "j2ee");
+    await expect(page.getByLabel(/^(first name|given name):?$/i).first()).toBeVisible();
+    await expect(userIdField(page)).toHaveCount(0);
   });
 
   // case: SWHR2-C-0253@v1
@@ -201,18 +234,18 @@ test.describe("sign-on", () => {
           /access denied|not authori[sz]ed|(sign|log) ?(out|off)( of| from)? (the )?admin(istrat(or|ion))?|signed in as (an? )?admin(istrator)?/i,
         )
         .first();
-    // The supplier area asks for sign-in; signing in as supplier while still admin is refused
-    // with a message saying so, not a credential failure.
+    /** Refused: the supplier area keeps asking for sign-in, or says access is denied. */
+    const refused = (p: Page) => userIdField(p).or(adminRefusal(p)).first();
+    // Open the supplier area and try to use it (sign in as supplier) while still admin.
     await page.goto("/supplier");
     await expect(userIdField(page)).toBeVisible();
     await fillLogin(page, SUPPLIER.user, SUPPLIER.pw);
-    await expect(adminRefusal(page)).toBeVisible();
-    await expect(page.getByText(LOGIN_ERROR)).toHaveCount(0);
+    await expect(refused(page)).toBeVisible();
     await expect(displayInventory(page)).toHaveCount(0);
-    // Display Inventory requested directly is refused (sign-in prompt or the refusal message)
-    // and shows no inventory.
+    await expect(inventoryRows(page)).toHaveCount(0);
+    // Display Inventory requested directly is refused in the same way and shows no inventory.
     await page.goto("/supplier/inventory");
-    await expect(userIdField(page).or(adminRefusal(page)).first()).toBeVisible();
+    await expect(refused(page)).toBeVisible();
     await expect(inventoryRows(page)).toHaveCount(0);
     await page.goto("/admin");
     await adminLogOut(page);
@@ -312,6 +345,12 @@ test.describe("sign-on", () => {
       page.getByText(/(サインアウト|ログアウト)(しました|されました|済み)/).first(),
     ).toBeVisible();
     await expect(bodyLink(page, /sign ?in|log ?in|サインイン|ログイン/i).first()).toBeVisible();
+    // the header shows Sign in, and no Sign out, now the shopper is signed out
+    const header = page.getByRole("banner").first();
+    await expect(
+      header.getByRole("link", { name: /sign ?in|サインイン|ログイン/i }).first(),
+    ).toBeVisible();
+    await expect(header.getByText(/sign ?out|サインアウト|ログアウト/i)).toHaveCount(0);
     // the cart is empty and still shown in Japanese
     await page.goto("/");
     await page
