@@ -3,7 +3,9 @@ import { Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, Outlet } from "react-router";
 
+import { useLocale } from "@/components/storefront/LocaleProvider";
 import StorefrontHeader from "@/components/storefront/StorefrontHeader";
+import { useScreen } from "@/locales/useScreen";
 
 import GlobalNav from "./GlobalNav";
 
@@ -14,6 +16,9 @@ export interface AppShellProps {
 
 export default function AppShell({ children, header }: AppShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { locale } = useLocale();
+  const shell = useScreen("shell", locale);
+  const t = "error" in shell ? { store: "Pet Store", home: "Home" } : shell.definition;
 
   return (
     <div className="grid h-screen grid-cols-1 grid-rows-[56px_1fr_40px] lg:grid-cols-[240px_1fr]">
@@ -47,10 +52,10 @@ export default function AppShell({ children, header }: AppShellProps) {
       </Dialog>
       <main className="overflow-auto px-8 py-6">{children ?? <Outlet />}</main>
       <footer className="text-muted-foreground flex items-center gap-4 border-t px-8 text-xs lg:col-start-2">
-        <span>Pet Store</span>
+        <span>{t.store}</span>
         <span aria-hidden="true">·</span>
         <Link to="/" className="hover:underline">
-          Home
+          {t.home}
         </Link>
       </footer>
     </div>

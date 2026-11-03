@@ -9,6 +9,7 @@ import en_US_signon from "./en_US/signon";
 import en_US_account from "./en_US/account";
 import en_US_checkout from "./en_US/checkout";
 import en_US_order_placed from "./en_US/order-placed";
+import en_US_shell from "./en_US/shell";
 import ja_JP_petstore_home from "./ja_JP/petstore-home";
 import ja_JP_petstore_cart from "./ja_JP/petstore-cart";
 import ja_JP_petstore_signin from "./ja_JP/petstore-signin";
@@ -20,6 +21,7 @@ import ja_JP_signon from "./ja_JP/signon";
 import ja_JP_account from "./ja_JP/account";
 import ja_JP_checkout from "./ja_JP/checkout";
 import ja_JP_order_placed from "./ja_JP/order-placed";
+import ja_JP_shell from "./ja_JP/shell";
 import zh_CN_petstore_home from "./zh_CN/petstore-home";
 import zh_CN_petstore_cart from "./zh_CN/petstore-cart";
 import zh_CN_petstore_signin from "./zh_CN/petstore-signin";
@@ -31,6 +33,7 @@ import zh_CN_signon from "./zh_CN/signon";
 import zh_CN_account from "./zh_CN/account";
 import zh_CN_checkout from "./zh_CN/checkout";
 import zh_CN_order_placed from "./zh_CN/order-placed";
+import zh_CN_shell from "./zh_CN/shell";
 import type { LocaleRegistry } from "./types";
 
 export const registry: LocaleRegistry = {
@@ -46,6 +49,7 @@ export const registry: LocaleRegistry = {
     account: en_US_account,
     checkout: en_US_checkout,
     "order-placed": en_US_order_placed,
+    shell: en_US_shell,
   },
   ja_JP: {
     "petstore-home": ja_JP_petstore_home,
@@ -59,6 +63,7 @@ export const registry: LocaleRegistry = {
     account: ja_JP_account,
     checkout: ja_JP_checkout,
     "order-placed": ja_JP_order_placed,
+    shell: ja_JP_shell,
   },
   zh_CN: {
     "petstore-home": zh_CN_petstore_home,
@@ -72,6 +77,7 @@ export const registry: LocaleRegistry = {
     account: zh_CN_account,
     checkout: zh_CN_checkout,
     "order-placed": zh_CN_order_placed,
+    shell: zh_CN_shell,
   },
 };
 
