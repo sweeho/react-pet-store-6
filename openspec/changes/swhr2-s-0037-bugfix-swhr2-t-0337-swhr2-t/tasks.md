@@ -7,9 +7,9 @@
 
 ## 2. Header and flags (SWHR2-T-0337)
 
-- [ ] 2.1 Make the storefront header read the shared locale (SWHR2-T-0337; SWHR2-R-0078)
-- [ ] 2.2 Move the language flags into the storefront header, on storefront pages only (SWHR2-T-0337; SWHR2-R-0078)
-- [ ] 2.3 Unit test that a flag change relabels the header without navigating (SWHR2-T-0337; SWHR2-R-0078)
+- [x] 2.1 Make the storefront header read the shared locale (SWHR2-T-0337; SWHR2-R-0078)
+- [x] 2.2 Move the language flags into the storefront header, on storefront pages only (SWHR2-T-0337; SWHR2-R-0078)
+- [x] 2.3 Unit test that a flag change relabels the header without navigating (SWHR2-T-0337; SWHR2-R-0078)
 
 ## 3. Localized shell chrome (SWHR2-T-0338)
 
