@@ -31,7 +31,7 @@ describe("LocaleProvider", () => {
     expect(screen.getByTestId("locale").textContent).toBe("ja_JP");
   });
 
-  it("[SWHR2-C-0293] ignores an unsupported ps_locale value", () => {
+  it("ignores an unsupported ps_locale value", () => {
     document.cookie = "ps_locale=xx_YY; path=/";
     render(
       <LocaleProvider>
