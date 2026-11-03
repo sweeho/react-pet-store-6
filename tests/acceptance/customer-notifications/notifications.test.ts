@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it } from "vitest";
 
-import { approvalXml, mailApp, messages, resetEnv, statusOf, subjects } from "./harness";
+import { approvalXml, messages, statusOf } from "../order-fulfillment/harness";
+import { mailApp, resetEnv, subjects } from "./harness";
 
 afterEach(resetEnv);
 
