@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "@/components/storefront/LocaleProvider";
+import StorefrontHeader from "@/components/storefront/StorefrontHeader";
 import Petstore from "../petstore";
 import Cart from "./cart";
 import ChangeLanguage from "./change-language";
@@ -34,6 +35,7 @@ function renderAt(path: string) {
   return render(
     <LocaleProvider>
       <MemoryRouter initialEntries={[path]}>
+        <StorefrontHeader />
         <Routes>
           <Route path="/petstore" element={<Petstore />}>
             <Route index element={<Home />} />

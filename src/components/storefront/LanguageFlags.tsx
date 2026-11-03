@@ -14,7 +14,7 @@ export default function LanguageFlags() {
   const title = "error" in screen ? "Language" : screen.definition.title;
 
   return (
-    <div role="group" aria-label={title} className="mb-4 flex justify-end gap-1">
+    <div role="group" aria-label={title} className="mr-2 flex justify-end gap-1">
       {FLAGS.map((flag) => (
         <button
           key={flag.locale}

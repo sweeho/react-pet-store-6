@@ -4,11 +4,11 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { useScreen } from "@/locales/useScreen";
 
-import { DEFAULT_LOCALE } from "../../../shared/i18n/locale";
+import LanguageFlags from "./LanguageFlags";
+import { useLocale } from "./LocaleProvider";
 import SearchBox from "./SearchBox";
 
 interface SessionState {
-  locale: string;
   signedOn: boolean;
 }
 
@@ -22,7 +22,8 @@ export default function StorefrontHeader() {
   const [session, setSession] = useState<SessionState | null>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const screen = useScreen("signon", session?.locale ?? DEFAULT_LOCALE);
+  const { locale } = useLocale();
+  const screen = useScreen("signon", locale);
 
   // Sign-on state changes with navigation (sign in, sign out, idle expiry), so ask again per page.
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function StorefrontHeader() {
       </Link>
       <SearchBox />
       <div className="ml-auto flex items-center gap-1">
+        {isStaffArea(pathname) ? null : <LanguageFlags />}
         <Link to="/petstore/cart" className={ghost}>
           <ShoppingCart className="mr-1.5 size-4" aria-hidden="true" />
           {t.cart}
