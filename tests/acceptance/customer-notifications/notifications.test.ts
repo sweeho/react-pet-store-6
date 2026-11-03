@@ -216,10 +216,16 @@ describe("queues and channels", () => {
   // case: SWHR2-C-0066@v1
   it("SWHR2-C-0066: completed order 1001 (en_US, two lines) sends the English COMPLETED e-mail listing both lines", async () => {
     const a = await mailApp({ NOTIFY_COMPLETED_ENABLED: "true" });
-    await a.pendingOrder("1001", [
-      ["EST-1", 2],
-      ["EST-6", 1],
-    ]);
+    await a.pendingOrder(
+      "1001",
+      [
+        ["EST-1", 2],
+        ["EST-6", 1],
+      ],
+      { locale: "en_US" },
+    );
+    // the stored order carries the en_US locale the e-mail is rendered in
+    expect(JSON.stringify(await a.receive.getPurchaseOrder("1001"))).toContain('"en_US"');
     a.client.exec("update op_order_workflow set status = 'APPROVED' where order_id = '1001'");
     await a.fulfilLines("1001", [
       ["EST-1", 2],
