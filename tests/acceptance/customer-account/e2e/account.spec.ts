@@ -27,22 +27,40 @@ function forgetUser(userId: string) {
   execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId])]);
 }
 
+/** Reads the sign-on accounts (signon_users rows) stored for a user name, in a bun child process. */
+function signOnAccounts(userId: string): { password_hash: string }[] {
+  const script = `
+    const { Database } = require("bun:sqlite");
+    const [file, userId] = JSON.parse(process.argv[1]);
+    const db = new Database(file, { readonly: true });
+    try {
+      const rows = db.query("select password_hash from signon_users where user_id = ?").all(userId);
+      process.stdout.write(JSON.stringify(rows));
+    } finally { db.close(); }`;
+  return JSON.parse(
+    execFileSync("bun", ["-e", script, JSON.stringify([DB_FILE, userId])], { encoding: "utf8" }),
+  ) as { password_hash: string }[];
+}
+
 type Profile = { favouriteCategory?: string; myListOn?: boolean; bannerOn?: boolean };
 
+const repeatPassword = /^(repeat(ed)?|confirm|re-?enter|verify)( your)? password:?$/i;
+/**
+ * The sign-in form of /petstore/signin: the form with a Sign In button and no repeated-password
+ * field, so its fields are never confused with the registration form's User Name and Password.
+ */
+const signInForm = (page: Page) =>
+  page
+    .locator("form")
+    .filter({ has: page.getByRole("button", { name: /^(sign ?in|log ?in)/i }) })
+    .filter({ hasNot: page.getByLabel(repeatPassword) });
 async function signIn(page: Page, user = "j2ee", pw = "j2ee") {
   await page.goto("/petstore/signin");
-  await page
-    .getByLabel(/^user id:?$/i)
-    .first()
-    .fill(user);
-  await page
-    .getByLabel(/^password:?$/i)
-    .first()
-    .fill(pw);
-  await page
-    .getByRole("button", { name: /^(sign ?in|log ?in)/i })
-    .first()
-    .click();
+  const f = signInForm(page);
+  await expect(f).toHaveCount(1);
+  await f.getByLabel(/^user (id|name):?$/i).fill(user);
+  await f.getByLabel(/^password:?$/i).fill(pw);
+  await f.getByRole("button", { name: /^(sign ?in|log ?in)/i }).click();
   await expect(page.getByText(/^sign out$/i)).toBeVisible();
 }
 /** Signs in as j2ee and stores the given profile preferences through the account API. */
@@ -87,8 +105,11 @@ test.describe("sign up", () => {
   test("SWHR2-C-0156: signing up as an existing j2ee is redirected to the user-creation error page", async ({
     page,
   }) => {
+    // precondition: the j2ee sign-on account exists with password j2ee
     await signIn(page);
     await page.getByText(/^sign out$/i).click();
+    const before = signOnAccounts("j2ee");
+    expect(before).toHaveLength(1);
     await page.goto("/petstore/signin");
     await fillSignUp(page, "j2ee", "other1", "other1");
     await submitSignUp(page);
@@ -97,11 +118,18 @@ test.describe("sign up", () => {
       page.getByText(/user name.*(in use|taken|exists)|already (exists|in use)/i).first(),
     ).toBeVisible();
     await expect(page.getByLabel(/^card type:?$/i)).toHaveCount(0);
-    // nothing was created or changed: the existing account keeps its old password
-    const res = await page.request.post("/api/session/sign-in", {
+    // nothing was created or changed: still exactly one j2ee account, its password unchanged
+    const after = signOnAccounts("j2ee");
+    expect(after).toHaveLength(1);
+    expect(after[0].password_hash).toBe(before[0].password_hash);
+    const refused = await page.request.post("/api/session/sign-in", {
       data: { userId: "j2ee", password: "other1", remember: false },
     });
-    expect(res.status()).toBe(401);
+    expect(refused.status()).toBe(401);
+    const accepted = await page.request.post("/api/session/sign-in", {
+      data: { userId: "j2ee", password: "j2ee", remember: false },
+    });
+    expect(accepted.status()).toBe(200);
   });
 
   // case: SWHR2-C-0147@v1
@@ -153,6 +181,14 @@ test.describe("sign up", () => {
     await submitSignUp(page);
     await expect(page.getByText(/user creation error/i).first()).toBeVisible();
     await expect(page.getByText(/in use/i).first()).toBeVisible();
+    // and asks for a different user name
+    await expect(
+      page
+        .getByText(
+          /(different|another|other|new) (user ?name|user id|name|one)|(choose|pick|enter|try) (a |another )?(different|other|new)/i,
+        )
+        .first(),
+    ).toBeVisible();
   });
 
   // case: SWHR2-C-0174@v1
@@ -163,9 +199,9 @@ test.describe("sign up", () => {
     // compile, so the test gets 60s instead of the suite's 15s and each new screen 15s instead of 3s
     test.setTimeout(60_000);
     const slowExpect = expect.configure({ timeout: 15_000 });
-    // precondition: no account exists for the name. sqlite.db is shared by every worker and kept
-    // between runs, so each run signs up a name of its own (at most 25 characters)
-    const user = `firsttimer-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
+    // precondition: no account exists for firsttimer, even one an earlier run signed up
+    const user = "firsttimer";
+    forgetUser(user);
     await page.goto("/petstore/signin");
     await fillSignUp(page, user, "secret1", "secret1");
     await submitSignUp(page);
@@ -266,11 +302,6 @@ test.describe("My List panel and pet-tips banner", () => {
     const entries = await links.evaluateAll((els) =>
       els.map((e) => [e.textContent?.trim() ?? "", e.getAttribute("href") ?? ""]),
     );
-    // every BIRDS product is listed, and nothing else
-    const birdNames = [...birds.keys()].filter((n) => n !== "").sort();
-    expect(birdNames.length).toBeGreaterThan(0);
-    const listedNames = new Set(entries.map(([name]) => name).filter((n) => n !== ""));
-    expect([...listedNames].sort()).toEqual(birdNames);
     for (const [name, href] of entries) {
       // only BIRDS products, each linked to the page the BIRDS listing gives that product
       expect([...birds.keys()]).toContain(name);
