@@ -145,13 +145,15 @@ test.describe("sign up", () => {
   test("SWHR2-C-0174: a first-time visitor signs up, enters account information and can then buy", async ({
     page,
   }) => {
-    // sign up, account entry, cart and checkout in one test: more than the suite's 15s budget
-    // on a cold dev server shared by parallel workers
-    test.slow();
-    // precondition: no account exists for "firsttimer", even one an earlier run created
-    forgetUser("firsttimer");
+    // sign up, account entry, cart and checkout in one test: each step's page may be a cold Vite
+    // compile, so the test gets 60s instead of the suite's 15s and each new screen 15s instead of 3s
+    test.setTimeout(60_000);
+    const slowExpect = expect.configure({ timeout: 15_000 });
+    // precondition: no account exists for the name. sqlite.db is shared by every worker and kept
+    // between runs, so each run signs up a name of its own (at most 25 characters)
+    const user = `firsttimer-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
     await page.goto("/petstore/signin");
-    await fillSignUp(page, "firsttimer", "secret1", "secret1");
+    await fillSignUp(page, user, "secret1", "secret1");
     await submitSignUp(page);
     await page.getByLabel(/^(first|given) name:?$/i).fill("First");
     await page.getByLabel(/^(last|family) name:?$/i).fill("Timer");
@@ -172,11 +174,11 @@ test.describe("sign up", () => {
     );
     await page.getByRole("button", { name: /save|submit|create/i }).click();
     expect((await saved).status()).toBeLessThan(300);
-    // the account is created: it reads back for the signed-on firsttimer with the entered details
+    // the account is created: it reads back for the signed-on new user with the entered details
     const account = await page.request.get("/api/account");
     expect(account.status()).toBe(200);
     const stored = JSON.stringify(await account.json());
-    for (const v of ["firsttimer", "First", "Timer", "1 Main St", "Palo Alto", "first@example.com"])
+    for (const v of [user, "First", "Timer", "1 Main St", "Palo Alto", "first@example.com"])
       expect(stored).toContain(v);
     await page.goto("/petstore/item/EST-1");
     await page
@@ -204,14 +206,14 @@ test.describe("sign up", () => {
     if (!confirmsOrder) {
       const confirm = page.getByRole("button", { name: /^\s*(confirm|place order)/i }).first();
       const done = page.getByRole("heading", { name: /your order is complete|order placed/i });
-      await expect(done.or(confirm).first()).toBeVisible();
+      await slowExpect(done.or(confirm).first()).toBeVisible();
       if (!(await done.isVisible())) await confirm.click();
     }
     const response = await placed;
     expect(response.status()).toBe(200);
     const { orderId } = (await response.json()) as { orderId: string };
     // the order-confirmation screen names the placed order
-    await expect(page.getByRole("heading", { name: /your order is complete/i })).toBeVisible();
+    await slowExpect(page.getByRole("heading", { name: /your order is complete/i })).toBeVisible();
     await expect(page.getByText(orderId).first()).toBeVisible();
   });
 });
